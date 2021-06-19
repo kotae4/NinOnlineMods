@@ -80,12 +80,15 @@ namespace NinMods
             */
             if (keyAscii == SFML.Window.Keyboard.Key.F1)
             {
-                client.modTypes.Player[client.modGlobals.MyIndex].Access = 8;
-                client.frmAdmin adminForm = client.frmAdmin.InstancePtr;
-                if (adminForm != null)
-                    adminForm.Show();
-                else
-                    Logger.Log.Write("NinMods.Main", "hk_modInput_HandleKeyPresses", "Could not get frmAdmin instance", Logger.ELogType.Info, null, true);
+                // set state before sending packet
+                client.modTypes.Player[client.modGlobals.MyIndex].Dir = 1;
+                client.modTypes.Player[client.modGlobals.MyIndex].Moving = 1;
+                client.modTypes.Player[client.modGlobals.MyIndex].Running = false;
+                // send state to server
+                client.modClientTCP.SendPlayerMove();
+                // client-side prediction
+                client.modTypes.Player[client.modGlobals.MyIndex].yOffset = 32f;
+                client.modDatabase.SetPlayerY(client.modGlobals.MyIndex, client.modDatabase.GetPlayerY(client.modGlobals.MyIndex) + 1);
             }
             else
             {

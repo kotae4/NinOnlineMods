@@ -63,6 +63,24 @@ namespace Injector
             }
             Logger.Log.Write("Injector", "Inject", "Created remote thread in game process @ LoadLibraryA with pointer to path to DLL string as parameter (thID: " + ipThread.ToString() +")", Logger.ELogType.Info, rtxtLog);
 
+            // this will wait on the thread that just calls LoadLibrary
+            // that thread will exit immediately after LoadLibrary returns (regardless of what the return value is)
+            // i think the thread's exit code is actually set to the result of LoadLibrary... strange.
+            // either way, this ensures the LoadLibrary call finishes before we free the memory holding our pathToDLL
+            uint waitValue = WinAPI.WaitForSingleObject(ipThread, WinAPI.INFINITE);
+            if (waitValue == WinAPI.WAIT_OBJECT_0)
+            {
+                uint exitCode = 50;
+                if (!WinAPI.GetExitCodeThread(ipThread, out exitCode))
+                {
+                    throw new Exception("Could not get exit code from remote thread: " + Marshal.GetLastWin32Error().ToString());
+                }
+                if (exitCode == 0)
+                {
+                    throw new Exception("Could not load bootstrapper into target process. No further details available.");
+                }
+            }
+
             WinAPI.VirtualFreeEx(procHandle, allocMemAddress, (IntPtr)0, (uint)(WinAPI.AllocationType.Release));
             WinAPI.CloseHandle(ipThread);
             WinAPI.CloseHandle(procHandle);
