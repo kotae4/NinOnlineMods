@@ -23,6 +23,12 @@ namespace NinMods
         public static bool setPlayerAccessFirstRun = true;
         public static ManagedHooker.HookEntry setPlayerAcessHook;
 
+        delegate void dOpenGameLoop();
+        public static bool gameLoopFirstRun = true;
+        public static ManagedHooker.HookEntry gameLoopHook;
+
+        public static PlayerStatsForm frmPlayerStats = null;
+
         public static void SetupManagedHookerHooks()
         {
             try
@@ -36,8 +42,14 @@ namespace NinMods
                 client.modInput.HandleKeyPresses(SFML.Window.Keyboard.Key.W);
                 client.modGlobals.InMapEditor = false;
                 handleKeyPressesHook = ManagedHooker.HookMethod<dOpenHandleKeyPresses>(typeof(client.modInput), "HandleKeyPresses", hk_modInput_HandleKeyPresses, 0);
+
                 client.modDatabase.SetPlayerAccess(-1, 1);
                 setPlayerAcessHook = ManagedHooker.HookMethod<dOpenSetPlayerAccess>(typeof(client.modDatabase), "SetPlayerAccess", hk_modDatabase_SetPlayerAccess, 0);
+
+                // NOTE:
+                // no way to force an early exit here. hopefully doesn't cause a packet to be missed.
+                client.modGameLogic.GameLoop();
+                gameLoopHook = ManagedHooker.HookMethod<dOpenGameLoop>(typeof(client.modGameLogic), "GameLoop", hk_modGameLogic_GameLoop, 0);
             }
             catch (Exception ex)
             {
@@ -59,6 +71,27 @@ namespace NinMods
             Logger.Log.Write("NinMods.Main", "Initialize", "Installing hooks...", Logger.ELogType.Info, null, false);
             SetupManagedHookerHooks();
             Logger.Log.Write("NinMods.Main", "Initialize", "Done installing hooks!", Logger.ELogType.Info, null, true);
+        }
+
+        public static void hk_modGameLogic_GameLoop()
+        {
+            if (NinMods.Main.handleKeyPressesFirstRun == true)
+            {
+                NinMods.Main.handleKeyPressesFirstRun = false;
+                Logger.Log.Write("NinMods.Main", "hk_modGameLogic_GameLoop", "Successfully hooked!", Logger.ELogType.Info, null, true);
+            }
+            if (NinMods.Main.frmPlayerStats == null)
+            {
+                Logger.Log.Write("NinMods.Main", "Initialize", "Initializing player stats form", Logger.ELogType.Info, null, false);
+                NinMods.Main.frmPlayerStats = new PlayerStatsForm();
+                NinMods.Main.frmPlayerStats.Show();
+            }
+            if (NinMods.Main.frmPlayerStats.Visible == false)
+                NinMods.Main.frmPlayerStats.Visible = true;
+
+            NinMods.Main.frmPlayerStats.UpdatePlayerStats(client.modTypes.Player[client.modGlobals.MyIndex]);
+            // call original
+            NinMods.Main.gameLoopHook.CallOriginalFunction(typeof(void));
         }
 
         public static void hk_modInput_HandleKeyPresses(SFML.Window.Keyboard.Key keyAscii)
@@ -89,6 +122,19 @@ namespace NinMods
                 // client-side prediction
                 client.modTypes.Player[client.modGlobals.MyIndex].yOffset = 32f;
                 client.modDatabase.SetPlayerY(client.modGlobals.MyIndex, client.modDatabase.GetPlayerY(client.modGlobals.MyIndex) + 1);
+            }
+            else if (keyAscii == SFML.Window.Keyboard.Key.F2)
+            {
+                if (NinMods.Main.frmPlayerStats == null)
+                {
+                    Logger.Log.Write("NinMods.Main", "hk_modInput_HandleKeyPresses", "Initializing player stats form", Logger.ELogType.Info, null, false);
+                    NinMods.Main.frmPlayerStats = new PlayerStatsForm();
+                }
+                client.frmAdmin.InstancePtr.Hide();
+                client.frmAdmin.InstancePtr.Show();
+                // setting owner just to experiment. not necessary.
+                NinMods.Main.frmPlayerStats.Owner = client.frmAdmin.InstancePtr;
+                NinMods.Main.frmPlayerStats.Show();
             }
             else
             {
