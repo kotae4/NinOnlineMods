@@ -80,20 +80,15 @@ namespace NinMods
                 NinMods.Main.handleKeyPressesFirstRun = false;
                 Logger.Log.Write("NinMods.Main", "hk_modGameLogic_GameLoop", "Successfully hooked!", Logger.ELogType.Info, null, true);
             }
+
             if (NinMods.Main.frmPlayerStats == null)
             {
                 Logger.Log.Write("NinMods.Main", "Initialize", "Initializing player stats form", Logger.ELogType.Info, null, false);
                 NinMods.Main.frmPlayerStats = new PlayerStatsForm();
                 NinMods.Main.frmPlayerStats.Show();
             }
-            if (NinMods.Main.frmPlayerStats.Visible == false)
-            {
-                Logger.Log.Write("NinMods.Main", "Initialize", "Setting player stats form to be visible", Logger.ELogType.Info, null, false);
-                NinMods.Main.frmPlayerStats.Visible = true;
-            }
 
             NinMods.Main.frmPlayerStats.UpdatePlayerStats(client.modTypes.Player[client.modGlobals.MyIndex]);
-
             // call original
             NinMods.Main.gameLoopHook.CallOriginalFunction(typeof(void));
         }
@@ -134,10 +129,6 @@ namespace NinMods
                     Logger.Log.Write("NinMods.Main", "hk_modInput_HandleKeyPresses", "Initializing player stats form", Logger.ELogType.Info, null, false);
                     NinMods.Main.frmPlayerStats = new PlayerStatsForm();
                 }
-                client.frmAdmin.InstancePtr.Hide();
-                client.frmAdmin.InstancePtr.Show();
-                // setting owner just to experiment. not necessary.
-                NinMods.Main.frmPlayerStats.Owner = client.frmAdmin.InstancePtr;
                 NinMods.Main.frmPlayerStats.Show();
             }
             else
