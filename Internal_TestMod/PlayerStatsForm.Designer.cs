@@ -176,8 +176,6 @@ namespace NinMods
             this.listviewPlayerStats.TabIndex = 2;
             this.listviewPlayerStats.UseCompatibleStateImageBehavior = false;
             this.listviewPlayerStats.View = System.Windows.Forms.View.Details;
-            this.listviewPlayerStats.DrawItem += new System.Windows.Forms.DrawListViewItemEventHandler(this.listviewPlayerStats_DrawItem);
-            this.listviewPlayerStats.DrawSubItem += new System.Windows.Forms.DrawListViewSubItemEventHandler(this.listviewPlayerStats_DrawSubItem);
             // 
             // columnHeader1
             // 

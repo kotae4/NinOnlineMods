@@ -87,9 +87,13 @@ namespace NinMods
                 NinMods.Main.frmPlayerStats.Show();
             }
             if (NinMods.Main.frmPlayerStats.Visible == false)
+            {
+                Logger.Log.Write("NinMods.Main", "Initialize", "Setting player stats form to be visible", Logger.ELogType.Info, null, false);
                 NinMods.Main.frmPlayerStats.Visible = true;
+            }
 
             NinMods.Main.frmPlayerStats.UpdatePlayerStats(client.modTypes.Player[client.modGlobals.MyIndex]);
+
             // call original
             NinMods.Main.gameLoopHook.CallOriginalFunction(typeof(void));
         }

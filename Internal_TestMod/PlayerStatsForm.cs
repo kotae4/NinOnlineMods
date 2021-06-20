@@ -49,9 +49,9 @@ namespace NinMods
         SFML.System.Vector2i lastGameWndPosition = SFML.System.Vector2i.Zero;
 
         delegate void dListView_SetItemText(int itemIndex, int subItemIndex, string text);
-        dListView_SetItemText oListView_SetItemText;
+        dListView_SetItemText oListView_SetItemText = null;
 
-        bool IsUpdating = false;
+        //bool IsUpdating = false;
 
         Dictionary<ETrackedStats, string> curStatValues = new Dictionary<ETrackedStats, string>((int)ETrackedStats.MAX);
         Dictionary<ETrackedStats, string> prevStatValues = new Dictionary<ETrackedStats, string>((int)ETrackedStats.MAX);
@@ -61,6 +61,12 @@ namespace NinMods
             InitializeComponent();
 
             EnableDoubleBuffering();
+
+            for (int statIndex = 0; statIndex < (int)ETrackedStats.MAX; statIndex++)
+            {
+                curStatValues.Add((ETrackedStats)statIndex, string.Empty);
+                prevStatValues.Add((ETrackedStats)statIndex, string.Empty);
+            }
 
             System.Reflection.MethodInfo methodInfo = typeof(System.Windows.Forms.ListView).GetMethod("SetItemText", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic, null, new Type[] { typeof(int), typeof(int), typeof(string) }, null);
             if (methodInfo == null)
@@ -123,10 +129,17 @@ namespace NinMods
         {
             for (int index = 0; index < (int)ETrackedStats.MAX; index++)
             {
+                /*
                 if (index == (int)ETrackedStats.MAX - 1)
                     IsUpdating = false;
+                */
+                
                 if (prevStatValues[(ETrackedStats)index] != curStatValues[(ETrackedStats)index])
-                    oListView_SetItemText(index, 1, curStatValues[(ETrackedStats)index]);
+                {
+                    Logger.Log.Write("PlayerStatsForm", "UpdateItemLabelsIfNew", $"Updating stat label '{(ETrackedStats)index}': {curStatValues[(ETrackedStats)index]}");
+                    //oListView_SetItemText(index, 1, curStatValues[(ETrackedStats)index]);
+                    listviewPlayerStats.Items[index].SubItems[1].Text = curStatValues[(ETrackedStats)index];
+                }
             }
         }
 
@@ -146,16 +159,16 @@ namespace NinMods
             // i hate this
             //listviewPlayerStats.Visible = false;
             PopulateStatValues(playerRecord, ref curStatValues);
-
-            IsUpdating = true;
-            listviewPlayerStats.BeginUpdate();
+            //IsUpdating = true;
+            //listviewPlayerStats.BeginUpdate();
             UpdateItemLabelsIfNew();
-            listviewPlayerStats.EndUpdate();
+            //listviewPlayerStats.EndUpdate();
             //listviewPlayerStats.Visible = true;
 
             PopulateStatValues(playerRecord, ref prevStatValues);
         }
 
+        /*
         private void listviewPlayerStats_DrawSubItem(object sender, DrawListViewSubItemEventArgs e)
         {
             if (IsUpdating) return;
@@ -180,5 +193,6 @@ namespace NinMods
             TextFormatFlags flags = TextFormatFlags.Left;
             e.DrawText(flags);
         }
+        */
     }
 }
