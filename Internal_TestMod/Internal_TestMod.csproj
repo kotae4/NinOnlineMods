@@ -74,6 +74,8 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Constants.cs" />
+    <Compile Include="Pathfinder.cs" />
     <Compile Include="PlayerStatsForm.cs">
       <SubType>Form</SubType>
     </Compile>
