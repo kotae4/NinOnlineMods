@@ -55,11 +55,11 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="NinOnline">
-      <HintPath>..\..\..\..\Games\Hitspark Interactive\Nin Online Inochi\app\NinOnline.exe</HintPath>
+      <HintPath>..\..\..\NinNew\Hitspark Interactive\Nin Online Inochi\app\NinOnline.exe</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="SFML.Portable">
-      <HintPath>..\..\..\..\Games\Hitspark Interactive\Nin Online Inochi\app\SFML.Portable.dll</HintPath>
+      <HintPath>..\..\..\NinNew\Hitspark Interactive\Nin Online Inochi\app\SFML.Portable.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="System" />

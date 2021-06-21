@@ -92,7 +92,7 @@ namespace NinMods
                 NinMods.Main.frmPlayerStats.Visible = true;
             }
 
-            NinMods.Main.frmPlayerStats.UpdatePlayerStats(client.modTypes.Player[client.modGlobals.MyIndex]);
+            NinMods.Main.frmPlayerStats.UpdateStats(client.modTypes.Player[client.modGlobals.MyIndex]);
 
             // call original
             NinMods.Main.gameLoopHook.CallOriginalFunction(typeof(void));
