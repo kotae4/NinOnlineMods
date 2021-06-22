@@ -1,0 +1,1 @@
+Everything in this folder is taken from https://www.redblobgames.com/pathfinding/a-star/implementation.html#csharp

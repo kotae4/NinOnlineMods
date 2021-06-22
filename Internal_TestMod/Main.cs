@@ -7,6 +7,7 @@ using System.Windows.Forms;
 using NinOnline;
 using System.Reflection;
 using NinMods.Hooking;
+using NinMods.Pathfinding;
 
 namespace NinMods
 {
@@ -28,6 +29,17 @@ namespace NinMods
         public static ManagedHooker.HookEntry gameLoopHook;
 
         public static PlayerStatsForm frmPlayerStats = null;
+
+        public static SquareGrid MapPathfindingGrid;
+        // for making sure we always have the latest tiledata for pathfinding
+        delegate void dHandleMapData(int index, byte[] data, int startAddr, int extraVar);
+        public static bool handleMapDataFirstRun = true;
+        public static ManagedHooker.HookEntry handleMapDataHook = null;
+
+        delegate void dLoadMap(int mapID);
+        public static bool loadMapFirstRun = true;
+        public static ManagedHooker.HookEntry loadMapHook = null;
+
 
         // for debugging
         public delegate void dDrawWeather();
@@ -61,6 +73,17 @@ namespace NinMods
 
                 client.modGraphics.DrawWeather();
                 drawWeatherHook = ManagedHooker.HookMethod<dDrawWeather>(typeof(client.modGraphics), "DrawWeather", hk_modGraphics_DrawWeather, 0);
+
+                // no way to force the JIT compilation of these two methods..
+                try
+                {
+                    handleMapDataHook = ManagedHooker.HookMethod<dHandleMapData>(typeof(client.modHandleData), "HandleMapData", hk_modHandleData_HandleMapData, 0);
+                    loadMapHook = ManagedHooker.HookMethod<dLoadMap>(typeof(client.modDatabase), "LoadMap", hk_modDatabase_LoadMap, 0);
+                }
+                catch (Exception ex)
+                {
+                    Logger.Log.WriteException("NinMods.Main", "SetupManagedHookerHooks", ex);
+                }
             }
             catch (Exception ex)
             {
@@ -87,6 +110,7 @@ namespace NinMods
             }
             oRenderText = (dRenderText)methodInfo.CreateDelegate(typeof(dRenderText));
 
+            MapPathfindingGrid = new SquareGrid(client.modTypes.Map.Tile, client.modTypes.Map.MaxX, client.modTypes.Map.MaxY);
 
             Logger.Log.Write("NinMods.Main", "Initialize", "Installing hooks...", Logger.ELogType.Info, null, false);
             SetupManagedHookerHooks();
@@ -102,6 +126,29 @@ namespace NinMods
             }
             try
             {
+                if (loadMapHook == null)
+                {
+                    try
+                    {
+                        loadMapHook = ManagedHooker.HookMethod<dLoadMap>(typeof(client.modDatabase), "LoadMap", hk_modDatabase_LoadMap, 0);
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Log.WriteException("NinMods.Main", "hk_modGameLogic_GameLoop", ex);
+                    }
+                }
+                if (handleMapDataHook == null)
+                {
+                    try
+                    {
+                        handleMapDataHook = ManagedHooker.HookMethod<dHandleMapData>(typeof(client.modHandleData), "HandleMapData", hk_modHandleData_HandleMapData, 0);
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Log.WriteException("NinMods.Main", "hk_modGameLogic_GameLoop", ex);
+                    }
+                }
+
                 if (NinMods.Main.frmPlayerStats == null)
                 {
                     Logger.Log.Write("NinMods.Main", "Initialize", "Initializing player stats form", Logger.ELogType.Info, null, false);
@@ -117,6 +164,20 @@ namespace NinMods
             }
             // call original
             NinMods.Main.gameLoopHook.CallOriginalFunction(typeof(void));
+        }
+
+        public static void hk_modHandleData_HandleMapData(int index, byte[] data, int startAddr, int extraVar)
+        {
+            NinMods.Main.handleMapDataHook.CallOriginalFunction(typeof(void), index, data, startAddr, extraVar);
+
+            MapPathfindingGrid = new SquareGrid(client.modTypes.Map.Tile, client.modTypes.Map.MaxX, client.modTypes.Map.MaxY);
+        }
+
+        public static void hk_modDatabase_LoadMap(int mapID)
+        {
+            NinMods.Main.loadMapHook.CallOriginalFunction(typeof(void), mapID);
+
+            MapPathfindingGrid = new SquareGrid(client.modTypes.Map.Tile, client.modTypes.Map.MaxX, client.modTypes.Map.MaxY);
         }
 
         public static void DrawTileTypeOverlay()

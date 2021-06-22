@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using NinMods.Pathfinding;
 
 namespace NinMods
 {
@@ -19,18 +20,42 @@ namespace NinMods
             // TILE_TYPE_THROUGH is passable, and might be related to NPC pathing or something? seems to be only used for interior buildings / portal to interior
             // TILE_TYPE_WARP isn't reliable at all. some warp points don't have any tile type, or have some other type.
             // TILE_TYPE_WATER is passable, but looks like it modifies movement in some way
+            // TILE_TYPE_RESOURCE is labeled 'B' by the game, which is the same as TILE_TYPE_BLOCKED, so i'm going to assume it's impassable too
             return !((client.modTypes.Map.Tile[x, y].Type == Constants.TILE_TYPE_BLOCKED) || 
                 (client.modTypes.Map.Tile[x, y].Type == Constants.TILE_TYPE_SIT) || 
                 (client.modTypes.Map.Tile[x, y].Type == Constants.TILE_TYPE_NPCSPAWN) ||
-                (client.modTypes.Map.Tile[x, y].Type == Constants.TILE_TYPE_PLAYERSPAWN));
+                (client.modTypes.Map.Tile[x, y].Type == Constants.TILE_TYPE_PLAYERSPAWN) ||
+                (client.modTypes.Map.Tile[x, y].Type == Constants.TILE_TYPE_RESOURCE));
         }
 
-        public static Queue<SFML.System.Vector2i> GetPathTo(int tileX, int tileY)
+        public static Stack<Location> GetPathTo(int tileX, int tileY)
         {
-            Queue<SFML.System.Vector2i> optimalPath = new Queue<SFML.System.Vector2i>();
-            // TO-DO:
-            // pathfinding algo (can put it in another function, just populate optimalPath with result)
-            return optimalPath;
+            Location playerLoc = new Location(client.modTypes.Player[client.modGlobals.MyIndex].X, client.modTypes.Player[client.modGlobals.MyIndex].Y);
+            Location targetLoc = new Location(tileX, tileY);
+            AStarSearch pathfinder = new AStarSearch(NinMods.Main.MapPathfindingGrid, playerLoc, targetLoc);
+            Logger.Log.Write("Pathfinder", "GetPathTo", $"Done pathfinding from {playerLoc} to {targetLoc}, drawing path now");
+            Location step;
+            if (!pathfinder.cameFrom.TryGetValue(targetLoc, out step))
+            {
+                Logger.Log.Write("Pathfinder", "GetPathTo", $"Pathfinder could not find path to {targetLoc}");
+            }
+            Stack<Location> pathStack = new Stack<Location>();
+            pathStack.Push(targetLoc);
+            while (true)
+            {
+                if (step == playerLoc)
+                {
+                    break;
+                }
+                pathStack.Push(step);
+                Logger.Log.Write("Pathfinder", "GetPathTo", $"Pathfinder stepped from {step}");
+                if (!pathfinder.cameFrom.TryGetValue(step, out step))
+                {
+                    Logger.Log.Write("Pathfinder", "GetPathTo", $"Pathfinder stopped at {step}");
+                    break;
+                }
+            }
+            return pathStack;
         }
     }
 }
