@@ -167,6 +167,11 @@ namespace NinMods
                 }
 
                 NinMods.Main.frmPlayerStats.UpdatePlayerStats(client.modTypes.Player[client.modGlobals.MyIndex]);
+                /*
+                Logger.Log.Write("NinMods.Main", "hk_modGameLogic_GameLoop", $"Player pos: " +
+                    $"{client.modTypes.Player[client.modGlobals.MyIndex].X}, {client.modTypes.Player[client.modGlobals.MyIndex].Y} " +
+                    $"(index: {client.modGlobals.MyIndex})");
+                */
                 if ((debugBotCmd != null) && (debugBotCmd.IsComplete() == false))
                 {
                     if (debugBotCmd.Perform() == false)
