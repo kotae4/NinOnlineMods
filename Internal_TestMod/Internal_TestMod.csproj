@@ -106,6 +106,7 @@
     <Compile Include="Hooking\minhook\Trampoline.cs" />
     <Compile Include="Hooking\minhook\Utilities.cs" />
     <Compile Include="Hooking\NativeStubHooker.cs" />
+    <Compile Include="Utilities\GameUtils.cs" />
     <Compile Include="Utilities\Logger.cs" />
     <Compile Include="Main.cs" />
     <Compile Include="InjectedClass.cs" />

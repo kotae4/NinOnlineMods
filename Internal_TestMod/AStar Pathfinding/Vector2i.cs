@@ -16,15 +16,15 @@ namespace NinMods
         public static readonly Vector2i zero = new Vector2i(0, 0);
         public static readonly Vector2i one = new Vector2i(1, 1);
 
-        public static readonly Vector2i up = new Vector2i(0, 1);
-        public static readonly Vector2i down = new Vector2i(0, -1);
+        public static readonly Vector2i up = new Vector2i(0, -1);
+        public static readonly Vector2i down = new Vector2i(0, 1);
         public static readonly Vector2i left = new Vector2i(-1, 0);
         public static readonly Vector2i right = new Vector2i(1, 0);
         // diagonals
-        public static readonly Vector2i upLeft = new Vector2i(-1, 1);
-        public static readonly Vector2i upRight = new Vector2i(1, 1);
-        public static readonly Vector2i downLeft = new Vector2i(-1, -1);
-        public static readonly Vector2i downRight = new Vector2i(1, -1);
+        public static readonly Vector2i upLeft = new Vector2i(-1, -1);
+        public static readonly Vector2i upRight = new Vector2i(1, -1);
+        public static readonly Vector2i downLeft = new Vector2i(-1, 1);
+        public static readonly Vector2i downRight = new Vector2i(1, 1);
         // ordered by cardinal directiosn on compass (N, S, E, W then NE, NW, SE, SW)
         public static readonly Vector2i[] directions = new Vector2i[] {
             up, down, left, right,

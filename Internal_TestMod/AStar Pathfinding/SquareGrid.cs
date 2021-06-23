@@ -12,14 +12,6 @@ namespace NinMods.Pathfinding
         // but in a real project you'll probably want to follow standard
         // style and make them private.
 
-        public static readonly Vector2i[] DIRS = new[]
-            {
-            new Vector2i(1, 0),
-            new Vector2i(0, -1),
-            new Vector2i(-1, 0),
-            new Vector2i(0, 1)
-        };
-
         private client.modTypes.TileRec[,] m_GridData;
 
         public int width, height;
@@ -69,7 +61,7 @@ namespace NinMods.Pathfinding
 
         public IEnumerable<Vector2i> Neighbors(Vector2i id)
         {
-            foreach (var dir in DIRS)
+            foreach (var dir in Vector2i.directions)
             {
                 Vector2i next = new Vector2i(id.x + dir.x, id.y + dir.y);
                 if (IsInBounds(next) && IsPassable(next))

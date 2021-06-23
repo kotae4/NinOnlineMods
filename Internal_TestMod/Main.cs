@@ -84,6 +84,7 @@ namespace NinMods
                 client.modGraphics.DrawWeather();
                 drawWeatherHook = ManagedHooker.HookMethod<dDrawWeather>(typeof(client.modGraphics), "DrawWeather", hk_modGraphics_DrawWeather, 0);
 
+                // WARNING:
                 // no way to force the JIT compilation of these two methods..
                 try
                 {
@@ -370,8 +371,8 @@ namespace NinMods
             }
             else if (keyAscii == SFML.Window.Keyboard.Key.F4)
             {
-                Vector2i playerLocation = Bot.BotUtils.GetSelfLocation();
-                debugBotCmd = new Bot.BotCommand_MoveToStaticPoint(new Vector2i(playerLocation.x + 5, playerLocation.y));
+                Vector2i cursorTileLocation = Utilities.GameUtils.GetTilePosFromCursor();
+                debugBotCmd = new Bot.BotCommand_MoveToStaticPoint(cursorTileLocation);
             }
             else
             {
