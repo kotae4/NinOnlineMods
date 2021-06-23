@@ -28,18 +28,19 @@ namespace NinMods
                 (client.modTypes.Map.Tile[x, y].Type == Constants.TILE_TYPE_RESOURCE));
         }
 
-        public static Stack<Location> GetPathTo(int tileX, int tileY)
+        public static Stack<Vector2i> GetPathTo(int tileX, int tileY)
         {
-            Location playerLoc = new Location(client.modTypes.Player[client.modGlobals.MyIndex].X, client.modTypes.Player[client.modGlobals.MyIndex].Y);
-            Location targetLoc = new Location(tileX, tileY);
+            Vector2i playerLoc = new Vector2i(client.modTypes.Player[client.modGlobals.MyIndex].X, client.modTypes.Player[client.modGlobals.MyIndex].Y);
+            Vector2i targetLoc = new Vector2i(tileX, tileY);
             AStarSearch pathfinder = new AStarSearch(NinMods.Main.MapPathfindingGrid, playerLoc, targetLoc);
             Logger.Log.Write("Pathfinder", "GetPathTo", $"Done pathfinding from {playerLoc} to {targetLoc}, drawing path now");
-            Location step;
+            Vector2i step;
             if (!pathfinder.cameFrom.TryGetValue(targetLoc, out step))
             {
                 Logger.Log.Write("Pathfinder", "GetPathTo", $"Pathfinder could not find path to {targetLoc}");
+                return null;
             }
-            Stack<Location> pathStack = new Stack<Location>();
+            Stack<Vector2i> pathStack = new Stack<Vector2i>();
             pathStack.Push(targetLoc);
             while (true)
             {

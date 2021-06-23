@@ -6,18 +6,18 @@ using System.Threading.Tasks;
 
 namespace NinMods.Pathfinding
 {
-    public class SquareGrid : IWeightedGraph<Location>
+    public class SquareGrid : IWeightedGraph<Vector2i>
     {
         // Implementation notes: I made the fields public for convenience,
         // but in a real project you'll probably want to follow standard
         // style and make them private.
 
-        public static readonly Location[] DIRS = new[]
+        public static readonly Vector2i[] DIRS = new[]
             {
-            new Location(1, 0),
-            new Location(0, -1),
-            new Location(-1, 0),
-            new Location(0, 1)
+            new Vector2i(1, 0),
+            new Vector2i(0, -1),
+            new Vector2i(-1, 0),
+            new Vector2i(0, 1)
         };
 
         private client.modTypes.TileRec[,] m_GridData;
@@ -40,13 +40,13 @@ namespace NinMods.Pathfinding
             set { m_GridData[x, y] = value; }
         }
 
-        public bool IsInBounds(Location id)
+        public bool IsInBounds(Vector2i id)
         {
             return 0 <= id.x && id.x < width
                 && 0 <= id.y && id.y < height;
         }
 
-        public bool IsPassable(Location id)
+        public bool IsPassable(Vector2i id)
         {
             client.modTypes.TileRec cell = m_GridData[id.x, id.y];
 
@@ -57,7 +57,7 @@ namespace NinMods.Pathfinding
                 (cell.Type == Constants.TILE_TYPE_RESOURCE));
         }
 
-        public double GetCost(Location from, Location to)
+        public double GetCost(Vector2i from, Vector2i to)
         {
             // NOTE:
             // don't need to check if it's passable; that's already done before reaching this point.
@@ -67,11 +67,11 @@ namespace NinMods.Pathfinding
             return 1;
         }
 
-        public IEnumerable<Location> Neighbors(Location id)
+        public IEnumerable<Vector2i> Neighbors(Vector2i id)
         {
             foreach (var dir in DIRS)
             {
-                Location next = new Location(id.x + dir.x, id.y + dir.y);
+                Vector2i next = new Vector2i(id.x + dir.x, id.y + dir.y);
                 if (IsInBounds(next) && IsPassable(next))
                 {
                     yield return next;

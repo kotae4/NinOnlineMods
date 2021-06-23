@@ -6,16 +6,16 @@ using System.Threading.Tasks;
 
 namespace NinMods.Bot
 {
-    public class BotCommand_Attack : IBotCommand
+    public class BotCommand_Heal : IBotCommand
     {
         public bool IsComplete()
         {
-            return false;
+            throw new NotImplementedException();
         }
 
         public bool Perform()
         {
-            return false;
+            throw new NotImplementedException();
         }
     }
 }

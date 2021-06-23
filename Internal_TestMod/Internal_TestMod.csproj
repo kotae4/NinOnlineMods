@@ -76,11 +76,14 @@
   <ItemGroup>
     <Compile Include="AStar Pathfinding\AStarSearch.cs" />
     <Compile Include="AStar Pathfinding\IWeightedGraph.cs" />
-    <Compile Include="AStar Pathfinding\Location.cs" />
+    <Compile Include="AStar Pathfinding\Vector2i.cs" />
     <Compile Include="AStar Pathfinding\PriorityQueue.cs" />
     <Compile Include="AStar Pathfinding\SquareGrid.cs" />
     <Compile Include="Bot\BotCommand_Attack.cs" />
-    <Compile Include="Bot\BotCommand_MoveTo.cs" />
+    <Compile Include="Bot\BotCommand_Heal.cs" />
+    <Compile Include="Bot\BotCommand_MoveToStaticPoint.cs" />
+    <Compile Include="Bot\BotCommand_MoveToTarget.cs" />
+    <Compile Include="Bot\BotUtils.cs" />
     <Compile Include="Bot\FarmBot.cs" />
     <Compile Include="Bot\IBotCommand.cs" />
     <Compile Include="Constants.cs" />

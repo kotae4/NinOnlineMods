@@ -8,19 +8,19 @@ namespace NinMods.Pathfinding
 {
     public class AStarSearch
     {
-        public Dictionary<Location, Location> cameFrom = new Dictionary<Location, Location>();
-        public Dictionary<Location, double> costSoFar = new Dictionary<Location, double>();
+        public Dictionary<Vector2i, Vector2i> cameFrom = new Dictionary<Vector2i, Vector2i>();
+        public Dictionary<Vector2i, double> costSoFar = new Dictionary<Vector2i, double>();
 
         // Note: a generic version of A* would abstract over Location and
         // also Heuristic
-        static public double Heuristic(Location a, Location b)
+        static public double Heuristic(Vector2i a, Vector2i b)
         {
             return Math.Abs(a.x - b.x) + Math.Abs(a.y - b.y);
         }
 
-        public AStarSearch(IWeightedGraph<Location> graph, Location start, Location goal)
+        public AStarSearch(IWeightedGraph<Vector2i> graph, Vector2i start, Vector2i goal)
         {
-            var frontier = new PriorityQueue<Location>();
+            var frontier = new PriorityQueue<Vector2i>();
             frontier.Enqueue(start, 0);
 
             cameFrom[start] = start;

@@ -11,7 +11,15 @@ using NinMods.Pathfinding;
 
 namespace NinMods
 {
-    public static class Main
+    // A NOTE ON GAME TIMERS:
+    // modGlobals.tmr25 is probably the most important timer (isConnected, input, movement, attacks, charging chakra, spells, and animations are all done on this timer)
+    // the conditional is: if (modGlobals.tmr25 < modGlobals.Tick)
+    // the value is set like: modGlobals.tmr25 = (int)(modGlobals.Tick + 25);
+    // modGlobals.Tick is set each loop to the value of modGeneral.timer.ElapsedMilliseconds.
+    // the 'timer' field there is just a System.Diagnostics.Stopwatch (lol)
+    // effectively, this means we need to wait 25 milliseconds after performing any game action
+    // i think the easiest way to do this is to perform the same check the game does: if (modGlobals.tmr25 < modGlobals.Tick) { DoNextAction(); }
+    public class Main
     {
         public const string MAIN_NAME = "NinMods";
         public const string MAIN_CAPTION = "NinMods";
@@ -48,6 +56,8 @@ namespace NinMods
 
         public delegate void dRenderText(SFML.Graphics.Font font, string text, int x, int y, SFML.Graphics.Color color, bool shadow = false, byte textSize = 13, SFML.Graphics.RenderWindow target = null);
         public static dRenderText oRenderText = null;
+
+        public static Bot.IBotCommand debugBotCmd;
 
         public static void SetupManagedHookerHooks()
         {
@@ -151,12 +161,20 @@ namespace NinMods
 
                 if (NinMods.Main.frmPlayerStats == null)
                 {
-                    Logger.Log.Write("NinMods.Main", "Initialize", "Initializing player stats form", Logger.ELogType.Info, null, false);
+                    Logger.Log.Write("NinMods.Main", "hk_modGameLogic_GameLoop", "Initializing player stats form", Logger.ELogType.Info, null, false);
                     NinMods.Main.frmPlayerStats = new PlayerStatsForm();
                     NinMods.Main.frmPlayerStats.Show();
                 }
 
                 NinMods.Main.frmPlayerStats.UpdatePlayerStats(client.modTypes.Player[client.modGlobals.MyIndex]);
+                if ((debugBotCmd != null) && (debugBotCmd.IsComplete() == false))
+                {
+                    if (debugBotCmd.Perform() == false)
+                    {
+                        Logger.Log.Write("NinMods.Main", "hk_modGameLogic_GameLoop", "Catastrophic error occurred performing botcommand");
+                        debugBotCmd = null;
+                    }
+                }
             }
             catch (Exception ex)
             {
@@ -344,6 +362,11 @@ namespace NinMods
                 clsBuffer2.WriteLong(20);
                 client.modClientTCP.SendData(clsBuffer2.ToArray());
                 clsBuffer2 = null;
+            }
+            else if (keyAscii == SFML.Window.Keyboard.Key.F4)
+            {
+                Vector2i playerLocation = Bot.BotUtils.GetSelfLocation();
+                debugBotCmd = new Bot.BotCommand_MoveToStaticPoint(new Vector2i(playerLocation.x + 5, playerLocation.y));
             }
             else
             {

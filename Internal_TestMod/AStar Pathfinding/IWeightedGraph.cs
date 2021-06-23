@@ -9,7 +9,7 @@ namespace NinMods.Pathfinding
     // have to be a grid. However, in the example code I am using a grid.
     public interface IWeightedGraph<L>
     {
-        double GetCost(Location a, Location b);
-        IEnumerable<Location> Neighbors(Location id);
+        double GetCost(Vector2i a, Vector2i b);
+        IEnumerable<Vector2i> Neighbors(Vector2i id);
     }
 }

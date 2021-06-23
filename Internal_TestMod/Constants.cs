@@ -8,6 +8,7 @@ namespace NinMods
 {
     public static class Constants
     {
+		// === MAP TILES ===
 		public const byte TILE_TYPE_WALKABLE = 0;
 
 		public const byte TILE_TYPE_BLOCKED = 1;
@@ -51,5 +52,30 @@ namespace NinMods
 		public const byte TILE_TYPE_NOTRAP = 22;
 
 		public const byte TILE_TYPE_SIT = 23;
+
+		// === MOVEMENT === 
+		public const byte DIR_UP = 0;
+
+		public const byte DIR_DOWN = 1;
+
+		public const byte DIR_LEFT = 2;
+
+		public const byte DIR_RIGHT = 3;
+
+		public const byte DIR_UPLEFT = 4;
+
+		public const byte DIR_UPRIGHT = 5;
+
+		public const byte DIR_DOWNLEFT = 6;
+
+		public const byte DIR_DOWNRIGHT = 7;
+
+		public const byte MOVING_WALKING = 1;
+
+		public const byte MOVING_RUNNING = 2;
+
+		public const byte MOVING_DIAGONAL = 3;
+
+		public const byte MOVING_KICKBACK = 4;
 	}
 }
