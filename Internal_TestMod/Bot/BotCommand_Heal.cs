@@ -10,12 +10,16 @@ namespace NinMods.Bot
     {
         public bool IsComplete()
         {
-            throw new NotImplementedException();
+            client.modTypes.PlayerRec bot = BotUtils.GetSelf();
+            float healthPercentage = (float)bot.Vital[(int)client.modEnumerations.Vitals.HP] / (float)bot.MaxVital[(int)client.modEnumerations.Vitals.HP];
+            // TO-DO:
+            // don't hardcode this
+            return healthPercentage > 0.9f;
         }
 
         public bool Perform()
         {
-            throw new NotImplementedException();
+            return true;
         }
     }
 }

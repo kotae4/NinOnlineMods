@@ -61,7 +61,7 @@ namespace NinMods.Pathfinding
 
         public IEnumerable<Vector2i> Neighbors(Vector2i id)
         {
-            foreach (var dir in Vector2i.directions)
+            foreach (var dir in Vector2i.directions_Eight)
             {
                 Vector2i next = new Vector2i(id.x + dir.x, id.y + dir.y);
                 if (IsInBounds(next) && IsPassable(next))

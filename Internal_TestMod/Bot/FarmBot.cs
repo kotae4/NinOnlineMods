@@ -26,7 +26,7 @@ namespace NinMods.Bot
         IBotCommand currentCommand = null;
 
         client.modTypes.MapNpcRec targetMonster = null;
-        ECompassDirection targetDirection;
+        int targetMonsterIndex = 0;
 
         public FarmBot()
         {
@@ -36,28 +36,28 @@ namespace NinMods.Bot
         void GetTarget()
         {
             Vector2i botLocation = BotUtils.GetSelfLocation();
-            ECompassDirection monsterDirection;
-            client.modTypes.MapNpcRec nearestMonster;
-            if (BotUtils.GetNearestMonster(botLocation, out nearestMonster, out monsterDirection))
+            if (BotUtils.GetNearestMonster(botLocation, out targetMonster, out targetMonsterIndex))
             {
-                targetMonster = nearestMonster;
-                targetDirection = monsterDirection;
+                Logger.Log.Write("FarmBot", "GetTarget", "Got nearest monster");
             }
             else
             {
+                Logger.Log.WriteError("FarmBot", "GetTarget", "Could not get nearest monster");
                 targetMonster = null;
+                targetMonsterIndex = 0;
             }
         }
 
         void NextState()
         {
+            EBotState oldState = currentState;
             // currentState is the 'finished' state, so we're determing what to do next
             switch (currentState)
             {
                 case EBotState.MovingToTarget:
                     {
                         // we have arrived at the target, so start attacking it
-                        currentCommand = new BotCommand_Attack();
+                        currentCommand = new BotCommand_Attack(targetMonster, targetMonsterIndex);
                         currentState = EBotState.AttackingTarget;
                         break;
                     }
@@ -73,16 +73,19 @@ namespace NinMods.Bot
                         GetTarget();
                         if (targetMonster != null)
                         {
-                            currentCommand = new BotCommand_MoveToTarget(targetMonster);
+                            currentCommand = new BotCommand_MoveToTarget(targetMonster, targetMonsterIndex);
                             currentState = EBotState.MovingToTarget;
                         }
                         break;
                     }
                 case EBotState.AttackingTarget:
-                    {
+                case EBotState.Idle:
+                {
                         // we have killed the target, so check if we need to heal / charge chakra, do that if necessary, otherwise move to closest target
                         client.modTypes.PlayerRec bot = BotUtils.GetSelf();
-                        float healthPercentage = bot.Vital[(int)client.modEnumerations.Vitals.HP] / bot.MaxVital[(int)client.modEnumerations.Vitals.HP];
+                        float healthPercentage = (float)bot.Vital[(int)client.modEnumerations.Vitals.HP] / (float)bot.MaxVital[(int)client.modEnumerations.Vitals.HP];
+                        // TO-DO:
+                        // don't hardcode this
                         if (healthPercentage <= 0.35f)
                         {
                             currentCommand = new BotCommand_Heal();
@@ -95,19 +98,23 @@ namespace NinMods.Bot
                             GetTarget();
                             if (targetMonster != null)
                             {
-                                currentCommand = new BotCommand_MoveToTarget(targetMonster);
+                                currentCommand = new BotCommand_MoveToTarget(targetMonster, targetMonsterIndex);
                                 currentState = EBotState.MovingToTarget;
                             }
                         }
                         break;
                     }
             }
+            Logger.Log.Write("FarmBot", "NextState", $"Moved to state {currentState} from {oldState}");
         }
 
         public void Update()
         {
             if (HasFailedCatastrophically)
+            {
+                Logger.Log.WriteError("FarmBot", "Update", "Bot failed catastrophically, cannot do anything.");
                 return;
+            }
 
             if (currentCommand != null)
             {
@@ -115,6 +122,7 @@ namespace NinMods.Bot
                 if (currentCommand.IsComplete())
                 {
                     currentCommand = null;
+                    Logger.Log.Write("FarmBot", "Update", "Completed command!");
                 }
             }
 

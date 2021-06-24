@@ -48,6 +48,9 @@ namespace NinMods
         public static bool loadMapFirstRun = true;
         public static ManagedHooker.HookEntry loadMapHook = null;
 
+        // farmbot
+        public static Bot.FarmBot farmBot = new Bot.FarmBot();
+
 
         // for debugging
         public delegate void dDrawWeather();
@@ -57,7 +60,7 @@ namespace NinMods
         public delegate void dRenderText(SFML.Graphics.Font font, string text, int x, int y, SFML.Graphics.Color color, bool shadow = false, byte textSize = 13, SFML.Graphics.RenderWindow target = null);
         public static dRenderText oRenderText = null;
 
-        public static Bot.IBotCommand debugBotCmd;
+        public static Bot.IBotCommand moveToCursorCmd;
 
         public static void SetupManagedHookerHooks()
         {
@@ -166,19 +169,21 @@ namespace NinMods
                     NinMods.Main.frmPlayerStats = new PlayerStatsForm();
                     NinMods.Main.frmPlayerStats.Show();
                 }
-
-                NinMods.Main.frmPlayerStats.UpdatePlayerStats(client.modTypes.Player[client.modGlobals.MyIndex]);
+                if (NinMods.Main.frmPlayerStats.Visible)
+                    NinMods.Main.frmPlayerStats.UpdatePlayerStats(client.modTypes.Player[client.modGlobals.MyIndex]);
                 /*
                 Logger.Log.Write("NinMods.Main", "hk_modGameLogic_GameLoop", $"Player pos: " +
                     $"{client.modTypes.Player[client.modGlobals.MyIndex].X}, {client.modTypes.Player[client.modGlobals.MyIndex].Y} " +
                     $"(index: {client.modGlobals.MyIndex})");
                 */
-                if ((debugBotCmd != null) && (debugBotCmd.IsComplete() == false))
+                farmBot.Update();
+
+                if ((moveToCursorCmd != null) && (moveToCursorCmd.IsComplete() == false))
                 {
-                    if (debugBotCmd.Perform() == false)
+                    if (moveToCursorCmd.Perform() == false)
                     {
-                        Logger.Log.Write("NinMods.Main", "hk_modGameLogic_GameLoop", "Catastrophic error occurred performing botcommand");
-                        debugBotCmd = null;
+                        Logger.Log.Write("NinMods.Main", "hk_modGameLogic_GameLoop", "Catastrophic error occurred performing MoveToCursor command");
+                        moveToCursorCmd = null;
                     }
                 }
             }
@@ -372,7 +377,7 @@ namespace NinMods
             else if (keyAscii == SFML.Window.Keyboard.Key.F4)
             {
                 Vector2i cursorTileLocation = Utilities.GameUtils.GetTilePosFromCursor();
-                debugBotCmd = new Bot.BotCommand_MoveToStaticPoint(cursorTileLocation);
+                moveToCursorCmd = new Bot.BotCommand_MoveToStaticPoint(cursorTileLocation);
             }
             else
             {

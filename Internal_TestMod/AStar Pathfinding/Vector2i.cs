@@ -26,9 +26,13 @@ namespace NinMods
         public static readonly Vector2i downLeft = new Vector2i(-1, 1);
         public static readonly Vector2i downRight = new Vector2i(1, 1);
         // ordered by cardinal directiosn on compass (N, S, E, W then NE, NW, SE, SW)
-        public static readonly Vector2i[] directions = new Vector2i[] {
+        public static readonly Vector2i[] directions_Eight = new Vector2i[] {
             up, down, left, right,
             upLeft, upRight, downLeft, downRight
+        };
+        // ordered by cardinal directiosn on compass (N, S, E, W)
+        public static readonly Vector2i[] directions_Four = new Vector2i[] {
+            up, down, left, right
         };
 
         public int x, y;
