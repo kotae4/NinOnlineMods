@@ -14,7 +14,6 @@ namespace NinMods.Bot
         enum EBotState
         {
             Idle,
-            MovingToTarget,
             MovingToMap,
             MovingToHotspot,
             AttackingTarget,
@@ -38,7 +37,9 @@ namespace NinMods.Bot
             Vector2i botLocation = BotUtils.GetSelfLocation();
             if (BotUtils.GetNearestMonster(botLocation, out targetMonster, out targetMonsterIndex))
             {
-                Logger.Log.Write("FarmBot", "GetTarget", "Got nearest monster");
+                Vector2i monsterLocation = new Vector2i(targetMonster.X, targetMonster.Y);
+                double dist = botLocation.DistanceTo(monsterLocation);
+                Logger.Log.Write("FarmBot", "GetTarget", $"Got nearest monster '{client.modTypes.Npc[targetMonster.num].Name.Trim()}[{targetMonsterIndex}]' at {monsterLocation} ({dist} away)");
             }
             else
             {
@@ -54,13 +55,6 @@ namespace NinMods.Bot
             // currentState is the 'finished' state, so we're determing what to do next
             switch (currentState)
             {
-                case EBotState.MovingToTarget:
-                    {
-                        // we have arrived at the target, so start attacking it
-                        currentCommand = new BotCommand_Attack(targetMonster, targetMonsterIndex);
-                        currentState = EBotState.AttackingTarget;
-                        break;
-                    }
                 case EBotState.MovingToMap:
                 case EBotState.MovingToHotspot:
                 case EBotState.Healing:
@@ -73,8 +67,11 @@ namespace NinMods.Bot
                         GetTarget();
                         if (targetMonster != null)
                         {
-                            currentCommand = new BotCommand_MoveToTarget(targetMonster, targetMonsterIndex);
-                            currentState = EBotState.MovingToTarget;
+                            // if we have a target, start attacking it
+                            // NOTE:
+                            // this will also move to the target and chase it if it tries running
+                            currentCommand = new BotCommand_Attack(targetMonster, targetMonsterIndex);
+                            currentState = EBotState.AttackingTarget;
                         }
                         break;
                     }
@@ -98,8 +95,11 @@ namespace NinMods.Bot
                             GetTarget();
                             if (targetMonster != null)
                             {
-                                currentCommand = new BotCommand_MoveToTarget(targetMonster, targetMonsterIndex);
-                                currentState = EBotState.MovingToTarget;
+                                // if we have a target, start attacking it
+                                // NOTE:
+                                // this will also move to the target and chase it if it tries running
+                                currentCommand = new BotCommand_Attack(targetMonster, targetMonsterIndex);
+                                currentState = EBotState.AttackingTarget;
                             }
                         }
                         break;

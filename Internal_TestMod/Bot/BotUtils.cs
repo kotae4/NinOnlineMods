@@ -79,6 +79,116 @@ namespace NinMods.Bot
             return path;
         }
 
+        public static bool MoveDir(Vector2i tileDirection)
+        {
+            Vector2i botLocation = GetSelfLocation();
+            Vector2i nextTile = new Vector2i(botLocation.x + tileDirection.x, botLocation.y + tileDirection.y);
+            byte gameDir = 255;
+            for (int index = 0; index < Vector2i.directions_Eight.Length; index++)
+                if (tileDirection == Vector2i.directions_Eight[index])
+                    gameDir = (byte)index;
+
+            if (gameDir == 255)
+            {
+                Logger.Log.WriteError("BotUtils", "MoveDir", $"Could not get direction out of {tileDirection} (self: {botLocation}; nextTile: {nextTile})");
+                return false;
+            }
+            Logger.Log.Write("BotUtils", "MoveDir", $"Moving bot from {botLocation} to {nextTile} in direction {gameDir} (tileDir: {tileDirection})", Logger.ELogType.Info, null, true);
+            // perform next movement
+            // set state before sending packet
+            client.modTypes.Player[client.modGlobals.MyIndex].Dir = gameDir;
+            // NOTE:
+            // the game has a value (3) for MOVING_DIAGONAL but doesn't seem to implement it anywhere. in fact, using it will cause movement to break.
+            client.modTypes.Player[client.modGlobals.MyIndex].Moving = Constants.MOVING_RUNNING;
+            client.modTypes.Player[client.modGlobals.MyIndex].Running = true;
+            // send state to server
+            client.modClientTCP.SendPlayerMove();
+            // client-side prediction (notice how the game's code is literally hundreds of lines to accomplish the exact same thing?)
+            // the game uses 143 lines to do JUST this.
+            client.modTypes.Player[client.modGlobals.MyIndex].xOffset = System.Math.Abs(tileDirection.x * 32f);
+            client.modTypes.Player[client.modGlobals.MyIndex].yOffset = System.Math.Abs(tileDirection.y * 32f);
+            client.modTypes.Player[client.modGlobals.MyIndex].X = (byte)(botLocation.x + tileDirection.x);
+            client.modTypes.Player[client.modGlobals.MyIndex].Y = (byte)(botLocation.y + tileDirection.y);
+            Logger.Log.Write("BotUtils", "MoveDir", $"Predicted: ({client.modTypes.Player[client.modGlobals.MyIndex].X}, " +
+                $"{client.modTypes.Player[client.modGlobals.MyIndex].Y}) (offset: " +
+                $"{client.modTypes.Player[client.modGlobals.MyIndex].xOffset}, " +
+                $"{client.modTypes.Player[client.modGlobals.MyIndex].yOffset})");
+            return true;
+        }
+
+        public static bool FaceDir(Vector2i tileDirection)
+        {
+            byte gameDir = 255;
+            for (int index = 0; index < Vector2i.directions_Eight.Length; index++)
+                if (tileDirection == Vector2i.directions_Eight[index])
+                    gameDir = (byte)index;
+
+            if (gameDir == 255)
+            {
+                // NOTE:
+                // TO-DO:
+                // logging inconsistency. normally log message would be here, instead it's left to the caller.
+                return false;
+            }
+            if (gameDir == client.modTypes.Player[client.modGlobals.MyIndex].Dir)
+            {
+                Logger.Log.Write("BotUtils", "FaceDir", "Bot is already facing target, no need to send dir packet");
+            }
+            else
+            {
+                Logger.Log.Write("BotUtils", "FaceDir", $"Setting bot to face target (was {client.modTypes.Player[client.modGlobals.MyIndex].Dir} now {gameDir})");
+                client.modTypes.Player[client.modGlobals.MyIndex].Dir = gameDir;
+                client.clsBuffer clsBuffer2 = new client.clsBuffer();
+                clsBuffer2.WriteLong(18);
+                clsBuffer2.WriteLong(gameDir);
+                client.modClientTCP.SendData(clsBuffer2.ToArray());
+            }
+            return true;
+        }
+
+        public static void BasicAttack()
+        {
+            client.clsBuffer clsBuffer2 = new client.clsBuffer();
+            clsBuffer2.WriteLong(20);
+            client.modClientTCP.SendData(clsBuffer2.ToArray());
+            client.modGlobals.TimeSinceAttack = (int)client.modGlobals.Tick;
+        }
+
+        public static bool CanMove()
+        {
+            if (client.modGlobals.tmr25 >= client.modGlobals.Tick)
+            {
+                Logger.Log.Write("BotUtils", "CanMove", $"Skipping frame because tmr25 isn't ready yet ({client.modGlobals.tmr25} > {client.modGlobals.Tick})");
+                return false;
+            }
+            // NOTE:
+            // taken from client.modGameLogic.CheckMovement()
+            if ((client.modTypes.Player[client.modGlobals.MyIndex].Moving > 0) || (client.modTypes.Player[client.modGlobals.MyIndex].DeathTimer > 0))
+            {
+                Logger.Log.Write("BotUtils", "CanMove", $"Skipping frame because player is in invalid state ({client.modTypes.Player[client.modGlobals.MyIndex].Moving}, {client.modTypes.Player[client.modGlobals.MyIndex].DeathTimer})");
+                return false;
+            }
+            return true;
+        }
+
+        public static bool CanAttack()
+        {
+            if (client.modGlobals.tmr25 >= client.modGlobals.Tick)
+                return false;
+
+            int playerAttackSpeed = client.modDatabase.GetPlayerAttackSpeed(client.modGlobals.MyIndex);
+            int nextAttackTime = client.modGlobals.TimeSinceAttack + playerAttackSpeed + 30;
+            // NOTE:
+            // we ignore some things because we can be reasonably sure the bot won't be in that state
+            // taken from client.modGameLogic.CheckAttack()
+            if ((nextAttackTime > client.modGlobals.Tick) || (client.modGlobals.SpellBuffer > 0) || (client.modGameLogic.CanPlayerInteract() == false))
+                return false;
+            if (client.modTypes.Player[client.modGlobals.MyIndex].EventTimer > client.modGlobals.Tick)
+                return false;
+
+            return true;
+        }
+
         public static client.modTypes.PlayerRec GetSelf()
         {
             // TO-DO:

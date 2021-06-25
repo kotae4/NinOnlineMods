@@ -13,7 +13,11 @@ namespace NinMods.Bot
 
         client.modTypes.MapNpcRec target = null;
         int targetIndex = 0;
-        int timeOfLastAttack = 0;
+        // for chasing the target if it moves before we engage it (happens occasionally)
+        Stack<Vector2i> path = null;
+        bool isChasingByPath = false;
+        // cache optimization
+        Vector2i targetLocation = new Vector2i();
 
         public BotCommand_Attack(client.modTypes.MapNpcRec target, int targetIndex)
         {
@@ -35,74 +39,85 @@ namespace NinMods.Bot
                 hasKilledTarget = true;
                 return true;
             }
-
-            if (CanAttack())
+            Vector2i botLocation = BotUtils.GetSelfLocation();
+            targetLocation.x = target.X;
+            targetLocation.y = target.Y;
+            double dist = botLocation.DistanceTo(targetLocation);
+            // TO-DO:
+            // don't hardcode this
+            if (dist > 1.6f)
             {
+                Logger.Log.Write("BotCommand_Attack", "Perform", $"Target has moved out of range, beginning chase now (self: {botLocation}, target: {targetLocation}, dist: {dist}");
+                if (ChaseTarget(botLocation, dist) == false)
+                {
+                    hasFailedCatastrophically = true;
+                    return false;
+                }
+            }
+            else if (BotUtils.CanAttack())
+            {
+                isChasingByPath = false;
+                path = null;
                 Logger.Log.Write("BotCommand_Attack", "Perform", $"Got permission to perform attack this tick (target[{targetIndex}]: {target.num}, hp: {target.Vital[(int)client.modEnumerations.Vitals.HP]}) " +
                     $"(npc: {client.modTypes.Npc[target.num].Name.Trim()}, {client.modTypes.Npc[target.num].HP})");
 
-                FaceTargetIfNot();
-
-                client.clsBuffer clsBuffer2 = new client.clsBuffer();
-                clsBuffer2.WriteLong(20);
-                client.modClientTCP.SendData(clsBuffer2.ToArray());
-                timeOfLastAttack = (int)client.modGlobals.Tick;
+                Vector2i tileDirection = targetLocation - botLocation;
+                if (BotUtils.FaceDir(tileDirection) == false)
+                {
+                    // NOTE:
+                    // assumes error state is from inability to parse direction (the function might return false from some other condition in the future)
+                    Logger.Log.WriteError("BotCommand_Attack", "Perform", $"Could not get direction out of {tileDirection} (self: {botLocation}; target: {targetLocation})");
+                    hasFailedCatastrophically = true;
+                    return false;
+                }
+                BotUtils.BasicAttack();
             }
-
             return true;
         }
 
-        void FaceTargetIfNot()
+        bool ChaseTarget(Vector2i botLocation, double dist)
         {
-            Vector2i botLocation = BotUtils.GetSelfLocation();
-            Vector2i targetLocation = new Vector2i(target.X, target.Y);
-            Vector2i tileDirection = targetLocation - botLocation;
-            if (tileDirection == Vector2i.zero)
+            if (BotUtils.CanMove())
             {
-                Logger.Log.WriteError("BotCommand_Attack", "FaceTargetIfNot", $"Bot is on top of target, not setting any direction. dir: {tileDirection} (self: {botLocation}; target: {targetLocation})");
-                return;
-            }
-            byte gameDir = 255;
-            for (int index = 0; index < Vector2i.directions_Eight.Length; index++)
-                if (tileDirection == Vector2i.directions_Eight[index])
-                    gameDir = (byte)index;
+                // NOTE:
+                // small optimization where we avoid running AStar if the target is only one tile away
+                if ((dist < 2.0d) && (isChasingByPath == false))
+                {
+                    Vector2i tileDirection = targetLocation - botLocation;
+                    if (BotUtils.MoveDir(tileDirection) == false)
+                    {
+                        Logger.Log.WriteError("BotCommand_Attack", "ChaseTarget", $"Could not move bot at {botLocation} in direction {tileDirection}");
+                        hasFailedCatastrophically = true;
+                        return false;
+                    }
+                    Logger.Log.Write("BotCommand_Attack", "ChaseTarget", "Moved one tile to attack target");
+                }
+                else if ((path == null) || (path.Count == 0))
+                {
+                    path = BotUtils.GetPathToMonster(target, botLocation);
+                    if (path == null)
+                    {
+                        Logger.Log.Write("BotCommand_Attack", "ChaseTarget", "Could not recalculate path to monster.");
+                        hasFailedCatastrophically = true;
+                        return false;
+                    }
+                    Logger.Log.Write("BotCommand_Attack", "ChaseTarget", "Recalculated path to monster because monster moved");
+                    isChasingByPath = true;
+                }
+                if ((path != null) && (path.Count > 0) && (isChasingByPath))
+                {
+                    Vector2i nextTile = path.Pop();
+                    Vector2i tileDirection = nextTile - botLocation;
 
-            if (gameDir == 255)
-            {
-                Logger.Log.WriteError("BotCommand_Attack", "FaceTargetIfNot", $"Could not get direction out of {tileDirection} (self: {botLocation}; target: {targetLocation})");
-                hasFailedCatastrophically = true;
-                return;
+                    if (BotUtils.MoveDir(tileDirection) == false)
+                    {
+                        Logger.Log.WriteError("BotCommand_Attack", "Perform", $"Could not move bot at {botLocation} in direction {tileDirection}");
+                        hasFailedCatastrophically = true;
+                        return false;
+                    }
+                    Logger.Log.Write("BotCommand_Attack", "ChaseTarget", "Moved along path to chase target");
+                }
             }
-            if (gameDir == client.modTypes.Player[client.modGlobals.MyIndex].Dir)
-            {
-                Logger.Log.Write("BotCommand_Attack", "FaceTargetIfNot", "Bot is already facing target, no need to send dir packet");
-            }
-            else
-            {
-                Logger.Log.Write("BotCommand_Attack", "FaceTargetIfNot", $"Setting bot to face target (was {client.modTypes.Player[client.modGlobals.MyIndex].Dir} now {gameDir})");
-                client.modTypes.Player[client.modGlobals.MyIndex].Dir = gameDir;
-                client.clsBuffer clsBuffer2 = new client.clsBuffer();
-                clsBuffer2.WriteLong(18);
-                clsBuffer2.WriteLong(gameDir);
-                client.modClientTCP.SendData(clsBuffer2.ToArray());
-            }
-        }
-
-        bool CanAttack()
-        {
-            if (client.modGlobals.tmr25 >= client.modGlobals.Tick)
-                return false;
-
-            int playerAttackSpeed = client.modDatabase.GetPlayerAttackSpeed(client.modGlobals.MyIndex);
-            int nextAttackTime = timeOfLastAttack + playerAttackSpeed + 30;
-            // NOTE:
-            // we ignore some things because we can be reasonably sure the bot won't be in that state
-            // taken from client.modGameLogic.CheckAttack()
-            if ((nextAttackTime > client.modGlobals.Tick) || (client.modGlobals.SpellBuffer > 0) || (client.modGameLogic.CanPlayerInteract() == false))
-                return false;
-            if (client.modTypes.Player[client.modGlobals.MyIndex].EventTimer > client.modGlobals.Tick)
-                return false;
-
             return true;
         }
     }

@@ -82,7 +82,6 @@
     <Compile Include="Bot\BotCommand_Attack.cs" />
     <Compile Include="Bot\BotCommand_Heal.cs" />
     <Compile Include="Bot\BotCommand_MoveToStaticPoint.cs" />
-    <Compile Include="Bot\BotCommand_MoveToTarget.cs" />
     <Compile Include="Bot\BotUtils.cs" />
     <Compile Include="Bot\FarmBot.cs" />
     <Compile Include="Bot\IBotCommand.cs" />
