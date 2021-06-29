@@ -71,7 +71,7 @@ namespace NinMods
         public static Bot.IBotCommand moveToCursorCmd;
 
         // for determing if a new item has dropped
-        public static Dictionary<int, int> lastFrameMapItemIndexByItemNum = new Dictionary<int, int>();
+        public static client.modTypes.MapItemRec[] lastFrameMapItems = new client.modTypes.MapItemRec[256];
 
 
         // debugging / visuals
@@ -137,6 +137,16 @@ namespace NinMods
 
         public static void Initialize()
         {
+            // initialize map items
+            for (int itemIndex = 0; itemIndex <= 255; itemIndex++)
+            {
+                lastFrameMapItems[itemIndex] = new client.modTypes.MapItemRec();
+                lastFrameMapItems[itemIndex].X = 0;
+                lastFrameMapItems[itemIndex].Y = 0;
+                lastFrameMapItems[itemIndex].num = 0;
+                lastFrameMapItems[itemIndex].PlayerName = "";
+            }
+
             System.Reflection.MethodInfo methodInfo = typeof(client.modText).GetMethod("RenderText", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic, null, new Type[] { typeof(SFML.Graphics.Font), typeof(string), typeof(int), typeof(int), typeof(SFML.Graphics.Color), typeof(bool), typeof(byte), typeof(SFML.Graphics.RenderWindow) }, null);
             if (methodInfo == null)
             {
@@ -210,40 +220,39 @@ namespace NinMods
         public static void CheckNewItemDrops()
         {
             client.modTypes.PlayerRec bot = NinMods.Bot.BotUtils.GetSelf();
-
+            //Logger.Log.Write("NinMods.Main", "CheckNewItemDrops", $"Checking {client.modGlobals.MapItem_HighIndex} map items", Logger.ELogType.Info, null, true);
             List<Vector2i> newItemLocations = new List<Vector2i>();
             for (int itemIndex = 1; itemIndex <= 255; itemIndex++)
             {
                 client.modTypes.MapItemRec mapItem = client.modTypes.MapItem[itemIndex];
-                if (NinMods.Main.lastFrameMapItemIndexByItemNum.ContainsKey(itemIndex))
+                if (mapItem.num <= 0)
                 {
-                    if ((lastFrameMapItemIndexByItemNum[itemIndex] != mapItem.num) && (mapItem.num > 0) && (mapItem.PlayerName.Trim() == bot.Name.Trim()))
-                    {
-                        newItemLocations.Add(new Vector2i(mapItem.X, mapItem.Y));
-                        lastFrameMapItemIndexByItemNum[itemIndex] = mapItem.num;
-                        Logger.Log.Write("NinMods.Main", "CheckNewItemDrops", $"Saw new item take place of old index " +
+                    // clear the entry in lastFrameMapItems since it's invalid
+                    lastFrameMapItems[itemIndex].X = 0;
+                    lastFrameMapItems[itemIndex].Y = 0;
+                    lastFrameMapItems[itemIndex].num = 0;
+                    lastFrameMapItems[itemIndex].PlayerName = "";
+                    continue;
+                }
+                client.modTypes.MapItemRec oldItem = lastFrameMapItems[itemIndex];
+                bool isNew = (((lastFrameMapItems[itemIndex].X != mapItem.X) || (lastFrameMapItems[itemIndex].Y != mapItem.Y) || (lastFrameMapItems[itemIndex].num != mapItem.num))
+                    && (mapItem.PlayerName.Trim() == bot.Name.Trim()));
+                if (isNew)
+                {
+                    newItemLocations.Add(new Vector2i(mapItem.X, mapItem.Y));
+                    Logger.Log.Write("NinMods.Main", "CheckNewItemDrops", $"Saw new item " +
                             $"(idx {itemIndex}, itemNum {mapItem.num})" +
                             $"\n\t-itemLoc ({mapItem.X}, {mapItem.Y})" +
                             $"\n\t-itemPlayer {mapItem.PlayerName.Trim()}" +
                             $"\n\t-itemMvalue {mapItem.mvalue}", Logger.ELogType.Info, null, true);
-                    }
                 }
-                else
-                {
-                    // it could be that the item existed before we loaded in and another player just picked that item up
-                    // so we check that it's a valid item and belongs to us before adding it to injection queue
-                    // but even if it's not a valid item we want to add its index to the lastFrame collection
-                    if ((mapItem.num > 0) && (mapItem.PlayerName.Trim() == bot.Name.Trim()))
-                    {
-                        newItemLocations.Add(new Vector2i(mapItem.X, mapItem.Y));
-                    }
-                    lastFrameMapItemIndexByItemNum.Add(itemIndex, mapItem.num);
-                    Logger.Log.Write("NinMods.Main", "CheckNewItemDrops", $"Saw entirely new item " +
-                        $"(idx {itemIndex}, itemNum {mapItem.num})" +
-                        $"\n\t-itemLoc ({mapItem.X}, {mapItem.Y})" +
-                        $"\n\t-itemPlayer {mapItem.PlayerName.Trim()}" +
-                        $"\n\t-itemMvalue {mapItem.mvalue}", Logger.ELogType.Info, null, true);
-                }
+                // now that we're done processing, perform the deep copy into lastFrameMapItems
+                // only going to copy the fields we actually use
+                lastFrameMapItems[itemIndex].X = mapItem.X;
+                lastFrameMapItems[itemIndex].Y = mapItem.Y;
+                lastFrameMapItems[itemIndex].num = mapItem.num;
+                lastFrameMapItems[itemIndex].PlayerName = mapItem.PlayerName;
+
             }
             foreach (Vector2i newItemLocation in newItemLocations)
             {
@@ -260,7 +269,6 @@ namespace NinMods
                 Logger.Log.Write("NinMods.Main", "hk_modGameLogic_GameLoop", "Successfully hooked!", Logger.ELogType.Info, null, true);
             }
             AttemptRehooking();
-            CheckNewItemDrops();
             try
             {
                 if (NinMods.Main.frmPlayerStats == null)
@@ -294,6 +302,10 @@ namespace NinMods
             }
             // call original
             NinMods.Main.gameLoopHook.CallOriginalFunction(typeof(void));
+
+            // i think we have to call this after the original function
+            // too lazy to double check
+            CheckNewItemDrops();
         }
 
         // for updating our pathfinding grid (and probably some other stuff later)

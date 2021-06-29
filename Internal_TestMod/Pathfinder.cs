@@ -33,13 +33,13 @@ namespace NinMods
             Vector2i playerLoc = new Vector2i(client.modTypes.Player[client.modGlobals.MyIndex].X, client.modTypes.Player[client.modGlobals.MyIndex].Y);
             Vector2i targetLoc = new Vector2i(tileX, tileY);
             AStarSearch pathfinder = new AStarSearch(NinMods.Main.MapPathfindingGrid, playerLoc, targetLoc);
-            Logger.Log.Write("Pathfinder", "GetPathTo", $"Done pathfinding from {playerLoc} to {targetLoc}, drawing path now");
             Vector2i step;
             if (!pathfinder.cameFrom.TryGetValue(targetLoc, out step))
             {
                 Logger.Log.Write("Pathfinder", "GetPathTo", $"Pathfinder could not find path to {targetLoc}");
                 return null;
             }
+            Logger.Log.Write("Pathfinder", "GetPathTo", $"Done pathfinding from {playerLoc} to {targetLoc}, constructing pathStack now");
             Stack<Vector2i> pathStack = new Stack<Vector2i>();
             pathStack.Push(targetLoc);
             while (true)
@@ -49,10 +49,10 @@ namespace NinMods
                     break;
                 }
                 pathStack.Push(step);
-                Logger.Log.Write("Pathfinder", "GetPathTo", $"Pathfinder stepped from {step}");
+                //Logger.Log.Write("Pathfinder", "GetPathTo", $"Pathfinder stepped from {step}");
                 if (!pathfinder.cameFrom.TryGetValue(step, out step))
                 {
-                    Logger.Log.Write("Pathfinder", "GetPathTo", $"Pathfinder stopped at {step}");
+                    Logger.Log.WriteError("Pathfinder", "GetPathTo", $"Pathfinder stopped unexpectedly at {step}");
                     break;
                 }
             }

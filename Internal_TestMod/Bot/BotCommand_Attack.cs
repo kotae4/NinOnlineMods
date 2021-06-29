@@ -69,8 +69,9 @@ namespace NinMods.Bot
                 // BUT keeping it this way allows us to kind of prioritize which spells should be cast (by placing those spells on the lower parts of the hotbar)
                 if (client.modGlobals.Tick >= spellCastTimer)
                 {
-                    Logger.Log.Write("BotCommand_Attack", "Perform", $"Got permission to cast a spell this tick (target[{targetIndex}]: {target.num}, hp: {target.Vital[(int)client.modEnumerations.Vitals.HP]}) " +
+                    /*Logger.Log.Write("BotCommand_Attack", "Perform", $"Got permission to cast a spell this tick (target[{targetIndex}]: {target.num}, hp: {target.Vital[(int)client.modEnumerations.Vitals.HP]}) " +
                         $"(npc: {client.modTypes.Npc[target.num].Name.Trim()}, {client.modTypes.Npc[target.num].HP})");
+                    */
                     for (int hotbarIndex = 1; hotbarIndex <= 20; hotbarIndex++)
                     {
                         // sType of 2 indicates it's a spell (aka jutsu)
@@ -81,7 +82,7 @@ namespace NinMods.Bot
                                 //Logger.Log.Write("BotCommand_Attack", "Perform", $"Saw PlayerSpells[{spellIndex}]={client.modGlobals.PlayerSpells[spellIndex]}, while Hotbar[{hotbarIndex}].Slot={client.modGlobals.Hotbar[hotbarIndex].Slot}");
                                 if (client.modGlobals.PlayerSpells[spellIndex] == client.modGlobals.Hotbar[hotbarIndex].Slot)
                                 {
-                                    Logger.Log.Write("BotCommand_Attack", "Perform", $"Saw PlayerSpells[{spellIndex}] from Hotbar[{hotbarIndex}], checking if we can cast it");
+                                    //Logger.Log.Write("BotCommand_Attack", "Perform", $"Saw PlayerSpells[{spellIndex}] from Hotbar[{hotbarIndex}], checking if we can cast it");
                                     if (BotUtils.CanCastSpell(spellIndex))
                                     {
                                         BotUtils.CastSpell(spellIndex);

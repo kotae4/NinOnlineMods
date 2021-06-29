@@ -62,7 +62,8 @@ namespace NinMods.Bot
             {
                 Vector2i monsterLocation = new Vector2i(targetMonster.X, targetMonster.Y);
                 double dist = botLocation.DistanceTo(monsterLocation);
-                Logger.Log.Write("FarmBot", "GetTarget", $"Got nearest monster '{client.modTypes.Npc[targetMonster.num].Name.Trim()}[{targetMonsterIndex}]' at {monsterLocation} ({dist} away)");
+                if (targetMonster.num > 0)
+                    Logger.Log.Write("FarmBot", "GetTarget", $"Got nearest monster '{(targetMonster.num > 0 ? client.modTypes.Npc[targetMonster.num].Name.Trim() : "<null>")}[{targetMonsterIndex}]' at {monsterLocation} ({dist} away)");
             }
             else
             {
