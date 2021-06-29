@@ -13,10 +13,14 @@ namespace NinMods.Bot
         public bool IsComplete()
         {
             client.modTypes.PlayerRec bot = BotUtils.GetSelf();
-            // NOTE:
-            // see other note in Perform() below.
-            bot.Map = realBotMap;
-            return bot.Vital[(int)client.modEnumerations.Vitals.MP] == bot.MaxVital[(int)client.modEnumerations.Vitals.MP];
+            if (bot.Vital[(int)client.modEnumerations.Vitals.MP] == bot.MaxVital[(int)client.modEnumerations.Vitals.MP])
+            {
+                // NOTE:
+                // see other note in Perform() below.
+                bot.Map = realBotMap;
+                return true;
+            }
+            return false;
         }
 
         public bool Perform()

@@ -46,10 +46,6 @@ namespace NinMods
         public static bool loadMapFirstRun = true;
         public static ManagedHooker.HookEntry loadMapHook = null;
 
-        delegate void dHandleSpawnItem(int Index, byte[] data, int StartAddr, int ExtraVar);
-        public static bool handleSpawnItemFirstRun = true;
-        public static ManagedHooker.HookEntry handleSpawnItemHook = null;
-
         // for logging incoming network messages (this is what receives all packets and then dispatches them to the specific packet handlers)
         delegate void dHandleData(byte[] data);
         public static bool handleDataFirstRun = true;
@@ -73,6 +69,9 @@ namespace NinMods
         public static Bot.FarmBot farmBot = new Bot.FarmBot();
         // for F3 keybind 'move to cursor' logic
         public static Bot.IBotCommand moveToCursorCmd;
+
+        // for determing if a new item has dropped
+        public static Dictionary<int, int> lastFrameMapItemIndexByItemNum = new Dictionary<int, int>();
 
 
         // debugging / visuals
@@ -113,12 +112,8 @@ namespace NinMods
                     handleMapDataHook = ManagedHooker.HookMethod<dHandleMapData>(typeof(client.modHandleData), "HandleMapData", hk_modHandleData_HandleMapData, 0);
                     loadMapHook = ManagedHooker.HookMethod<dLoadMap>(typeof(client.modDatabase), "LoadMap", hk_modDatabase_LoadMap, 0);
 
-                    handleSpawnItemHook = ManagedHooker.HookMethod<dHandleSpawnItem>(typeof(client.modHandleData), "HandleSpawnItem", hk_modHandleData_HandleSpawnItem, 0);
-
-                    /*
                     handleDataHook = ManagedHooker.HookMethod<dHandleData>(typeof(client.modHandleData), "HandleData", hk_modHandleData_HandleData, 0);
                     sendDataHook = ManagedHooker.HookMethod<dSendData>(typeof(client.modClientTCP), "SendData", hk_modClientTCP_SendData, 0);
-                    */
                 }
                 catch (Exception ex)
                 {
@@ -188,18 +183,6 @@ namespace NinMods
                     Logger.Log.WriteException("NinMods.Main", "AttemptRehooking", ex);
                 }
             }
-            if (handleSpawnItemHook == null)
-            {
-                try
-                {
-                    handleSpawnItemHook = ManagedHooker.HookMethod<dHandleSpawnItem>(typeof(client.modHandleData), "HandleSpawnItem", hk_modHandleData_HandleSpawnItem, 0);
-                }
-                catch (Exception ex)
-                {
-                    Logger.Log.WriteException("NinMods.Main", "AttemptRehooking", ex);
-                }
-            }
-            /*
             if (handleDataHook == null)
             {
                 try
@@ -222,7 +205,50 @@ namespace NinMods
                     Logger.Log.WriteException("NinMods.Main", "AttemptRehooking", ex);
                 }
             }
-            */
+        }
+
+        public static void CheckNewItemDrops()
+        {
+            client.modTypes.PlayerRec bot = NinMods.Bot.BotUtils.GetSelf();
+
+            List<Vector2i> newItemLocations = new List<Vector2i>();
+            for (int itemIndex = 1; itemIndex <= 255; itemIndex++)
+            {
+                client.modTypes.MapItemRec mapItem = client.modTypes.MapItem[itemIndex];
+                if (NinMods.Main.lastFrameMapItemIndexByItemNum.ContainsKey(itemIndex))
+                {
+                    if ((lastFrameMapItemIndexByItemNum[itemIndex] != mapItem.num) && (mapItem.num > 0) && (mapItem.PlayerName.Trim() == bot.Name.Trim()))
+                    {
+                        newItemLocations.Add(new Vector2i(mapItem.X, mapItem.Y));
+                        lastFrameMapItemIndexByItemNum[itemIndex] = mapItem.num;
+                        Logger.Log.Write("NinMods.Main", "CheckNewItemDrops", $"Saw new item take place of old index " +
+                            $"(idx {itemIndex}, itemNum {mapItem.num})" +
+                            $"\n\t-itemLoc ({mapItem.X}, {mapItem.Y})" +
+                            $"\n\t-itemPlayer {mapItem.PlayerName.Trim()}" +
+                            $"\n\t-itemMvalue {mapItem.mvalue}", Logger.ELogType.Info, null, true);
+                    }
+                }
+                else
+                {
+                    // it could be that the item existed before we loaded in and another player just picked that item up
+                    // so we check that it's a valid item and belongs to us before adding it to injection queue
+                    // but even if it's not a valid item we want to add its index to the lastFrame collection
+                    if ((mapItem.num > 0) && (mapItem.PlayerName.Trim() == bot.Name.Trim()))
+                    {
+                        newItemLocations.Add(new Vector2i(mapItem.X, mapItem.Y));
+                    }
+                    lastFrameMapItemIndexByItemNum.Add(itemIndex, mapItem.num);
+                    Logger.Log.Write("NinMods.Main", "CheckNewItemDrops", $"Saw entirely new item " +
+                        $"(idx {itemIndex}, itemNum {mapItem.num})" +
+                        $"\n\t-itemLoc ({mapItem.X}, {mapItem.Y})" +
+                        $"\n\t-itemPlayer {mapItem.PlayerName.Trim()}" +
+                        $"\n\t-itemMvalue {mapItem.mvalue}", Logger.ELogType.Info, null, true);
+                }
+            }
+            foreach (Vector2i newItemLocation in newItemLocations)
+            {
+                farmBot.InjectEvent(Bot.FarmBot.EBotEvent.ItemDrop, (object)newItemLocation);
+            }
         }
 
         // the heart of the bot. this runs every tick on the game's thread.
@@ -234,6 +260,7 @@ namespace NinMods
                 Logger.Log.Write("NinMods.Main", "hk_modGameLogic_GameLoop", "Successfully hooked!", Logger.ELogType.Info, null, true);
             }
             AttemptRehooking();
+            CheckNewItemDrops();
             try
             {
                 if (NinMods.Main.frmPlayerStats == null)
@@ -501,46 +528,6 @@ namespace NinMods
             }
         }
 
-        // for telling the bot to pick up an item drop
-        public static void hk_modHandleData_HandleSpawnItem(int Index, byte[] data, int StartAddr, int ExtraVar)
-        {
-            if (NinMods.Main.handleSpawnItemHook == null) return;
-
-            if (NinMods.Main.handleSpawnItemFirstRun == true)
-            {
-                NinMods.Main.handleSpawnItemFirstRun = false;
-                Logger.Log.Write("NinMods.Main", "hk_modHandleData_HandleSpawnItem", "Successfully hooked!", Logger.ELogType.Info, null, true);
-            }
-            Logger.Log.Write("NinMods.Main", "hk_modHandleData_HandleSpawnItem", "Calling original HandleSpawnItem function", Logger.ELogType.Info, null, true);
-            NinMods.Main.handleSpawnItemHook.CallOriginalFunction(typeof(void), Index, data, StartAddr, ExtraVar);
-            /*
-            Logger.Log.Write("NinMods.Main", "hk_modHandleData_HandleSpawnItem", "Sending spawned item into farmbot", Logger.ELogType.Info, null, true);
-            // NOTE:
-            // clsBuffer doesn't modify the original data buffer, so this is perfectly valid even after calling the original game function
-            client.clsBuffer clsBuffer2 = new client.clsBuffer(data);
-            int num = clsBuffer2.ReadLong();
-            if (client.modTypes.MapItem[num].num > 0)
-            {
-                try
-                {
-                    client.modTypes.ItemRec item = client.modTypes.Item[client.modTypes.MapItem[num].num];
-                    Logger.Log.Write("NinMods.Main", "hk_modHandleData_HandleSpawnItem", $"Saw spawned item '{item.Name}' (ID: {num})", Logger.ELogType.Info, null, true);
-                }
-                catch (Exception ex)
-                {
-                    Logger.Log.WriteException("NinMods.Main", "hk_modHandleData_HandleSpawnItem", ex);
-                }
-                Vector2i itemLocation = new Vector2i(client.modTypes.MapItem[num].X, client.modTypes.MapItem[num].Y);
-                farmBot.InjectEvent(Bot.FarmBot.EBotEvent.ItemDrop, itemLocation);
-            }
-            else
-            {
-                Logger.Log.Write("NinMods.Main", "hk_modHandleData_HandleSpawnItem", "Saw invalid spawned item?", Logger.ELogType.Info);
-            }
-            */
-        }
-
-        /*
         // for logging packets that we receive from the server (and for notifying the bot of certain ones)
         public static void hk_modHandleData_HandleData(byte[] data)
         {
@@ -574,6 +561,5 @@ namespace NinMods
 
             NinMods.Main.sendDataHook.CallOriginalFunction(typeof(void), data, auth);
         }
-        */
     }
 }

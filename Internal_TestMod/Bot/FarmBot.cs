@@ -165,11 +165,13 @@ namespace NinMods.Bot
                     {
                         if (currentState == EBotState.AttackingTarget)
                         {
+                            Logger.Log.Write("FarmBot", "InjectEvent", $"Enqueuing {eventType} event because we are in an uninterruptible state");
                             injectedEventQueue.Enqueue(new InjectedEventData(eventType, eventData));
                             return;
                         }
                         else
                         {
+                            Logger.Log.Write("FarmBot", "InjectEvent", $"Interrupting current state to handle {eventType} event");
                             currentCommand = new BotCommand_CollectItem((Vector2i)eventData);
                             currentState = EBotState.CollectingItem;
                         }
