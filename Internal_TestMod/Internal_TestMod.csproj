@@ -80,6 +80,7 @@
     <Compile Include="AStar Pathfinding\PriorityQueue.cs" />
     <Compile Include="AStar Pathfinding\SquareGrid.cs" />
     <Compile Include="Bot\BotCommand_Attack.cs" />
+    <Compile Include="Bot\BotCommand_ChargeChakra.cs" />
     <Compile Include="Bot\BotCommand_CollectItem.cs" />
     <Compile Include="Bot\BotCommand_Heal.cs" />
     <Compile Include="Bot\BotCommand_MoveToStaticPoint.cs" />

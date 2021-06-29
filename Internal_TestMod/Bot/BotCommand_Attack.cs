@@ -19,6 +19,8 @@ namespace NinMods.Bot
         // cache optimization
         Vector2i targetLocation = new Vector2i();
 
+        float spellCastTimer = 0f;
+
         public BotCommand_Attack(client.modTypes.MapNpcRec target, int targetIndex)
         {
             this.target = target;
@@ -59,37 +61,48 @@ namespace NinMods.Bot
                 // NOTE:
                 // doing this here instead of in ctor because another player / another hostile mob might attack us and force change our target which would break the bot logic
                 // also, it is necessary to have a target to cast spells
-                client.modGlobals.myTarget = targetIndex;
-                // NOTE:
-                // bot only targets NPCs for now (and probably forever)
-                client.modGlobals.myTargetType = Constants.TARGET_TYPE_NPC;
+                CheckTargetChanged();
 
                 // check if we can cast any of our hotbar spells
                 // NOTE:
                 // we can actually skip the hotbar part and just cast directly from the spellbook
                 // BUT keeping it this way allows us to kind of prioritize which spells should be cast (by placing those spells on the lower parts of the hotbar)
-                for (int hotbarIndex = 1; hotbarIndex <= 20; hotbarIndex++)
+                if (client.modGlobals.Tick >= spellCastTimer)
                 {
-                    // sType of 2 indicates it's a spell (aka jutsu)
-                    if (client.modGlobals.Hotbar[hotbarIndex].sType == 2)
+                    Logger.Log.Write("BotCommand_Attack", "Perform", $"Got permission to cast a spell this tick (target[{targetIndex}]: {target.num}, hp: {target.Vital[(int)client.modEnumerations.Vitals.HP]}) " +
+                        $"(npc: {client.modTypes.Npc[target.num].Name.Trim()}, {client.modTypes.Npc[target.num].HP})");
+                    for (int hotbarIndex = 1; hotbarIndex <= 20; hotbarIndex++)
                     {
-                        for (int spellIndex = 1; spellIndex <= 40; spellIndex++)
+                        // sType of 2 indicates it's a spell (aka jutsu)
+                        if (client.modGlobals.Hotbar[hotbarIndex].sType == 2)
                         {
-                            //Logger.Log.Write("BotCommand_Attack", "Perform", $"Saw PlayerSpells[{spellIndex}]={client.modGlobals.PlayerSpells[spellIndex]}, while Hotbar[{hotbarIndex}].Slot={client.modGlobals.Hotbar[hotbarIndex].Slot}");
-                            if (client.modGlobals.PlayerSpells[spellIndex] == client.modGlobals.Hotbar[hotbarIndex].Slot)
+                            for (int spellIndex = 1; spellIndex <= 40; spellIndex++)
                             {
-                                if (BotUtils.CanCastSpell(spellIndex))
+                                //Logger.Log.Write("BotCommand_Attack", "Perform", $"Saw PlayerSpells[{spellIndex}]={client.modGlobals.PlayerSpells[spellIndex]}, while Hotbar[{hotbarIndex}].Slot={client.modGlobals.Hotbar[hotbarIndex].Slot}");
+                                if (client.modGlobals.PlayerSpells[spellIndex] == client.modGlobals.Hotbar[hotbarIndex].Slot)
                                 {
-                                    BotUtils.CastSpell(spellIndex);
+                                    Logger.Log.Write("BotCommand_Attack", "Perform", $"Saw PlayerSpells[{spellIndex}] from Hotbar[{hotbarIndex}], checking if we can cast it");
+                                    if (BotUtils.CanCastSpell(spellIndex))
+                                    {
+                                        BotUtils.CastSpell(spellIndex);
+                                        // WARNING:
+                                        // i think the server has a bug where it doesn't handle spellcasts properly if they're sent within a certain timeframe
+                                        // so we create our own little timer to simulate the natural delay between pressing keys / receiving confirmation from server
+                                        spellCastTimer = client.modGlobals.Tick + 200f;
+                                        Logger.Log.Write("BotCommand_Attack", "Perform", $"Cast spell {spellIndex}");
+                                        // TO-DO:
+                                        // revisit this. is it actually necessary or did i just have a bug elsewhere?
+                                        // NOTE:
+                                        // return immediately otherwise we get in a weird loop where we're constantly trying to cast the same spell. need to let it finish!
+                                        return true;
+                                    }
                                 }
-                                break;
                             }
                         }
                     }
                 }
                 // NOTE:
                 // is it ever possible to do a basic attack immediately (like literally same frame) after casting a spell?
-                // guess we'll find out!
                 if (BotUtils.CanAttack())
                 {
                     isChasingByPath = false;
@@ -110,6 +123,18 @@ namespace NinMods.Bot
                 }
             }
             return true;
+        }
+
+        void CheckTargetChanged()
+        {
+            if (client.modGlobals.myTarget != targetIndex)
+            {
+                client.modGlobals.myTarget = targetIndex;
+                // NOTE:
+                // bot only targets NPCs for now (and probably forever)
+                client.modGlobals.myTargetType = Constants.TARGET_TYPE_NPC;
+                BotUtils.SetTarget(targetIndex, Constants.TARGET_TYPE_NPC);
+            }
         }
 
         bool ChaseTarget(Vector2i botLocation, double dist)

@@ -79,6 +79,15 @@ namespace NinMods.Bot
             return path;
         }
 
+		public static void SetTarget(int targetIndex, int targetType = Constants.TARGET_TYPE_NPC)
+        {
+			client.clsBuffer clsBuffer2 = new client.clsBuffer();
+			clsBuffer2.WriteLong(118);
+			clsBuffer2.WriteByte((byte)targetType);
+			clsBuffer2.WriteLong(targetIndex);
+			client.modClientTCP.SendData(clsBuffer2.ToArray());
+		}
+
         public static bool MoveDir(Vector2i tileDirection)
         {
             Vector2i botLocation = GetSelfLocation();
@@ -162,6 +171,25 @@ namespace NinMods.Bot
         }
 
 		// NOTE:
+		// this only needs to be called once
+		public static void ChargeChakra()
+        {
+			// NOTE:
+			// the game does this even if it's not currently casting anything
+			client.modClientTCP.BreakSpell();
+
+			client.modTypes.PlayerRec bot = GetSelf();
+			if (bot.ChargeTimer == 0)
+			{
+				bot.ChargeTimer = (int)client.modGlobals.Tick;
+			}
+			bot.ChargeChakra = true;
+			client.clsBuffer clsBuffer2 = new client.clsBuffer();
+			clsBuffer2.WriteLong(104);
+			client.modClientTCP.SendData(clsBuffer2.ToArray());
+		}
+
+		// NOTE:
 		// this takes the index into the modGlobals.PlayerSpells array, *NOT* the spellID (aka the index into the modTypes.Spell array)
 		public static void CastSpell(int spellIndex)
         {
@@ -173,6 +201,21 @@ namespace NinMods.Bot
 				client.modGlobals.StunTimer = (int)(client.modGlobals.Tick + 100);
 			}
 			client.modClientTCP.SendCast((byte)spellIndex);
+		}
+
+		// NOTE:
+		// modGameLogic.CanInteract() - this is used by CheckAttack() and CheckCharge()
+		// because we have to set modGlobals.StunDuration to get chakra charging working, we need to modify this to ignore StunDuration.
+		// basically, we'll use this in our own CanChargeChakra() but we should use the game's modGameLogic.CanInteract() in all other cases.
+		public static bool CanInteract(bool Ignore = false)
+        {
+			if ((client.modGlobals.InEvent) || (client.modGlobals.InNpcChat) || (client.modTypes.Player[client.modGlobals.MyIndex].DeathTimer > 0) ||
+				(client.modGlobals.InBank) || (client.modGlobals.InShop > 0) || (client.modGlobals.InTrade > 0) || (client.modGlobals.InSpecialShop) ||
+				(!Ignore && client.modGlobals.SpellBuffer > 0))
+			{
+				return false;
+			}
+			return true;
 		}
 
         public static bool CanMove()
@@ -209,6 +252,17 @@ namespace NinMods.Bot
 
             return true;
         }
+
+		public static bool CanChargeChakra()
+        {
+			client.modTypes.PlayerRec bot = GetSelf();
+			return ((bot.ChargeChakra == false)
+				&& (bot.Village == 3 || bot.Village == 13 || client.modTypes.Map.Tile[bot.X, bot.Y].Type != 17)
+				&& (((double)(bot.ChargeTimer + 500) - (double)bot.Stat[5] * 0.2 * 5.0) <= (double)client.modGlobals.Tick)
+				&& (CanInteract(Ignore: true))
+				&& (bot.Vital[(int)client.modEnumerations.Vitals.MP] != bot.MaxVital[(int)client.modEnumerations.Vitals.MP]));
+
+		}
 
 		// NOTE:
 		// this takes the index into the modGlobals.PlayerSpells array, *NOT* the spellID (aka the index into the modTypes.Spell array)

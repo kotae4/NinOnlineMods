@@ -115,8 +115,10 @@ namespace NinMods
 
                     handleSpawnItemHook = ManagedHooker.HookMethod<dHandleSpawnItem>(typeof(client.modHandleData), "HandleSpawnItem", hk_modHandleData_HandleSpawnItem, 0);
 
+                    /*
                     handleDataHook = ManagedHooker.HookMethod<dHandleData>(typeof(client.modHandleData), "HandleData", hk_modHandleData_HandleData, 0);
                     sendDataHook = ManagedHooker.HookMethod<dSendData>(typeof(client.modClientTCP), "SendData", hk_modClientTCP_SendData, 0);
+                    */
                 }
                 catch (Exception ex)
                 {
@@ -151,6 +153,11 @@ namespace NinMods
             MapPathfindingGrid = new SquareGrid(client.modTypes.Map.Tile, client.modTypes.Map.MaxX, client.modTypes.Map.MaxY);
 
             Logger.Log.Write("NinMods.Main", "Initialize", "Installing hooks...", Logger.ELogType.Info, null, false);
+            // NOTE:
+            // this hook keeps crashing, so i'm going to try forcing JIT compilation here and maybe that'll fix it?
+            // logs show minhook pointing to clr!ThePreStub or something, which makes me think it's not JIT compiled by time minhook gets to it
+            // although... that shouldn't crash it on the first instance. only from the second on. and that isn't the case. i don't know.
+            //hk_modHandleData_HandleSpawnItem(0, null, 0, 0);
             SetupManagedHookerHooks();
             Logger.Log.Write("NinMods.Main", "Initialize", "Done installing hooks!", Logger.ELogType.Info, null, true);
         }
@@ -192,6 +199,7 @@ namespace NinMods
                     Logger.Log.WriteException("NinMods.Main", "AttemptRehooking", ex);
                 }
             }
+            /*
             if (handleDataHook == null)
             {
                 try
@@ -214,6 +222,7 @@ namespace NinMods
                     Logger.Log.WriteException("NinMods.Main", "AttemptRehooking", ex);
                 }
             }
+            */
         }
 
         // the heart of the bot. this runs every tick on the game's thread.
@@ -483,7 +492,7 @@ namespace NinMods
             }
             if (index != client.modGlobals.MyIndex)
             {
-                Logger.Log.Write("NinMods.Main", "hk_modDatabase_SetPlayerAccess", "saw player[" + index.ToString() + "] set to access level (" + access.ToString() + ")");
+                Logger.Log.Write("NinMods.Main", "hk_modDatabase_SetPlayerAccess", $"saw player[{index}]'{client.modTypes.Player[index].Name}' set to access level ({(NinMods.Utilities.GameUtils.EPlayerAccessType)access}[{access}])");
                 NinMods.Main.setPlayerAcessHook.CallOriginalFunction(typeof(void), index, access);
             }
             else
@@ -495,52 +504,43 @@ namespace NinMods
         // for telling the bot to pick up an item drop
         public static void hk_modHandleData_HandleSpawnItem(int Index, byte[] data, int StartAddr, int ExtraVar)
         {
+            if (NinMods.Main.handleSpawnItemHook == null) return;
+
             if (NinMods.Main.handleSpawnItemFirstRun == true)
             {
                 NinMods.Main.handleSpawnItemFirstRun = false;
                 Logger.Log.Write("NinMods.Main", "hk_modHandleData_HandleSpawnItem", "Successfully hooked!", Logger.ELogType.Info, null, true);
             }
             Logger.Log.Write("NinMods.Main", "hk_modHandleData_HandleSpawnItem", "Calling original HandleSpawnItem function", Logger.ELogType.Info, null, true);
-            try
-            {
-                NinMods.Main.handleSpawnItemHook.CallOriginalFunction(typeof(void), Index, data, StartAddr, ExtraVar);
-            }
-            catch (Exception ex)
-            {
-                Logger.Log.WriteException("NinMods.Main", "hk_modHandleData_HandleSpawnItem", ex);
-            }
+            NinMods.Main.handleSpawnItemHook.CallOriginalFunction(typeof(void), Index, data, StartAddr, ExtraVar);
+            /*
             Logger.Log.Write("NinMods.Main", "hk_modHandleData_HandleSpawnItem", "Sending spawned item into farmbot", Logger.ELogType.Info, null, true);
             // NOTE:
             // clsBuffer doesn't modify the original data buffer, so this is perfectly valid even after calling the original game function
-            try
+            client.clsBuffer clsBuffer2 = new client.clsBuffer(data);
+            int num = clsBuffer2.ReadLong();
+            if (client.modTypes.MapItem[num].num > 0)
             {
-                client.clsBuffer clsBuffer2 = new client.clsBuffer(data);
-                int num = clsBuffer2.ReadLong();
-                if (client.modTypes.MapItem[num].num > 0)
+                try
                 {
-                    try
-                    {
-                        client.modTypes.ItemRec item = client.modTypes.Item[client.modTypes.MapItem[num].num];
-                        Logger.Log.Write("NinMods.Main", "hk_modHandleData_HandleSpawnItem", $"Saw spawned item '{item.Name}' (ID: {num})", Logger.ELogType.Info, null, true);
-                    }
-                    catch (Exception ex)
-                    {
-                        Logger.Log.WriteException("NinMods.Main", "hk_modHandleData_HandleSpawnItem", ex);
-                    }
-                    Vector2i itemLocation = new Vector2i(client.modTypes.MapItem[num].X, client.modTypes.MapItem[num].Y);
-                    farmBot.InjectEvent(Bot.FarmBot.EBotEvent.ItemDrop, itemLocation);
+                    client.modTypes.ItemRec item = client.modTypes.Item[client.modTypes.MapItem[num].num];
+                    Logger.Log.Write("NinMods.Main", "hk_modHandleData_HandleSpawnItem", $"Saw spawned item '{item.Name}' (ID: {num})", Logger.ELogType.Info, null, true);
                 }
-                else
+                catch (Exception ex)
                 {
-                    Logger.Log.Write("NinMods.Main", "hk_modHandleData_HandleSpawnItem", "Saw invalid spawned item?", Logger.ELogType.Info);
+                    Logger.Log.WriteException("NinMods.Main", "hk_modHandleData_HandleSpawnItem", ex);
                 }
+                Vector2i itemLocation = new Vector2i(client.modTypes.MapItem[num].X, client.modTypes.MapItem[num].Y);
+                farmBot.InjectEvent(Bot.FarmBot.EBotEvent.ItemDrop, itemLocation);
             }
-            catch (Exception outerEx)
+            else
             {
-                Logger.Log.WriteException("NinMods.Main", "hk_modHandleData_HandleSpawnItem", outerEx);
+                Logger.Log.Write("NinMods.Main", "hk_modHandleData_HandleSpawnItem", "Saw invalid spawned item?", Logger.ELogType.Info);
             }
+            */
         }
 
+        /*
         // for logging packets that we receive from the server (and for notifying the bot of certain ones)
         public static void hk_modHandleData_HandleData(byte[] data)
         {
@@ -574,5 +574,6 @@ namespace NinMods
 
             NinMods.Main.sendDataHook.CallOriginalFunction(typeof(void), data, auth);
         }
+        */
     }
 }

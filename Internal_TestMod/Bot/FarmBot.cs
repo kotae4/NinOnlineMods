@@ -121,26 +121,29 @@ namespace NinMods.Bot
                         // or we finished picking up an item (which could happen immediately after attacking - so we want to check our health still)
                         client.modTypes.PlayerRec bot = BotUtils.GetSelf();
                         float healthPercentage = (float)bot.Vital[(int)client.modEnumerations.Vitals.HP] / (float)bot.MaxVital[(int)client.modEnumerations.Vitals.HP];
+                        float manaPercentage = (float)bot.Vital[(int)client.modEnumerations.Vitals.MP] / (float)bot.MaxVital[(int)client.modEnumerations.Vitals.MP];
                         // TO-DO:
                         // don't hardcode this
                         if (healthPercentage <= 0.35f)
                         {
                             currentCommand = new BotCommand_Heal();
                             currentState = EBotState.Healing;
+                            break;
                         }
-                        // TO-DO:
-                        // check chakra (if we want to support jutsu's - probably do)
-                        else
+                        if ((manaPercentage <= 0.2f) || (bot.Vital[(int)client.modEnumerations.Vitals.MP] < 10))
                         {
-                            GetTarget();
-                            if (targetMonster != null)
-                            {
-                                // if we have a target, start attacking it
-                                // NOTE:
-                                // this will also move to the target and chase it if it tries running
-                                currentCommand = new BotCommand_Attack(targetMonster, targetMonsterIndex);
-                                currentState = EBotState.AttackingTarget;
-                            }
+                            currentCommand = new BotCommand_ChargeChakra();
+                            currentState = EBotState.ChargingChakra;
+                            break;
+                        }
+                        GetTarget();
+                        if (targetMonster != null)
+                        {
+                            // if we have a target, start attacking it
+                            // NOTE:
+                            // this will also move to the target and chase it if it tries running
+                            currentCommand = new BotCommand_Attack(targetMonster, targetMonsterIndex);
+                            currentState = EBotState.AttackingTarget;
                         }
                         break;
                     }

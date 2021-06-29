@@ -22,5 +22,19 @@ namespace NinMods.Utilities
             // modText.RenderText(ref modText.Font[1], Strings.Trim("X: " + Convert.ToString(modGlobals.GlobalX) + " Y: " + Convert.ToString(modGlobals.GlobalY)), 9, num + modText.CharHeight(ref modText.Font[1]) * 4, 14, shadow: true, 14, GameWindowForm.Window);
             return new Vector2i(client.modGlobals.CurX, client.modGlobals.CurY);
         }
+
+        public enum EPlayerAccessType
+        {
+            ACCESS_FREE = 0,
+            ACCESS_DONOR = 1,
+            ACCESS_MEDIA = 3,
+            ACCESS_TRAILGM = 4,
+            ACCESS_MODERATOR = 2,
+            ACCESS_GAMEMASTER = 5,
+            ACCESS_GAMEARTIST = 6,
+            ACCESS_DEVELOPER = 7,
+            ACCESS_ADMIN = 8
+        }
+
     }
 }
