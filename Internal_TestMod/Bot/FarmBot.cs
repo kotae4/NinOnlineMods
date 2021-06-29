@@ -9,6 +9,17 @@ namespace NinMods.Bot
     // probably have this class act as a collection of relevant bot commands working toward a specific purpose (farming monsters in this case)
     public class FarmBot
     {
+        class InjectedEventData
+        {
+            public EBotEvent eventType;
+            public object eventData;
+            public InjectedEventData(EBotEvent _event, object _data)
+            {
+                eventType = _event;
+                eventData = _data;
+            }
+        }
+
         bool HasFailedCatastrophically = false;
 
         enum EBotState
@@ -18,11 +29,23 @@ namespace NinMods.Bot
             MovingToHotspot,
             AttackingTarget,
             Healing,
-            ChargingChakra
+            ChargingChakra,
+            CollectingItem
+        }
+
+        public enum EBotEvent
+        {
+            ItemDrop
         }
 
         EBotState currentState = EBotState.Idle;
         IBotCommand currentCommand = null;
+        // this is used for events that need to be handled but shouldn't interrupt the current state
+        // in other words, the current state is more important than the injected event
+        // in cases where the current state is *less* important, then we simply switch states (interrupting the current state) to handle the event right away
+        // in those cases, we do that in the InjectEvent() method directly and wouldn't use this Queue<T>
+        Queue<InjectedEventData> injectedEventQueue = new Queue<InjectedEventData>();
+
 
         client.modTypes.MapNpcRec targetMonster = null;
         int targetMonsterIndex = 0;
@@ -52,6 +75,20 @@ namespace NinMods.Bot
         void NextState()
         {
             EBotState oldState = currentState;
+            if (injectedEventQueue.Count > 0)
+            {
+                InjectedEventData injectedEvent = injectedEventQueue.Dequeue();
+                switch (injectedEvent.eventType)
+                {
+                    case EBotEvent.ItemDrop:
+                        {
+                            currentCommand = new BotCommand_CollectItem((Vector2i)injectedEvent.eventData);
+                            currentState = EBotState.CollectingItem;
+                            Logger.Log.Write("FarmBot", "NextState", $"Moved to injected state {currentState} from {oldState}");
+                            return;
+                        }
+                }
+            }
             // currentState is the 'finished' state, so we're determing what to do next
             switch (currentState)
             {
@@ -77,8 +114,11 @@ namespace NinMods.Bot
                     }
                 case EBotState.AttackingTarget:
                 case EBotState.Idle:
-                {
+                case EBotState.CollectingItem:
+                    {
                         // we have killed the target, so check if we need to heal / charge chakra, do that if necessary, otherwise move to closest target
+                        // or we're in an idle state in which case we should check our health before engaging
+                        // or we finished picking up an item (which could happen immediately after attacking - so we want to check our health still)
                         client.modTypes.PlayerRec bot = BotUtils.GetSelf();
                         float healthPercentage = (float)bot.Vital[(int)client.modEnumerations.Vitals.HP] / (float)bot.MaxVital[(int)client.modEnumerations.Vitals.HP];
                         // TO-DO:
@@ -108,6 +148,33 @@ namespace NinMods.Bot
             Logger.Log.Write("FarmBot", "NextState", $"Moved to state {currentState} from {oldState}");
         }
 
+        public void InjectEvent(EBotEvent eventType, object eventData)
+        {
+            // currently, the only event is the item drop event, and the only state that is more important than that is the 'Attacking' state
+            // so, if we're currently 'Attacking' then we add this event to the 'injectedEventQueue' and we'll check that when we complete the 'Attacking' state
+            // if we're NOT currently 'Attacking' then we can transition directly to the 'CollectingItem' state
+            // NOTE:
+            // it was at this point that i realized a proper state machine implementation would be invaluable :)
+            // more closely tying events, states (and commands - the logic of a state), and the conditionals that glue it together would be great
+            switch (eventType)
+            {
+                case EBotEvent.ItemDrop:
+                    {
+                        if (currentState == EBotState.AttackingTarget)
+                        {
+                            injectedEventQueue.Enqueue(new InjectedEventData(eventType, eventData));
+                            return;
+                        }
+                        else
+                        {
+                            currentCommand = new BotCommand_CollectItem((Vector2i)eventData);
+                            currentState = EBotState.CollectingItem;
+                        }
+                        break;
+                    }
+            }
+        }
+
         public void Update()
         {
             if (HasFailedCatastrophically)
@@ -118,7 +185,16 @@ namespace NinMods.Bot
 
             if (currentCommand != null)
             {
-                HasFailedCatastrophically = !(currentCommand.Perform());
+                if (currentCommand.Perform() == false)
+                {
+                    // if the current command fails for some reason then switch to idle and hope we don't face the same issue repeatedly
+                    // this is definitely bad, but i want to get my character leveled as quickly as possible so i can develop the bot further
+                    // so i'll risk getting stuck in a nasty loop over not having the chance to recover at all
+                    currentState = EBotState.Idle;
+                    currentCommand = null;
+                    NextState();
+                    return;
+                }
                 if (currentCommand.IsComplete())
                 {
                     currentCommand = null;

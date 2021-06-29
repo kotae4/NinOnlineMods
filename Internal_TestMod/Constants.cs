@@ -77,5 +77,35 @@ namespace NinMods
 		public const byte MOVING_DIAGONAL = 3;
 
 		public const byte MOVING_KICKBACK = 4;
+
+		// === TARGETING ===
+		public const byte TARGET_TYPE_NONE = 0;
+
+		public const byte TARGET_TYPE_PLAYER = 1;
+
+		public const byte TARGET_TYPE_NPC = 2;
+
+		public const byte TARGET_TYPE_CLONE = 3;
+
+		public const byte TARGET_TYPE_EVENT = 4;
+
+		// === SPELLS (JUTSUS) ===
+		public const byte SPELL_TYPE_DAMAGEHP = 0;
+
+		public const byte SPELL_TYPE_DAMAGEMP = 1;
+
+		public const byte SPELL_TYPE_WARP = 2;
+
+		public const byte SPELL_TYPE_BUFF = 3;
+
+		public const byte SPELL_TYPE_PROJECTILE = 4;
+
+		public const byte SPELL_TYPE_REVIVE = 5;
+
+		public const byte SPELL_TYPE_WARPTOTARGET = 6;
+
+		public const byte SPELL_TYPE_RECALL = 7;
+
+		public const byte SPELL_TYPE_SUMMON = 8;
 	}
 }

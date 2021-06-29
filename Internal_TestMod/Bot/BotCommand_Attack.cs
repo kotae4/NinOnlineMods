@@ -54,23 +54,60 @@ namespace NinMods.Bot
                     return false;
                 }
             }
-            else if (BotUtils.CanAttack())
+            else
             {
-                isChasingByPath = false;
-                path = null;
-                Logger.Log.Write("BotCommand_Attack", "Perform", $"Got permission to perform attack this tick (target[{targetIndex}]: {target.num}, hp: {target.Vital[(int)client.modEnumerations.Vitals.HP]}) " +
-                    $"(npc: {client.modTypes.Npc[target.num].Name.Trim()}, {client.modTypes.Npc[target.num].HP})");
+                // NOTE:
+                // doing this here instead of in ctor because another player / another hostile mob might attack us and force change our target which would break the bot logic
+                // also, it is necessary to have a target to cast spells
+                client.modGlobals.myTarget = targetIndex;
+                // NOTE:
+                // bot only targets NPCs for now (and probably forever)
+                client.modGlobals.myTargetType = Constants.TARGET_TYPE_NPC;
 
-                Vector2i tileDirection = targetLocation - botLocation;
-                if (BotUtils.FaceDir(tileDirection) == false)
+                // check if we can cast any of our hotbar spells
+                // NOTE:
+                // we can actually skip the hotbar part and just cast directly from the spellbook
+                // BUT keeping it this way allows us to kind of prioritize which spells should be cast (by placing those spells on the lower parts of the hotbar)
+                for (int hotbarIndex = 1; hotbarIndex <= 20; hotbarIndex++)
                 {
-                    // NOTE:
-                    // assumes error state is from inability to parse direction (the function might return false from some other condition in the future)
-                    Logger.Log.WriteError("BotCommand_Attack", "Perform", $"Could not get direction out of {tileDirection} (self: {botLocation}; target: {targetLocation})");
-                    hasFailedCatastrophically = true;
-                    return false;
+                    // sType of 2 indicates it's a spell (aka jutsu)
+                    if (client.modGlobals.Hotbar[hotbarIndex].sType == 2)
+                    {
+                        for (int spellIndex = 1; spellIndex <= 40; spellIndex++)
+                        {
+                            //Logger.Log.Write("BotCommand_Attack", "Perform", $"Saw PlayerSpells[{spellIndex}]={client.modGlobals.PlayerSpells[spellIndex]}, while Hotbar[{hotbarIndex}].Slot={client.modGlobals.Hotbar[hotbarIndex].Slot}");
+                            if (client.modGlobals.PlayerSpells[spellIndex] == client.modGlobals.Hotbar[hotbarIndex].Slot)
+                            {
+                                if (BotUtils.CanCastSpell(spellIndex))
+                                {
+                                    BotUtils.CastSpell(spellIndex);
+                                }
+                                break;
+                            }
+                        }
+                    }
                 }
-                BotUtils.BasicAttack();
+                // NOTE:
+                // is it ever possible to do a basic attack immediately (like literally same frame) after casting a spell?
+                // guess we'll find out!
+                if (BotUtils.CanAttack())
+                {
+                    isChasingByPath = false;
+                    path = null;
+                    Logger.Log.Write("BotCommand_Attack", "Perform", $"Got permission to perform attack this tick (target[{targetIndex}]: {target.num}, hp: {target.Vital[(int)client.modEnumerations.Vitals.HP]}) " +
+                        $"(npc: {client.modTypes.Npc[target.num].Name.Trim()}, {client.modTypes.Npc[target.num].HP})");
+
+                    Vector2i tileDirection = targetLocation - botLocation;
+                    if (BotUtils.FaceDir(tileDirection) == false)
+                    {
+                        // NOTE:
+                        // assumes error state is from inability to parse direction (the function might return false from some other condition in the future)
+                        Logger.Log.WriteError("BotCommand_Attack", "Perform", $"Could not get direction out of {tileDirection} (self: {botLocation}; target: {targetLocation})");
+                        hasFailedCatastrophically = true;
+                        return false;
+                    }
+                    BotUtils.BasicAttack();
+                }
             }
             return true;
         }

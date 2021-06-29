@@ -51,7 +51,7 @@ namespace NinMods.Bot
                     nearestMonsterIndex = npcIndex;
                 }
             }
-            return distance != double.MaxValue;
+            return nearestMonster != null;
         }
 
         public static Stack<Vector2i> GetPathToMonster(client.modTypes.MapNpcRec monster, Vector2i fromPos)
@@ -154,6 +154,27 @@ namespace NinMods.Bot
             client.modGlobals.TimeSinceAttack = (int)client.modGlobals.Tick;
         }
 
+        public static void CollectItem()
+        {
+            client.clsBuffer clsBuffer2 = new client.clsBuffer();
+            clsBuffer2.WriteLong(31);
+            client.modClientTCP.SendData(clsBuffer2.ToArray());
+        }
+
+		// NOTE:
+		// this takes the index into the modGlobals.PlayerSpells array, *NOT* the spellID (aka the index into the modTypes.Spell array)
+		public static void CastSpell(int spellIndex)
+        {
+			int spellID = client.modGlobals.PlayerSpells[spellIndex];
+			client.modTypes.SpellRec spell = client.modTypes.Spell[spellID];
+			if (spell.CastTime == 0 && spell.EndCastDuration > 0)
+			{
+				client.modGlobals.StunDuration = spell.EndCastDuration;
+				client.modGlobals.StunTimer = (int)(client.modGlobals.Tick + 100);
+			}
+			client.modClientTCP.SendCast((byte)spellIndex);
+		}
+
         public static bool CanMove()
         {
             if (client.modGlobals.tmr25 >= client.modGlobals.Tick)
@@ -188,6 +209,217 @@ namespace NinMods.Bot
 
             return true;
         }
+
+		// NOTE:
+		// this takes the index into the modGlobals.PlayerSpells array, *NOT* the spellID (aka the index into the modTypes.Spell array)
+		public static bool CanCastSpell(int spellIndex)
+		{
+			// oh boy this is a long one... if the dev could change modGameLogic.CastSpell(...) to return a boolean things would be so much easier.
+			bool clearedTarget = false;
+			client.modTypes.PlayerRec bot = GetSelf();
+			Vector2i botPos = GetSelfLocation();
+			if (client.modGlobals.GettingMap || spellIndex < 1 || spellIndex > 40 || client.modGlobals.SpellBuffer > 0 || client.modGlobals.StunDuration > 0 || client.modGlobals.PlayerSpells[spellIndex] <= 0 || client.modTypes.Player[client.modGlobals.MyIndex].DeathTimer > 0 || client.modGlobals.SilenceTimer > 0)
+			{
+				return false;
+			}
+			int spellID = client.modGlobals.PlayerSpells[spellIndex];
+			client.modTypes.SpellRec spell = client.modTypes.Spell[spellID];
+			if (client.modTypes.Map.Tile[bot.X, bot.Y].Type == 18)
+			{
+				return false;
+			}
+			if (client.modGlobals.SpellCD[spellIndex] > 0)
+			{
+				return false;
+			}
+			if (spell.MPCost > bot.Vital[(int)client.modEnumerations.Vitals.MP])
+			{
+				return false;
+			}
+			// TO-DO:
+			// requires myTargetType and myTarget to be set prior to calling this
+			// checks if trying to cast on a player from a certain village (some spells can only be cast on members of certain villages?)
+			if (spell.TargetVillageReq > 0 && client.modGlobals.myTargetType == 1 && client.modTypes.Player[client.modGlobals.myTarget].Village != spell.TargetVillageReq)
+			{
+				return false;
+			}
+			if (bot.Access < 7)
+			{
+				if (spell.LevelReq > bot.Level)
+				{
+					return false;
+				}
+				if (spell.ClassReq > 0 && spell.ClassReq != bot.Class)
+				{
+					return false;
+				}
+				if (spell.VillageReq > 0 && bot.Village != spell.VillageReq)
+				{
+					return false;
+				}
+				if (spell.AccessReq > bot.Access)
+				{
+					return false;
+				}
+				// NOTE:
+				// 'element' refers to elemental type masteries, i think (fire, water, wind, earth, lightning)
+				for (int elementIndex = 1; elementIndex <= 5; elementIndex++)
+				{
+					if (spell.Element[elementIndex] > 0 && bot.Element[elementIndex] != spell.Element[elementIndex])
+					{
+						return false;
+					}
+				}
+				// NOTE:
+				// 'nonelement' refers to the non-elemental type masters (medical, weapon mastery, taijutsu)
+				for (int nonElementalIndex = 1; nonElementalIndex <= 3; nonElementalIndex++)
+				{
+					if (spell.NonElement[nonElementalIndex] > 0 && bot.NonElement[nonElementalIndex] != spell.NonElement[nonElementalIndex])
+					{
+						return false;
+					}
+				}
+			}
+			// now we start checking actual spell logic. range, type of spell (buff, aoe, etc), and what direction we're facing when we cast it
+			byte maybeCastType = 0;
+			// NOTE:
+			// this is the worst ternary operator i've ever seen. never start a ternary operator with a false conditional, wtf? literally inverts the entire expression chain for no reason.
+			// b = (byte)((!modTypes.Spell[modGlobals.PlayerSpells[SpellSlot]].IsDirectional) ? ((modTypes.Spell[modGlobals.PlayerSpells[SpellSlot]].Range > 0) ? (modTypes.Spell[modGlobals.PlayerSpells[SpellSlot]].IsAoE ? 3 : 2) : (modTypes.Spell[modGlobals.PlayerSpells[SpellSlot]].IsAoE ? 1 : 0)) : (modTypes.Spell[modGlobals.PlayerSpells[SpellSlot]].IsAoE ? 5 : 4));
+			// alright, the above ternary is just so convoluted i'm going to expand it for clarity and my sanity
+			if (spell.IsDirectional)
+            {
+				if (spell.IsAoE)
+					maybeCastType = 5;
+				else 
+					maybeCastType = 4;
+			}
+			else
+            {
+				if (spell.Range > 0)
+                {
+					if (spell.IsAoE)
+						maybeCastType = 3;
+					else
+						maybeCastType = 2;
+                }
+				else
+                {
+					if (spell.IsAoE)
+						maybeCastType = 1;
+					else
+						maybeCastType = 0;
+                }
+			}
+			// ^^^^ infinitely easier to see exactly what's happening, isn't it?
+			if (spell.Type == 4)
+			{
+				maybeCastType = 0;
+			}
+			switch (maybeCastType)
+			{
+				case 2:
+				case 3:
+					// uhhh... they are checking the BuffTexture for w..........
+					// nah, not even going to question this developer's logic, not ever. not worth the brain power.
+					// NOTE:
+					// pretty sure these shouldn't be &&'s but it's how the game does it, so i'm keeping it
+					if ((client.modGlobals.myTarget == 0) && (client.modGlobals.SelfCastKeyDown == false) && (spell.Buff.BuffTexture == 0))
+					{
+						return false;
+					}
+					break;
+				case 4:
+					{
+						// optimized away 18 calls and 38 lines of code...
+						bool hasDirectionalTarget = false;
+						Vector2i spellHitPos = botPos + Vector2i.directions_Eight[bot.Dir];
+						// (game only supports 300 players online at once? actually, i bet it's 255 because the dev doesn't know what a byte is)
+						// NOTE:
+						// checks all possible players to see if they're on the tile our spell is targeting... and then sets our myTarget to 1 instead of their playerIndex because of a bug..
+						for (int i = 1; i <= 300; i++)
+						{
+							if (client.modClientTCP.IsPlaying(i) && client.modGlobals.MyIndex != i && client.modDatabase.GetPlayerMap(i) == bot.Map && client.modDatabase.GetPlayerX(i) == spellHitPos.x && client.modDatabase.GetPlayerY(i) == spellHitPos.y)
+							{
+								client.modGlobals.myTarget = i;
+								// NOTE:
+								// game code has this as 'myTarget = 1', an obvious bug. changing it here proactively because i expect it to be fixed in the client eventually.
+								client.modGlobals.myTargetType = Constants.TARGET_TYPE_PLAYER;
+								hasDirectionalTarget = true;
+								break;
+							}
+						}
+						// NOTE:
+						// if we haven't found a player target, then start looking for NPC targets too using the same logic
+						if (!hasDirectionalTarget)
+						{
+							for (int i = 1; i <= client.modGlobals.NPC_HighIndex; i++)
+							{
+								if (client.modTypes.MapNpc[i].num > 0 && client.modTypes.MapNpc[i].num <= 255 && client.modTypes.MapNpc[i].X == spellHitPos.x && client.modTypes.MapNpc[i].Y == spellHitPos.y)
+								{
+									client.modGlobals.myTarget = i;
+									client.modGlobals.myTargetType = Constants.TARGET_TYPE_NPC;
+									hasDirectionalTarget = true;
+									break;
+								}
+							}
+						}
+						if (!hasDirectionalTarget)
+						{
+							return false;
+						}
+						break;
+					}
+			}
+			if (client.modGlobals.myTargetType == Constants.TARGET_TYPE_CLONE)
+			{
+				// NOTE:
+				// can't buff the hp or mp of clones
+				if (spell.Range > 0 && ((spell.Buff.BuffType == 1) || (spell.Buff.BuffType == 2)))
+				{
+					return false;
+				}
+			}
+			else if (client.modGlobals.myTargetType == Constants.TARGET_TYPE_PLAYER)
+			{
+				if (spell.Type != Constants.SPELL_TYPE_REVIVE && (client.modTypes.Player[client.modGlobals.myTarget].DeathTimer > 0 || client.modDatabase.GetPlayerVital(client.modGlobals.myTarget, client.modEnumerations.Vitals.HP) == 0))
+				{
+					// NOTE:
+					// the game clears the target here but doesn't return. i'm going to make note of the cleared target w/out actually clearing it
+					clearedTarget = true;
+				}
+				// spell.Type == 5 seems to be revival type spells
+				if (spell.Range > 0 && spell.Type == Constants.SPELL_TYPE_REVIVE)
+				{
+					if (client.modGlobals.myTarget == client.modGlobals.MyIndex)
+					{
+						return false;
+					}
+					// checks if the target is still alive
+					if ((client.modTypes.Player[client.modGlobals.myTarget].DeathTimer < 1) && (client.modTypes.Player[client.modGlobals.myTarget].Vital[(int)client.modEnumerations.Vitals.HP] != 0))
+					{
+						return false;
+					}
+				}
+			}
+			if (((bot.CastingSpell <= 0) || (client.modTypes.Spell[bot.CastingSpell].CastTime <= 0)) && 
+				((spell.Type != Constants.SPELL_TYPE_WARP) || ((client.modGlobals.myTarget != 0) && (client.modGlobals.myTargetType == Constants.TARGET_TYPE_PLAYER) && (clearedTarget == false))))
+			{
+				if (spell.WalkCast)
+				{
+					return true;
+					
+				}
+				else if (bot.Moving == 0)
+				{
+					return true;
+				}
+				else
+				{
+					return false;
+				}
+			}
+			return false;
+		}
 
         public static client.modTypes.PlayerRec GetSelf()
         {
