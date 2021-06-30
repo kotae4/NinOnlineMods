@@ -256,12 +256,39 @@ namespace NinMods.Bot
 		public static bool CanChargeChakra()
         {
 			client.modTypes.PlayerRec bot = GetSelf();
-			return ((bot.ChargeChakra == false)
-				&& (bot.Village == 3 || bot.Village == 13 || client.modTypes.Map.Tile[bot.X, bot.Y].Type != 17)
+			if (bot.ChargeChakra == true)
+            {
+				Logger.Log.Write("BotUtils", "CanChargeChakra", "Cannot charge chakra because we're already charging chakra", Logger.ELogType.Error);
+				return false;
+            }
+			if ((bot.Village != 3) && (bot.Village != 13) && (client.modTypes.Map.Tile[bot.X, bot.Y].Type == Constants.TILE_TYPE_WATER))
+			{
+				Logger.Log.Write("BotUtils", "CanChargeChakra", $"Cannot charge chakra in water (botLoc ({bot.X}, {bot.Y}), botVillage {bot.Village}, tileType {client.modTypes.Map.Tile[bot.X, bot.Y].Type})", Logger.ELogType.Error);
+				return false;
+			}
+			if (((double)(bot.ChargeTimer + 500) - (double)bot.Stat[5] * 0.2 * 5.0) > (double)client.modGlobals.Tick)
+            {
+				Logger.Log.Write("BotUtils", "CanChargeChakra", $"Cannot charge chakra while on cooldown (chargeTimer {bot.ChargeTimer}, effectiveTimer {((double)(bot.ChargeTimer + 500) - (double)bot.Stat[5] * 0.2 * 5.0)}, tick {(double)client.modGlobals.Tick})", Logger.ELogType.Error);
+				return false;
+			}
+			if (client.modGameLogic.CanPlayerInteract(Ignore:true) == false)
+            {
+				Logger.Log.Write("BotUtils", "CanChargeChakra", "Cannot charge chakra while in a menu or CC'd", Logger.ELogType.Error);
+				return false;
+			}
+			if (bot.Vital[(int)client.modEnumerations.Vitals.MP] == bot.MaxVital[(int)client.modEnumerations.Vitals.MP])
+            {
+				Logger.Log.Write("BotUtils", "CanChargeChakra", $"Cannot charge chakra because it's already full ({bot.Vital[(int)client.modEnumerations.Vitals.MP]} / {bot.MaxVital[(int)client.modEnumerations.Vitals.MP]})", Logger.ELogType.Error);
+				return false;
+			}
+			return true;
+			/*
+				return ((bot.ChargeChakra == false)
+				&& ((bot.Village == 3) || (bot.Village == 13) || (client.modTypes.Map.Tile[bot.X, bot.Y].Type != Constants.TILE_TYPE_WATER))
 				&& (((double)(bot.ChargeTimer + 500) - (double)bot.Stat[5] * 0.2 * 5.0) <= (double)client.modGlobals.Tick)
 				&& (CanInteract(Ignore: true))
 				&& (bot.Vital[(int)client.modEnumerations.Vitals.MP] != bot.MaxVital[(int)client.modEnumerations.Vitals.MP]));
-
+			*/
 		}
 
 		// NOTE:

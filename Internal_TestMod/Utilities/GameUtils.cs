@@ -36,5 +36,30 @@ namespace NinMods.Utilities
             ACCESS_ADMIN = 8
         }
 
+        public enum ETileType : byte
+        {
+            TILE_TYPE_WALKABLE = 0,
+            TILE_TYPE_BLOCKED = 1,
+            TILE_TYPE_WARP = 2,
+            TILE_TYPE_ITEM = 3,
+            TILE_TYPE_NPCAVOID = 4,
+            TILE_TYPE_CHECKPOINT = 5,
+            TILE_TYPE_RESOURCE = 7,
+            TILE_TYPE_NPCSPAWN = 9,
+            TILE_TYPE_SHOP = 10,
+            TILE_TYPE_HOUSE = 11,
+            TILE_TYPE_HEAL = 12,
+            TILE_TYPE_TRAP = 13,
+            TILE_TYPE_SLIDE = 14,
+            TILE_TYPE_SOUND = 15,
+            TILE_TYPE_PLAYERSPAWN = 16,
+            TILE_TYPE_WATER = 17,
+            TILE_TYPE_NOJUTSU = 18,
+            TILE_TYPE_NOWARP = 19,
+            TILE_TYPE_FIRE = 20,
+            TILE_TYPE_THROUGH = 21,
+            TILE_TYPE_NOTRAP = 22,
+            TILE_TYPE_SIT = 23
+        }
     }
 }
