@@ -494,6 +494,11 @@ namespace NinMods
                                     sw.WriteLine($"Indoor: {map.Indoor}");
                                     sw.WriteLine($"CurrentEvents: {map.CurrentEvents}");
                                     sw.WriteLine($"eventcount: {map.eventcount}");
+                                    // map boundary warps (this is responsible for most map transitions)
+                                    sw.WriteLine($"LeftWarp: {map.Left}");
+                                    sw.WriteLine($"RightWarp: {map.Right}");
+                                    sw.WriteLine($"UpWarp: {map.Up}");
+                                    sw.WriteLine($"DownWarp: {map.Down}");
                                     // dump tile array / tile data
                                     int tileLengthX = map.Tile.GetLength(0);
                                     int tileLengthY = map.Tile.GetLength(1);
