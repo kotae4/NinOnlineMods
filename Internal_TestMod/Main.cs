@@ -290,6 +290,7 @@ namespace NinMods
                 */
                 if (IsBotEnabled)
                     farmBot.Update();
+                //farmBotBloc.
 
                 if ((moveToCursorCmd != null) && (moveToCursorCmd.IsComplete() == false))
                 {

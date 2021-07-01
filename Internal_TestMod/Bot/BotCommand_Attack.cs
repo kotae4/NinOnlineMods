@@ -36,6 +36,8 @@ namespace NinMods.Bot
         {
             if (hasFailedCatastrophically) return false;
 
+
+            // Not safe for the future
             if ((target == null) || (client.modTypes.MapNpc[targetIndex] != target) || (target.Vital[(int)client.modEnumerations.Vitals.HP] <= 0))
             {
                 hasKilledTarget = true;

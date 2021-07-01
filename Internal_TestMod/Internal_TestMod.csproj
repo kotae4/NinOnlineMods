@@ -55,11 +55,11 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="NinOnline">
-      <HintPath>..\..\..\..\Games\Hitspark Interactive\Nin Online Inochi\app\NinOnline.exe</HintPath>
+      <HintPath>..\..\..\NinNew\Hitspark Interactive\Nin Online Inochi\app\NinOnline.exe</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="SFML.Portable">
-      <HintPath>..\..\..\..\Games\Hitspark Interactive\Nin Online Inochi\app\SFML.Portable.dll</HintPath>
+      <HintPath>..\..\..\NinNew\Hitspark Interactive\Nin Online Inochi\app\SFML.Portable.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="System" />
@@ -74,6 +74,11 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Application\bloc\BaseBloc.cs" />
+    <Compile Include="Application\bloc\Bloc.cs" />
+    <Compile Include="Application\FarmBotBloc\FarmBotBloc.cs" />
+    <Compile Include="Application\FarmBotBloc\FarmBotEvent.cs" />
+    <Compile Include="Application\FarmBotBloc\FarmBotState.cs" />
     <Compile Include="AStar Pathfinding\AStarSearch.cs" />
     <Compile Include="AStar Pathfinding\IWeightedGraph.cs" />
     <Compile Include="AStar Pathfinding\Vector2i.cs" />
@@ -120,5 +125,6 @@
       <DependentUpon>PlayerStatsForm.cs</DependentUpon>
     </EmbeddedResource>
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
