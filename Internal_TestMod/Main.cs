@@ -109,7 +109,8 @@ namespace NinMods
                 // no way to force the JIT compilation of these two methods..
                 try
                 {
-                    handleMapDataHook = ManagedHooker.HookMethod<dHandleMapData>(typeof(client.modHandleData), "HandleMapData", hk_modHandleData_HandleMapData, 0);
+                    // NOTE: this hook is unstable.
+                    //handleMapDataHook = ManagedHooker.HookMethod<dHandleMapData>(typeof(client.modHandleData), "HandleMapData", hk_modHandleData_HandleMapData, 0);
                     loadMapHook = ManagedHooker.HookMethod<dLoadMap>(typeof(client.modDatabase), "LoadMap", hk_modDatabase_LoadMap, 0);
 
                     handleDataHook = ManagedHooker.HookMethod<dHandleData>(typeof(client.modHandleData), "HandleData", hk_modHandleData_HandleData, 0);
@@ -182,6 +183,8 @@ namespace NinMods
                     Logger.Log.WriteException("NinMods.Main", "AttemptRehooking", ex);
                 }
             }
+            // NOTE: this hook is unstable.
+            /*
             if (handleMapDataHook == null)
             {
                 try
@@ -193,6 +196,7 @@ namespace NinMods
                     Logger.Log.WriteException("NinMods.Main", "AttemptRehooking", ex);
                 }
             }
+            */
             if (handleDataHook == null)
             {
                 try
@@ -470,10 +474,13 @@ namespace NinMods
                 if (System.IO.Directory.Exists("GAME_DUMP\\Warps") == false)
                     System.IO.Directory.CreateDirectory("GAME_DUMP\\Warps");
 
+                string safeMapName = map.Name;
+                foreach (char invalidChar in System.IO.Path.GetInvalidFileNameChars())
+                    safeMapName = safeMapName.Replace(invalidChar, '-');
                 // there's no real reason for these to be nested
-                using (System.IO.FileStream fsFullDump = System.IO.File.Open("GAME_DUMP\\" + map.Name + "_" + bot.Map.ToString() + ".fdmp", System.IO.FileMode.Create, System.IO.FileAccess.Write, System.IO.FileShare.Read))
+                using (System.IO.FileStream fsFullDump = System.IO.File.Open("GAME_DUMP\\" + safeMapName + "_" + bot.Map.ToString() + ".fdmp", System.IO.FileMode.Create, System.IO.FileAccess.Write, System.IO.FileShare.Read))
                 {
-                    using (System.IO.FileStream fsWarpDump = System.IO.File.Open("GAME_DUMP\\Warps\\" + map.Name + "_" + bot.Map.ToString() + ".wdmp", System.IO.FileMode.Create, System.IO.FileAccess.Write, System.IO.FileShare.Read))
+                    using (System.IO.FileStream fsWarpDump = System.IO.File.Open("GAME_DUMP\\Warps\\" + safeMapName + "_" + bot.Map.ToString() + ".wdmp", System.IO.FileMode.Create, System.IO.FileAccess.Write, System.IO.FileShare.Read))
                     {
                         using (System.IO.StreamWriter swFullDump = new System.IO.StreamWriter(fsFullDump))
                         {
