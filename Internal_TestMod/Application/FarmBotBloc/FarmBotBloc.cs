@@ -7,21 +7,31 @@ using System.Threading.Tasks;
 
 namespace NinMods.Application.FarmBotBloc
 {
-    class FarmBotBloc : Bloc<FarmBotState, FarmBotEvent>
+     class FarmBotBloc : Bloc<FarmBotState, FarmBotEvent>
     {
 
-        client.modTypes.MapNpcRec targetMonster;
-        int targetMonsterIndex;
+        public static client.modTypes.MapNpcRec targetMonster;
+        public static int targetMonsterIndex;
+        public static client.modTypes.MapItemRec[] lastFrameMapItems = new client.modTypes.MapItemRec[256];
 
-        public FarmBotBloc() : base(new FarmBotIdleState())
+
+        public FarmBotBloc() : base(new FarmBotIdleState(),new FarmBotIdleState())
         {
             // Initialize variables in constructor
             targetMonster = null;
             targetMonsterIndex = 0;
+            // initialize map items
+            for (int itemIndex = 0; itemIndex <= 255; itemIndex++)
+            {
+                lastFrameMapItems[itemIndex] = new client.modTypes.MapItemRec();
+                lastFrameMapItems[itemIndex].X = 0;
+                lastFrameMapItems[itemIndex].Y = 0;
+                lastFrameMapItems[itemIndex].num = 0;
+                lastFrameMapItems[itemIndex].PlayerName = "";
+            }
         }
 
-        override
-        public FarmBotState mapEventToState(FarmBotEvent e)
+        public override FarmBotState mapEventToState(FarmBotEvent e)
         {
             // Get Player Infos
             client.modTypes.PlayerRec bot = BotUtils.GetSelf();
@@ -33,25 +43,69 @@ namespace NinMods.Application.FarmBotBloc
             float manaPercentage = mana / (float)bot.MaxVital[(int)client.modEnumerations.Vitals.MP];
 
 
-            if (e is KilledMobSuccesfullyEvent || e is HpRestoredEvent || e is MpRestoredEvent)
+            if (e is KilledMobSuccesfullyEvent || e is HpRestoredEvent || e is MpRestoredEvent || e is StartBotEvent)
             {
                 return getAttackState(healthPercentage, manaPercentage, mana);          
             }
-
-            return new FarmBotIdleState();
-        }
-
-
-        override
-        public void triggerCommandBasedOnCurrentState()
-        {
-            if (currentState is FarmBotHealingState)
+            else if (e is AttackingMobEvent)
             {
-                currentCommand = new BotCommand_Attack(targetMonster, targetMonsterIndex);
+                AttackingMobEvent ev = e as AttackingMobEvent;
+                return new FarmBotAttackingTargetState(ev.targetMonster, ev.targetMonsterIndex);
+            }
+            else if (e is CollectingItemEvent)
+            {
+                CollectingItemEvent ev = e as CollectingItemEvent;
+                return new FarmBotCollectingItemState(ev.newItemPosition);
+            }
+            else if (e is CollectedItemEvent)
+            {
+                return getAttackState(healthPercentage, manaPercentage, mana);
+            }
+            else if (e is HpRestoringEvent)
+            {
+                return new FarmBotHealingState();
+            }
+            else if (e is MpRestoringEvent)
+            {
+                return new FarmBotChargingChakraState();
+            }
+            else
+            {
+                // if there was a failure, get health and mp and attack again
+                return getAttackState(healthPercentage, manaPercentage, mana);
             }
         }
 
-            
+        public override void changeCurrentCommandBasedOnCurrentState()
+        {
+            if (currentState is FarmBotHealingState)
+            {
+                currentCommand = new BotCommand_Heal();
+            }
+            else if (currentState is FarmBotAttackingTargetState)
+            {
+                // if we are in a attacking state we have the target, cause that's the condition to get in that state
+                FarmBotAttackingTargetState state = currentState as FarmBotAttackingTargetState;
+                currentCommand = new BotCommand_Attack(
+                    state.targetMonster,
+                    state.targetMonsterIndex
+                    );
+            }
+            else if (currentState is FarmBotChargingChakraState)
+            {
+                currentCommand = new BotCommand_ChargeChakra();
+            } 
+            else if (currentState is FarmBotCollectingItemState)
+            {
+                FarmBotCollectingItemState state = currentState as FarmBotCollectingItemState;
+                currentCommand = new BotCommand_CollectItem(state.newItemPosition);
+            }
+            else
+            {
+                // in case of idle state, which is our fallback, command is null and we will do it again
+                currentCommand = null;
+            }
+        }
 
         private FarmBotState getAttackState(float healthPercentage, float manaPercentage, float mana)
         {
@@ -59,7 +113,7 @@ namespace NinMods.Application.FarmBotBloc
             if(vitalsCheckState != null)
             {
                 return vitalsCheckState;
-            } 
+            }
             else
             {
                 //  get target and attack!
@@ -67,16 +121,14 @@ namespace NinMods.Application.FarmBotBloc
                 if (targetMonster != null)
                 {
 
-                    return new FarmBotAttackingTargetState();
+                    return new FarmBotAttackingTargetState(targetMonster, targetMonsterIndex);
                 }
             }
-
             return new FarmBotIdleState();
         }
 
         private FarmBotState getStateForHealthAndMana( float healthPercentage, float manaPercentage, float mana)
         {
-            
             if (!enoughHealth(healthPercentage))
             {
                 //currentCommand = new BotCommand_Heal();
@@ -87,7 +139,6 @@ namespace NinMods.Application.FarmBotBloc
                 //currentCommand = new BotCommand_ChargeChakra();
                 return new FarmBotChargingChakraState();
             }
-
             return null;
         }
 
@@ -113,8 +164,7 @@ namespace NinMods.Application.FarmBotBloc
         {
             return healthPercentage > 0.2;
         }
-
-
+        
         private bool enoughMana(float manaPercentage, float mana)
         {
             return ((manaPercentage > 0.2) || (mana > 10.0));

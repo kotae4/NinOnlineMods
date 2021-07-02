@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace NinMods.Application.FarmBotBloc
 {
-    abstract class FarmBotEvent 
+    public abstract class FarmBotEvent 
     {
         public FarmBotEvent()
         {
@@ -14,12 +14,47 @@ namespace NinMods.Application.FarmBotBloc
         }
     }
 
-    class ItemDroppedEvent : FarmBotEvent { }
+    class FarmBotFailureEvent : FarmBotEvent
+    {
+        // maybe add details and do logging here
+    }
 
+    class StartBotEvent : FarmBotEvent { }
+
+    class AttackingMobEvent: FarmBotEvent {
+        public client.modTypes.MapNpcRec targetMonster;
+        public int targetMonsterIndex;
+
+        public AttackingMobEvent(client.modTypes.MapNpcRec targetMonsterP, int targetMonsterIndexP)
+        {
+            targetMonster = targetMonsterP;
+            targetMonsterIndex = targetMonsterIndexP;
+        }
+    }
     class KilledMobSuccesfullyEvent : FarmBotEvent { }
+    class ItemDroppedEvent : FarmBotEvent {
 
+        public Vector2i newItemPosition;
+
+        public ItemDroppedEvent (Vector2i newItemPositionP)
+        {
+            newItemPosition = newItemPositionP;
+        }
+    }
+
+    class HpRestoringEvent : FarmBotEvent { }
     class HpRestoredEvent : FarmBotEvent { }
 
+    class MpRestoringEvent : FarmBotEvent { }
     class MpRestoredEvent : FarmBotEvent { }
 
+    class CollectingItemEvent : FarmBotEvent {
+        public Vector2i newItemPosition;
+
+        public CollectingItemEvent(Vector2i newItemPositionP)
+        {
+            newItemPosition = newItemPositionP;
+        }
+    }
+    class CollectedItemEvent : FarmBotEvent { }
 }

@@ -8,6 +8,7 @@ using NinOnline;
 using System.Reflection;
 using NinMods.Hooking;
 using NinMods.Pathfinding;
+using NinMods.Application.FarmBotBloc;
 
 namespace NinMods
 {
@@ -66,13 +67,13 @@ namespace NinMods
 
         // farmbot
         public static bool IsBotEnabled = false;
-        public static Bot.FarmBot farmBot = new Bot.FarmBot();
+        //public static Bot.FarmBot farmBot = new Bot.FarmBot();
+        public static FarmBotBloc farmBotBloc = new FarmBotBloc();
         // for F3 keybind 'move to cursor' logic
         public static Bot.IBotCommand moveToCursorCmd;
 
         // for determing if a new item has dropped
         public static client.modTypes.MapItemRec[] lastFrameMapItems = new client.modTypes.MapItemRec[256];
-
 
         // debugging / visuals
         public static PlayerStatsForm frmPlayerStats = null;
@@ -260,16 +261,17 @@ namespace NinMods
             }
             foreach (Vector2i newItemLocation in newItemLocations)
             {
-                farmBot.InjectEvent(Bot.FarmBot.EBotEvent.ItemDrop, (object)newItemLocation);
+                //farmBot.InjectEvent(Bot.FarmBot.EBotEvent.ItemDrop, (object)newItemLocation);
+                farmBotBloc.addEvent(new ItemDroppedEvent(newItemLocation));
             }
         }
 
         // the heart of the bot. this runs every tick on the game's thread.
         public static void hk_modGameLogic_GameLoop()
         {
-            if (NinMods.Main.handleKeyPressesFirstRun == true)
+            if (NinMods.Main.gameLoopFirstRun == true)
             {
-                NinMods.Main.handleKeyPressesFirstRun = false;
+                NinMods.Main.gameLoopFirstRun = false;
                 Logger.Log.Write("NinMods.Main", "hk_modGameLogic_GameLoop", "Successfully hooked!", Logger.ELogType.Info, null, true);
             }
             AttemptRehooking();
@@ -289,9 +291,10 @@ namespace NinMods
                     $"(index: {client.modGlobals.MyIndex})");
                 */
                 if (IsBotEnabled)
-                    farmBot.Update();
-                //farmBotBloc.
-
+                {
+                    farmBotBloc.Run(new StartBotEvent());
+                    //farmBot.Update();
+                }
                 if ((moveToCursorCmd != null) && (moveToCursorCmd.IsComplete() == false))
                 {
                     if (moveToCursorCmd.Perform() == false)
@@ -563,9 +566,9 @@ namespace NinMods
             {
                 // F1 is used for testing specific exploits
                 // /heal command: does not work
-                // attacks bypassing attack speed: does not work (but might be very slightly faster?)
-                // movement bypassing timers: does work! (particularly, bypassing the xOffset and yOffset timers)
-                // bypassing jutsu timers / limits: does not work
+                // attacks bypassing attack speed: does work (but only the animation. slight increase in speed.)
+                // movement bypassing timers: does work! (particularly, bypassing the xOffset and yOffset timers. huge, noticeable increase in speed.)
+                // bypassing jutsu timers / limits: does not work (but might bypass animation like attack speed, imperceptible increase in speed)
                 client.clsBuffer clsBuffer2 = new client.clsBuffer();
                 clsBuffer2.WriteLong(49);
                 // hotbar slot
@@ -590,7 +593,8 @@ namespace NinMods
                 if (IsBotEnabled)
                 {
                     // if we're enabled it from a disabled state, then just re-instantiate it (alternative is resetting its state but i'm being lazy right now)
-                    farmBot = new Bot.FarmBot();
+                    //farmBot = new Bot.FarmBot();
+                    farmBotBloc = new FarmBotBloc();
                 }
             }
             else if (keyAscii == SFML.Window.Keyboard.Key.F4)

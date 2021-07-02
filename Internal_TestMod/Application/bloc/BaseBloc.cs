@@ -5,12 +5,12 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-public interface BaseBloc<BlocStateType>
+public interface BaseBloc<BlocStateType, BlocEventType>
 {
     BlocStateType currentState { get;set; }  
 
-    BlocStateType oldState { get;set; }
-    IBotCommand currentCommand { get; set; }
+    BlocStateType fallbackState { get;set; }
+    IBotBlocCommand<BlocEventType> currentCommand { get; set; }
 
 
 }

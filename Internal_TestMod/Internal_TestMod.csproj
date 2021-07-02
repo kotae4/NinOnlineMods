@@ -91,6 +91,7 @@
     <Compile Include="Bot\BotCommand_MoveToStaticPoint.cs" />
     <Compile Include="Bot\BotUtils.cs" />
     <Compile Include="Bot\FarmBot.cs" />
+    <Compile Include="Bot\IBotBlocCommand.cs" />
     <Compile Include="Bot\IBotCommand.cs" />
     <Compile Include="Constants.cs" />
     <Compile Include="Pathfinder.cs" />
