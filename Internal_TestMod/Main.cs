@@ -7,6 +7,11 @@ using System.Windows.Forms;
 using NinOnline;
 using System.Reflection;
 using NinMods.Hooking;
+<<<<<<< Updated upstream
+=======
+using NinMods.Pathfinding;
+using NinMods.Application.FarmBotBloc;
+>>>>>>> Stashed changes
 
 namespace NinMods
 {
@@ -27,6 +32,49 @@ namespace NinMods
         public static bool gameLoopFirstRun = true;
         public static ManagedHooker.HookEntry gameLoopHook;
 
+<<<<<<< Updated upstream
+=======
+        // for making sure we always have the latest tiledata for pathfinding
+        delegate void dHandleMapData(int index, byte[] data, int startAddr, int extraVar);
+        public static bool handleMapDataFirstRun = true;
+        public static ManagedHooker.HookEntry handleMapDataHook = null;
+
+        delegate void dLoadMap(int mapID);
+        public static bool loadMapFirstRun = true;
+        public static ManagedHooker.HookEntry loadMapHook = null;
+
+        // for logging incoming network messages (this is what receives all packets and then dispatches them to the specific packet handlers)
+        delegate void dHandleData(byte[] data);
+        public static bool handleDataFirstRun = true;
+        public static ManagedHooker.HookEntry handleDataHook = null;
+
+        // for logging outgoing network messages
+        delegate void dSendData(byte[] data, bool auth);
+        public static bool sendDataFirstRun = true;
+        public static ManagedHooker.HookEntry sendDataHook = null;
+
+        // just for tile overlays. can remove later, probably.
+        public delegate void dDrawWeather();
+        public static bool drawWeatherFirstRun = true;
+        public static ManagedHooker.HookEntry drawWeatherHook;
+        #endregion
+
+        public static SquareGrid MapPathfindingGrid;
+
+        // farmbot
+        public static bool IsBotEnabled = false;
+        //public static Bot.FarmBot farmBot = new Bot.FarmBot();
+        // for F3 keybind 'move to cursor' logic
+        public static Bot.IBotCommand moveToCursorCmd;
+
+        // for determing if a new item has dropped
+        public static client.modTypes.MapItemRec[] lastFrameMapItems = new client.modTypes.MapItemRec[256];
+
+        static FarmBotBloc farmBotBloc = new FarmBotBloc();
+
+
+        // debugging / visuals
+>>>>>>> Stashed changes
         public static PlayerStatsForm frmPlayerStats = null;
 
         public static void SetupManagedHookerHooks()
@@ -73,6 +121,107 @@ namespace NinMods
             Logger.Log.Write("NinMods.Main", "Initialize", "Done installing hooks!", Logger.ELogType.Info, null, true);
         }
 
+<<<<<<< Updated upstream
+=======
+        // for methods that can't be forced to JIT compile
+        // we have to continuously check if the method exists, and, if so, finally hook it.
+        public static void AttemptRehooking()
+        {
+            if (loadMapHook == null)
+            {
+                try
+                {
+                    loadMapHook = ManagedHooker.HookMethod<dLoadMap>(typeof(client.modDatabase), "LoadMap", hk_modDatabase_LoadMap, 0);
+                }
+                catch (Exception ex)
+                {
+                    Logger.Log.WriteException("NinMods.Main", "AttemptRehooking", ex);
+                }
+            }
+            // NOTE: this hook is unstable.
+            /*
+            if (handleMapDataHook == null)
+            {
+                try
+                {
+                    handleMapDataHook = ManagedHooker.HookMethod<dHandleMapData>(typeof(client.modHandleData), "HandleMapData", hk_modHandleData_HandleMapData, 0);
+                }
+                catch (Exception ex)
+                {
+                    Logger.Log.WriteException("NinMods.Main", "AttemptRehooking", ex);
+                }
+            }
+            */
+            if (handleDataHook == null)
+            {
+                try
+                {
+                    handleDataHook = ManagedHooker.HookMethod<dHandleData>(typeof(client.modHandleData), "HandleData", hk_modHandleData_HandleData, 0);
+                }
+                catch (Exception ex)
+                {
+                    Logger.Log.WriteException("NinMods.Main", "AttemptRehooking", ex);
+                }
+            }
+            if (sendDataHook == null)
+            {
+                try
+                {
+                    sendDataHook = ManagedHooker.HookMethod<dSendData>(typeof(client.modClientTCP), "SendData", hk_modClientTCP_SendData, 0);
+                }
+                catch (Exception ex)
+                {
+                    Logger.Log.WriteException("NinMods.Main", "AttemptRehooking", ex);
+                }
+            }
+        }
+
+        public static void CheckNewItemDrops()
+        {
+            client.modTypes.PlayerRec bot = NinMods.Bot.BotUtils.GetSelf();
+            //Logger.Log.Write("NinMods.Main", "CheckNewItemDrops", $"Checking {client.modGlobals.MapItem_HighIndex} map items", Logger.ELogType.Info, null, true);
+            List<Vector2i> newItemLocations = new List<Vector2i>();
+            for (int itemIndex = 1; itemIndex <= 255; itemIndex++)
+            {
+                client.modTypes.MapItemRec mapItem = client.modTypes.MapItem[itemIndex];
+                if (mapItem.num <= 0)
+                {
+                    // clear the entry in lastFrameMapItems since it's invalid
+                    lastFrameMapItems[itemIndex].X = 0;
+                    lastFrameMapItems[itemIndex].Y = 0;
+                    lastFrameMapItems[itemIndex].num = 0;
+                    lastFrameMapItems[itemIndex].PlayerName = "";
+                    continue;
+                }
+                client.modTypes.MapItemRec oldItem = lastFrameMapItems[itemIndex];
+                bool isNew = (((lastFrameMapItems[itemIndex].X != mapItem.X) || (lastFrameMapItems[itemIndex].Y != mapItem.Y) || (lastFrameMapItems[itemIndex].num != mapItem.num))
+                    && (mapItem.PlayerName.Trim() == bot.Name.Trim()));
+                if (isNew)
+                {
+                    newItemLocations.Add(new Vector2i(mapItem.X, mapItem.Y));
+                    Logger.Log.Write("NinMods.Main", "CheckNewItemDrops", $"Saw new item " +
+                            $"(idx {itemIndex}, itemNum {mapItem.num})" +
+                            $"\n\t-itemLoc ({mapItem.X}, {mapItem.Y})" +
+                            $"\n\t-itemPlayer {mapItem.PlayerName.Trim()}" +
+                            $"\n\t-itemMvalue {mapItem.mvalue}", Logger.ELogType.Info, null, true);
+                }
+                // now that we're done processing, perform the deep copy into lastFrameMapItems
+                // only going to copy the fields we actually use
+                lastFrameMapItems[itemIndex].X = mapItem.X;
+                lastFrameMapItems[itemIndex].Y = mapItem.Y;
+                lastFrameMapItems[itemIndex].num = mapItem.num;
+                lastFrameMapItems[itemIndex].PlayerName = mapItem.PlayerName;
+
+            }
+            foreach (Vector2i newItemLocation in newItemLocations)
+            {
+                //farmBot.InjectEvent(Bot.FarmBot.EBotEvent.ItemDrop, (object)newItemLocation);
+                farmBotBloc.addEvent(new ItemDroppedEvent(newItemLocation));
+            }
+        }
+
+        // the heart of the bot. this runs every tick on the game's thread.
+>>>>>>> Stashed changes
         public static void hk_modGameLogic_GameLoop()
         {
             if (NinMods.Main.handleKeyPressesFirstRun == true)
@@ -82,9 +231,186 @@ namespace NinMods
             }
             if (NinMods.Main.frmPlayerStats == null)
             {
+<<<<<<< Updated upstream
                 Logger.Log.Write("NinMods.Main", "Initialize", "Initializing player stats form", Logger.ELogType.Info, null, false);
                 NinMods.Main.frmPlayerStats = new PlayerStatsForm();
                 NinMods.Main.frmPlayerStats.Show();
+=======
+                if (NinMods.Main.frmPlayerStats == null)
+                {
+                    Logger.Log.Write("NinMods.Main", "hk_modGameLogic_GameLoop", "Initializing player stats form", Logger.ELogType.Info, null, false);
+                    NinMods.Main.frmPlayerStats = new PlayerStatsForm();
+                    NinMods.Main.frmPlayerStats.Show();
+                }
+                if (NinMods.Main.frmPlayerStats.Visible)
+                    NinMods.Main.frmPlayerStats.UpdatePlayerStats(client.modTypes.Player[client.modGlobals.MyIndex]);
+                /*
+                Logger.Log.Write("NinMods.Main", "hk_modGameLogic_GameLoop", $"Player pos: " +
+                    $"{client.modTypes.Player[client.modGlobals.MyIndex].X}, {client.modTypes.Player[client.modGlobals.MyIndex].Y} " +
+                    $"(index: {client.modGlobals.MyIndex})");
+                */
+                if (IsBotEnabled)
+                {
+                    farmBotBloc.Run(new StartBotEvent());
+                }
+                    //farmBot.Update();
+                //farmBotBloc.
+
+                if ((moveToCursorCmd != null) && (moveToCursorCmd.IsComplete() == false))
+                {
+                    if (moveToCursorCmd.Perform() == false)
+                    {
+                        Logger.Log.Write("NinMods.Main", "hk_modGameLogic_GameLoop", "Catastrophic error occurred performing MoveToCursor command");
+                        moveToCursorCmd = null;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Log.WriteException("NinMods.Main", "hk_modGameLogic_GameLoop", ex);
+            }
+            // call original
+            NinMods.Main.gameLoopHook.CallOriginalFunction(typeof(void));
+
+            // i think we have to call this after the original function
+            // too lazy to double check
+            CheckNewItemDrops();
+        }
+
+        // for updating our pathfinding grid (and probably some other stuff later)
+        // note: i think this is only called as a result of an admin command? not sure
+        public static void hk_modHandleData_HandleMapData(int index, byte[] data, int startAddr, int extraVar)
+        {
+            if (NinMods.Main.handleMapDataFirstRun == true)
+            {
+                NinMods.Main.handleMapDataFirstRun = false;
+                Logger.Log.Write("NinMods.Main", "hk_modHandleData_HandleMapData", "Successfully hooked!", Logger.ELogType.Info, null, true);
+            }
+
+            NinMods.Main.handleMapDataHook.CallOriginalFunction(typeof(void), index, data, startAddr, extraVar);
+
+            MapPathfindingGrid = new SquareGrid(client.modTypes.Map.Tile, client.modTypes.Map.MaxX, client.modTypes.Map.MaxY);
+        }
+
+        // for updating our pathfinding grid (and probably some other stuff later)
+        public static void hk_modDatabase_LoadMap(int mapID)
+        {
+            if (NinMods.Main.loadMapFirstRun == true)
+            {
+                NinMods.Main.loadMapFirstRun = false;
+                Logger.Log.Write("NinMods.Main", "hk_modDatabase_LoadMap", "Successfully hooked!", Logger.ELogType.Info, null, true);
+            }
+
+            NinMods.Main.loadMapHook.CallOriginalFunction(typeof(void), mapID);
+
+            MapPathfindingGrid = new SquareGrid(client.modTypes.Map.Tile, client.modTypes.Map.MaxX, client.modTypes.Map.MaxY);
+        }
+
+        public static void DrawTileTypeOverlay()
+        {
+            if (oRenderText == null) return;
+            try
+            {
+                for (int i = client.modGlobals.TileView.Left; i <= client.modGlobals.TileView.Right; i++)
+                {
+                    for (int j = client.modGlobals.TileView.Top; j <= client.modGlobals.TileView.Bottom; j++)
+                    {
+                        if (client.modGraphics.InViewPort(i, j))
+                        {
+                            int x = (int)((double)(i * 32 - 4) + 16.0);
+                            int y = (int)((double)(j * 32 - 7) + 16.0);
+                            if (client.modTypes.Map.Tile[i, j].Type == Constants.TILE_TYPE_BLOCKED)
+                            {
+                                NinMods.Main.oRenderText(client.modText.Font[1], "B", x, y, client.modText.Dx8Color(12), shadow: false, 13);
+                            }
+                            else if (client.modTypes.Map.Tile[i, j].Type == Constants.TILE_TYPE_WARP)
+                            {
+                                NinMods.Main.oRenderText(client.modText.Font[1], "WP", x, y, client.modText.Dx8Color(15), shadow: false, 13);
+                            }
+                            else if (client.modTypes.Map.Tile[i, j].Type == Constants.TILE_TYPE_ITEM)
+                            {
+                                NinMods.Main.oRenderText(client.modText.Font[1], "I", x, y, client.modText.Dx8Color(15), shadow: false, 13);
+                            }
+                            else if (client.modTypes.Map.Tile[i, j].Type == Constants.TILE_TYPE_NPCAVOID)
+                            {
+                                NinMods.Main.oRenderText(client.modText.Font[1], "NA", x, y, client.modText.Dx8Color(15), shadow: false, 13);
+                            }
+                            else if (client.modTypes.Map.Tile[i, j].Type == Constants.TILE_TYPE_CHECKPOINT)
+                            {
+                                NinMods.Main.oRenderText(client.modText.Font[1], "C", x, y, client.modText.Dx8Color(10), shadow: false, 13);
+                            }
+                            else if (client.modTypes.Map.Tile[i, j].Type == Constants.TILE_TYPE_RESOURCE)
+                            {
+                                NinMods.Main.oRenderText(client.modText.Font[1], "Br", x, y, client.modText.Dx8Color(2), shadow: false, 13);
+                            }
+                            else if (client.modTypes.Map.Tile[i, j].Type == Constants.TILE_TYPE_NPCSPAWN)
+                            {
+                                NinMods.Main.oRenderText(client.modText.Font[1], "NS", x, y, client.modText.Dx8Color(14), shadow: false, 13);
+                            }
+                            else if (client.modTypes.Map.Tile[i, j].Type == Constants.TILE_TYPE_SHOP)
+                            {
+                                NinMods.Main.oRenderText(client.modText.Font[1], "SH", x, y, client.modText.Dx8Color(9), shadow: false, 13);
+                            }
+                            else if (client.modTypes.Map.Tile[i, j].Type == Constants.TILE_TYPE_HOUSE)
+                            {
+                                NinMods.Main.oRenderText(client.modText.Font[1], "H", x, y, client.modText.Dx8Color(10), shadow: false, 13);
+                            }
+                            else if (client.modTypes.Map.Tile[i, j].Type == Constants.TILE_TYPE_HEAL)
+                            {
+                                NinMods.Main.oRenderText(client.modText.Font[1], "HE", x, y, client.modText.Dx8Color(10), shadow: false, 13);
+                            }
+                            else if (client.modTypes.Map.Tile[i, j].Type == Constants.TILE_TYPE_TRAP)
+                            {
+                                NinMods.Main.oRenderText(client.modText.Font[1], "T", x, y, client.modText.Dx8Color(12), shadow: false, 13);
+                            }
+                            else if (client.modTypes.Map.Tile[i, j].Type == Constants.TILE_TYPE_SLIDE)
+                            {
+                                NinMods.Main.oRenderText(client.modText.Font[1], "SL", x, y, client.modText.Dx8Color(11), shadow: false, 13);
+                            }
+                            else if (client.modTypes.Map.Tile[i, j].Type == Constants.TILE_TYPE_SOUND)
+                            {
+                                NinMods.Main.oRenderText(client.modText.Font[1], "SO", x, y, client.modText.Dx8Color(17), shadow: false, 13);
+                            }
+                            else if (client.modTypes.Map.Tile[i, j].Type == Constants.TILE_TYPE_PLAYERSPAWN)
+                            {
+                                NinMods.Main.oRenderText(client.modText.Font[1], "PS", x, y, client.modText.Dx8Color(13), shadow: false, 13);
+                            }
+                            else if (client.modTypes.Map.Tile[i, j].Type == Constants.TILE_TYPE_WATER)
+                            {
+                                NinMods.Main.oRenderText(client.modText.Font[1], "W", x, y, client.modText.Dx8Color(3), shadow: false, 13);
+                            }
+                            else if (client.modTypes.Map.Tile[i, j].Type == Constants.TILE_TYPE_NOJUTSU)
+                            {
+                                NinMods.Main.oRenderText(client.modText.Font[1], "NJ", x, y, client.modText.Dx8Color(1), shadow: false, 13);
+                            }
+                            else if (client.modTypes.Map.Tile[i, j].Type == Constants.TILE_TYPE_NOWARP)
+                            {
+                                NinMods.Main.oRenderText(client.modText.Font[1], "NW", x, y, client.modText.Dx8Color(1), shadow: false, 13);
+                            }
+                            else if (client.modTypes.Map.Tile[i, j].Type == Constants.TILE_TYPE_FIRE)
+                            {
+                                NinMods.Main.oRenderText(client.modText.Font[1], "F", x, y, client.modText.Dx8Color(12), shadow: false, 13);
+                            }
+                            else if (client.modTypes.Map.Tile[i, j].Type == Constants.TILE_TYPE_THROUGH)
+                            {
+                                NinMods.Main.oRenderText(client.modText.Font[1], "TH", x, y, client.modText.Dx8Color(17), shadow: false, 13);
+                            }
+                            else if (client.modTypes.Map.Tile[i, j].Type == Constants.TILE_TYPE_NOTRAP)
+                            {
+                                NinMods.Main.oRenderText(client.modText.Font[1], "NT", x, y, client.modText.Dx8Color(17), shadow: false, 13);
+                            }
+                            else if (client.modTypes.Map.Tile[i, j].Type == Constants.TILE_TYPE_SIT)
+                            {
+                                NinMods.Main.oRenderText(client.modText.Font[1], "SI", x, y, client.modText.Dx8Color(17), shadow: false, 13);
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Log.WriteException("NinMods.Main", "DrawTileTypeOverlay", ex);
+>>>>>>> Stashed changes
             }
             if (NinMods.Main.frmPlayerStats.Visible == false)
             {
@@ -140,6 +466,28 @@ namespace NinMods
                 NinMods.Main.frmPlayerStats.Owner = client.frmAdmin.InstancePtr;
                 NinMods.Main.frmPlayerStats.Show();
             }
+<<<<<<< Updated upstream
+=======
+            else if (keyAscii == SFML.Window.Keyboard.Key.F3)
+            {
+                IsBotEnabled = !IsBotEnabled;
+                if (IsBotEnabled)
+                {
+                    // if we're enabled it from a disabled state, then just re-instantiate it (alternative is resetting its state but i'm being lazy right now)
+                    //farmBot = new Bot.FarmBot();
+                    farmBotBloc = new FarmBotBloc();
+                }
+            }
+            else if (keyAscii == SFML.Window.Keyboard.Key.F4)
+            {
+                Vector2i cursorTileLocation = Utilities.GameUtils.GetTilePosFromCursor();
+                moveToCursorCmd = new Bot.BotCommand_MoveToStaticPoint(cursorTileLocation);
+            }
+            else if (keyAscii == SFML.Window.Keyboard.Key.F5)
+            {
+                DumpMapData();
+            }
+>>>>>>> Stashed changes
             else
             {
                 Logger.Log.Write("NinMods.Main", "hk_modInput_HandleKeyPresses", "calling original");

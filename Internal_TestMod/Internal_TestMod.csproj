@@ -74,6 +74,30 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+<<<<<<< Updated upstream
+=======
+    <Compile Include="Application\bloc\BaseBloc.cs" />
+    <Compile Include="Application\bloc\Bloc.cs" />
+    <Compile Include="Application\FarmBotBloc\FarmBotBloc.cs" />
+    <Compile Include="Application\FarmBotBloc\FarmBotEvent.cs" />
+    <Compile Include="Application\FarmBotBloc\FarmBotState.cs" />
+    <Compile Include="AStar Pathfinding\AStarSearch.cs" />
+    <Compile Include="AStar Pathfinding\IWeightedGraph.cs" />
+    <Compile Include="AStar Pathfinding\Vector2i.cs" />
+    <Compile Include="AStar Pathfinding\PriorityQueue.cs" />
+    <Compile Include="AStar Pathfinding\SquareGrid.cs" />
+    <Compile Include="Bot\BotCommand_Attack.cs" />
+    <Compile Include="Bot\BotCommand_ChargeChakra.cs" />
+    <Compile Include="Bot\BotCommand_CollectItem.cs" />
+    <Compile Include="Bot\BotCommand_Heal.cs" />
+    <Compile Include="Bot\BotCommand_MoveToStaticPoint.cs" />
+    <Compile Include="Bot\BotUtils.cs" />
+    <Compile Include="Bot\FarmBot.cs" />
+    <Compile Include="Bot\IBotBlocCommand.cs" />
+    <Compile Include="Bot\IBotCommand.cs" />
+    <Compile Include="Constants.cs" />
+    <Compile Include="Pathfinder.cs" />
+>>>>>>> Stashed changes
     <Compile Include="PlayerStatsForm.cs">
       <SubType>Form</SubType>
     </Compile>
