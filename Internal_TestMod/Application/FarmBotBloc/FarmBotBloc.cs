@@ -31,8 +31,7 @@ namespace NinMods.Application.FarmBotBloc
             }
         }
 
-        override
-        public FarmBotState mapEventToState(FarmBotEvent e)
+        public override FarmBotState mapEventToState(FarmBotEvent e)
         {
             // Get Player Infos
             client.modTypes.PlayerRec bot = BotUtils.GetSelf();
@@ -47,11 +46,13 @@ namespace NinMods.Application.FarmBotBloc
             if (e is KilledMobSuccesfullyEvent || e is HpRestoredEvent || e is MpRestoredEvent || e is StartBotEvent)
             {
                 return getAttackState(healthPercentage, manaPercentage, mana);          
-            } else if (e is AttackingMobEvent)
+            }
+            else if (e is AttackingMobEvent)
             {
                 AttackingMobEvent ev = e as AttackingMobEvent;
                 return new FarmBotAttackingTargetState(ev.targetMonster, ev.targetMonsterIndex);
-            } else if (e is CollectingItemEvent)
+            }
+            else if (e is CollectingItemEvent)
             {
                 CollectingItemEvent ev = e as CollectingItemEvent;
                 return new FarmBotCollectingItemState(ev.newItemPosition);
@@ -64,7 +65,6 @@ namespace NinMods.Application.FarmBotBloc
             {
                 return new FarmBotHealingState();
             }
-            
             else if (e is MpRestoringEvent)
             {
                 return new FarmBotChargingChakraState();
@@ -73,18 +73,15 @@ namespace NinMods.Application.FarmBotBloc
             {
                 // if there was a failure, get health and mp and attack again
                 return getAttackState(healthPercentage, manaPercentage, mana);
-
             }
         }
 
-
-        override
-        public void changeCurrentCommandBasedOnCurrentState()
+        public override void changeCurrentCommandBasedOnCurrentState()
         {
             if (currentState is FarmBotHealingState)
             {
                 currentCommand = new BotCommand_Heal();
-            } 
+            }
             else if (currentState is FarmBotAttackingTargetState)
             {
                 // if we are in a attacking state we have the target, cause that's the condition to get in that state
@@ -110,15 +107,13 @@ namespace NinMods.Application.FarmBotBloc
             }
         }
 
-            
-
         private FarmBotState getAttackState(float healthPercentage, float manaPercentage, float mana)
         {
             FarmBotState vitalsCheckState = getStateForHealthAndMana(healthPercentage, manaPercentage, mana);
             if(vitalsCheckState != null)
             {
                 return vitalsCheckState;
-            } 
+            }
             else
             {
                 //  get target and attack!
@@ -129,13 +124,11 @@ namespace NinMods.Application.FarmBotBloc
                     return new FarmBotAttackingTargetState(targetMonster, targetMonsterIndex);
                 }
             }
-
             return new FarmBotIdleState();
         }
 
         private FarmBotState getStateForHealthAndMana( float healthPercentage, float manaPercentage, float mana)
         {
-            
             if (!enoughHealth(healthPercentage))
             {
                 //currentCommand = new BotCommand_Heal();
@@ -146,7 +139,6 @@ namespace NinMods.Application.FarmBotBloc
                 //currentCommand = new BotCommand_ChargeChakra();
                 return new FarmBotChargingChakraState();
             }
-
             return null;
         }
 
@@ -168,14 +160,11 @@ namespace NinMods.Application.FarmBotBloc
             }
         }
 
-      
-
         private bool enoughHealth(float healthPercentage)
         {
             return healthPercentage > 0.2;
         }
-
-
+        
         private bool enoughMana(float manaPercentage, float mana)
         {
             return ((manaPercentage > 0.2) || (mana > 10.0));

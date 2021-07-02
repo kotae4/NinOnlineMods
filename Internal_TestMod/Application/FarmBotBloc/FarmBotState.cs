@@ -16,6 +16,7 @@ namespace NinMods.Application.FarmBotBloc
     class FarmBotIdleState : FarmBotState { }
     class FarmBotMovingToMapState : FarmBotState { }
     class FarmBotMovingToHotspotState : FarmBotState { }
+
     class FarmBotAttackingTargetState : FarmBotState { 
         public client.modTypes.MapNpcRec targetMonster;
         public int targetMonsterIndex;
@@ -26,8 +27,10 @@ namespace NinMods.Application.FarmBotBloc
             targetMonsterIndex = targetMonsterIndexP;
         }
     }
+
     class FarmBotHealingState : FarmBotState { }
     class FarmBotChargingChakraState : FarmBotState { }
+
     class FarmBotCollectingItemState : FarmBotState {
         public Vector2i newItemPosition;
 
@@ -36,6 +39,4 @@ namespace NinMods.Application.FarmBotBloc
             newItemPosition = newItemPositionP;
         }
     }
-
-
 }

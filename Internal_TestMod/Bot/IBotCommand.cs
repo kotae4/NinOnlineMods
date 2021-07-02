@@ -1,4 +1,4 @@
-﻿using NinMods.Application.FarmBotBloc;
+using NinMods.Application.FarmBotBloc;
 using System;
 using System.Collections.Generic;
 using System.Linq;

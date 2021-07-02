@@ -166,7 +166,7 @@ namespace NinMods
                 
                 if (prevStatValues[(ETrackedStats)index] != curStatValues[(ETrackedStats)index])
                 {
-                    Logger.Log.Write("PlayerStatsForm", "UpdateItemLabelsIfNew", $"Updating stat label '{(ETrackedStats)index}': {curStatValues[(ETrackedStats)index]}");
+                    //Logger.Log.Write("PlayerStatsForm", "UpdateItemLabelsIfNew", $"Updating stat label '{(ETrackedStats)index}': {curStatValues[(ETrackedStats)index]}");
                     //oListView_SetItemText(index, 1, curStatValues[(ETrackedStats)index]);
                     listviewPlayerStats.Items[index].SubItems[1].Text = curStatValues[(ETrackedStats)index];
                 }

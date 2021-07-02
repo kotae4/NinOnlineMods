@@ -7,19 +7,25 @@ using System.Windows.Forms;
 using NinOnline;
 using System.Reflection;
 using NinMods.Hooking;
-<<<<<<< Updated upstream
-=======
 using NinMods.Pathfinding;
 using NinMods.Application.FarmBotBloc;
->>>>>>> Stashed changes
 
 namespace NinMods
 {
-    public static class Main
+    // A NOTE ON GAME TIMERS:
+    // modGlobals.tmr25 is probably the most important timer (isConnected, input, movement, attacks, charging chakra, spells, and animations are all done on this timer)
+    // the conditional is: if (modGlobals.tmr25 < modGlobals.Tick)
+    // the value is set like: modGlobals.tmr25 = (int)(modGlobals.Tick + 25);
+    // modGlobals.Tick is set each loop to the value of modGeneral.timer.ElapsedMilliseconds.
+    // the 'timer' field there is just a System.Diagnostics.Stopwatch (lol)
+    // effectively, this means we need to wait 25 milliseconds after performing any game action
+    // i think the easiest way to do this is to perform the same check the game does: if (modGlobals.tmr25 < modGlobals.Tick) { DoNextAction(); }
+    public class Main
     {
         public const string MAIN_NAME = "NinMods";
         public const string MAIN_CAPTION = "NinMods";
 
+        #region Hook instance data
         delegate void dOpenHandleKeyPresses(SFML.Window.Keyboard.Key keyAscii);
         public static bool handleKeyPressesFirstRun = true;
         public static ManagedHooker.HookEntry handleKeyPressesHook;
@@ -32,8 +38,6 @@ namespace NinMods
         public static bool gameLoopFirstRun = true;
         public static ManagedHooker.HookEntry gameLoopHook;
 
-<<<<<<< Updated upstream
-=======
         // for making sure we always have the latest tiledata for pathfinding
         delegate void dHandleMapData(int index, byte[] data, int startAddr, int extraVar);
         public static bool handleMapDataFirstRun = true;
@@ -64,18 +68,18 @@ namespace NinMods
         // farmbot
         public static bool IsBotEnabled = false;
         //public static Bot.FarmBot farmBot = new Bot.FarmBot();
+        public static FarmBotBloc farmBotBloc = new FarmBotBloc();
         // for F3 keybind 'move to cursor' logic
         public static Bot.IBotCommand moveToCursorCmd;
 
         // for determing if a new item has dropped
         public static client.modTypes.MapItemRec[] lastFrameMapItems = new client.modTypes.MapItemRec[256];
 
-        static FarmBotBloc farmBotBloc = new FarmBotBloc();
-
-
         // debugging / visuals
->>>>>>> Stashed changes
         public static PlayerStatsForm frmPlayerStats = null;
+        // for tile overlays (might also do other stuff with it, though)
+        public delegate void dRenderText(SFML.Graphics.Font font, string text, int x, int y, SFML.Graphics.Color color, bool shadow = false, byte textSize = 13, SFML.Graphics.RenderWindow target = null);
+        public static dRenderText oRenderText = null;
 
         public static void SetupManagedHookerHooks()
         {
@@ -98,6 +102,25 @@ namespace NinMods
                 // no way to force an early exit here. hopefully doesn't cause a packet to be missed.
                 client.modGameLogic.GameLoop();
                 gameLoopHook = ManagedHooker.HookMethod<dOpenGameLoop>(typeof(client.modGameLogic), "GameLoop", hk_modGameLogic_GameLoop, 0);
+
+                client.modGraphics.DrawWeather();
+                drawWeatherHook = ManagedHooker.HookMethod<dDrawWeather>(typeof(client.modGraphics), "DrawWeather", hk_modGraphics_DrawWeather, 0);
+
+                // WARNING:
+                // no way to force the JIT compilation of these two methods..
+                try
+                {
+                    // NOTE: this hook is unstable.
+                    //handleMapDataHook = ManagedHooker.HookMethod<dHandleMapData>(typeof(client.modHandleData), "HandleMapData", hk_modHandleData_HandleMapData, 0);
+                    loadMapHook = ManagedHooker.HookMethod<dLoadMap>(typeof(client.modDatabase), "LoadMap", hk_modDatabase_LoadMap, 0);
+
+                    handleDataHook = ManagedHooker.HookMethod<dHandleData>(typeof(client.modHandleData), "HandleData", hk_modHandleData_HandleData, 0);
+                    sendDataHook = ManagedHooker.HookMethod<dSendData>(typeof(client.modClientTCP), "SendData", hk_modClientTCP_SendData, 0);
+                }
+                catch (Exception ex)
+                {
+                    Logger.Log.WriteException("NinMods.Main", "SetupManagedHookerHooks", ex);
+                }
             }
             catch (Exception ex)
             {
@@ -116,13 +139,36 @@ namespace NinMods
 
         public static void Initialize()
         {
+            // initialize map items
+            for (int itemIndex = 0; itemIndex <= 255; itemIndex++)
+            {
+                lastFrameMapItems[itemIndex] = new client.modTypes.MapItemRec();
+                lastFrameMapItems[itemIndex].X = 0;
+                lastFrameMapItems[itemIndex].Y = 0;
+                lastFrameMapItems[itemIndex].num = 0;
+                lastFrameMapItems[itemIndex].PlayerName = "";
+            }
+
+            System.Reflection.MethodInfo methodInfo = typeof(client.modText).GetMethod("RenderText", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic, null, new Type[] { typeof(SFML.Graphics.Font), typeof(string), typeof(int), typeof(int), typeof(SFML.Graphics.Color), typeof(bool), typeof(byte), typeof(SFML.Graphics.RenderWindow) }, null);
+            if (methodInfo == null)
+            {
+                Logger.Log.WriteError("NinMods.Main", "Initialize", "Could not get RenderText methodinfo");
+                return;
+            }
+            oRenderText = (dRenderText)methodInfo.CreateDelegate(typeof(dRenderText));
+
+            MapPathfindingGrid = new SquareGrid(client.modTypes.Map.Tile, client.modTypes.Map.MaxX, client.modTypes.Map.MaxY);
+
             Logger.Log.Write("NinMods.Main", "Initialize", "Installing hooks...", Logger.ELogType.Info, null, false);
+            // NOTE:
+            // this hook keeps crashing, so i'm going to try forcing JIT compilation here and maybe that'll fix it?
+            // logs show minhook pointing to clr!ThePreStub or something, which makes me think it's not JIT compiled by time minhook gets to it
+            // although... that shouldn't crash it on the first instance. only from the second on. and that isn't the case. i don't know.
+            //hk_modHandleData_HandleSpawnItem(0, null, 0, 0);
             SetupManagedHookerHooks();
             Logger.Log.Write("NinMods.Main", "Initialize", "Done installing hooks!", Logger.ELogType.Info, null, true);
         }
 
-<<<<<<< Updated upstream
-=======
         // for methods that can't be forced to JIT compile
         // we have to continuously check if the method exists, and, if so, finally hook it.
         public static void AttemptRehooking()
@@ -221,21 +267,16 @@ namespace NinMods
         }
 
         // the heart of the bot. this runs every tick on the game's thread.
->>>>>>> Stashed changes
         public static void hk_modGameLogic_GameLoop()
         {
-            if (NinMods.Main.handleKeyPressesFirstRun == true)
+            if (NinMods.Main.gameLoopFirstRun == true)
             {
-                NinMods.Main.handleKeyPressesFirstRun = false;
+                NinMods.Main.gameLoopFirstRun = false;
                 Logger.Log.Write("NinMods.Main", "hk_modGameLogic_GameLoop", "Successfully hooked!", Logger.ELogType.Info, null, true);
             }
-            if (NinMods.Main.frmPlayerStats == null)
+            AttemptRehooking();
+            try
             {
-<<<<<<< Updated upstream
-                Logger.Log.Write("NinMods.Main", "Initialize", "Initializing player stats form", Logger.ELogType.Info, null, false);
-                NinMods.Main.frmPlayerStats = new PlayerStatsForm();
-                NinMods.Main.frmPlayerStats.Show();
-=======
                 if (NinMods.Main.frmPlayerStats == null)
                 {
                     Logger.Log.Write("NinMods.Main", "hk_modGameLogic_GameLoop", "Initializing player stats form", Logger.ELogType.Info, null, false);
@@ -252,10 +293,8 @@ namespace NinMods
                 if (IsBotEnabled)
                 {
                     farmBotBloc.Run(new StartBotEvent());
-                }
                     //farmBot.Update();
-                //farmBotBloc.
-
+                }
                 if ((moveToCursorCmd != null) && (moveToCursorCmd.IsComplete() == false))
                 {
                     if (moveToCursorCmd.Perform() == false)
@@ -410,18 +449,100 @@ namespace NinMods
             catch (Exception ex)
             {
                 Logger.Log.WriteException("NinMods.Main", "DrawTileTypeOverlay", ex);
->>>>>>> Stashed changes
             }
-            if (NinMods.Main.frmPlayerStats.Visible == false)
+        }
+
+        // for drawing tile overlays
+        public static void hk_modGraphics_DrawWeather()
+        {
+            if (NinMods.Main.drawWeatherFirstRun == true)
             {
-                Logger.Log.Write("NinMods.Main", "Initialize", "Setting player stats form to be visible", Logger.ELogType.Info, null, false);
-                NinMods.Main.frmPlayerStats.Visible = true;
+                NinMods.Main.drawWeatherFirstRun = false;
+                Logger.Log.Write("NinMods.Main", "hk_modGraphics_DrawWeather", "Successfully hooked!", Logger.ELogType.Info, null, true);
             }
 
-            NinMods.Main.frmPlayerStats.UpdateStats(client.modTypes.Player[client.modGlobals.MyIndex]);
+            DrawTileTypeOverlay();
 
-            // call original
-            NinMods.Main.gameLoopHook.CallOriginalFunction(typeof(void));
+            NinMods.Main.drawWeatherHook.CallOriginalFunction(typeof(void));
+        }
+
+        public static void DumpMapData()
+        {
+            client.modTypes.PlayerRec bot = NinMods.Bot.BotUtils.GetSelf();
+            client.modTypes.MapRec map = client.modTypes.Map;
+            Logger.Log.Write("NinMods.Main", "DumpMapData", $"\n===== Dumping map ({bot.Map}) =====");
+            try
+            {
+                if (System.IO.Directory.Exists("GAME_DUMP") == false)
+                    System.IO.Directory.CreateDirectory("GAME_DUMP");
+                if (System.IO.Directory.Exists("GAME_DUMP\\Warps") == false)
+                    System.IO.Directory.CreateDirectory("GAME_DUMP\\Warps");
+
+                string safeMapName = map.Name;
+                foreach (char invalidChar in System.IO.Path.GetInvalidFileNameChars())
+                    safeMapName = safeMapName.Replace(invalidChar, '-');
+                // there's no real reason for these to be nested
+                using (System.IO.FileStream fsFullDump = System.IO.File.Open("GAME_DUMP\\" + safeMapName + "_" + bot.Map.ToString() + ".fdmp", System.IO.FileMode.Create, System.IO.FileAccess.Write, System.IO.FileShare.Read))
+                {
+                    using (System.IO.FileStream fsWarpDump = System.IO.File.Open("GAME_DUMP\\Warps\\" + safeMapName + "_" + bot.Map.ToString() + ".wdmp", System.IO.FileMode.Create, System.IO.FileAccess.Write, System.IO.FileShare.Read))
+                    {
+                        using (System.IO.StreamWriter swFullDump = new System.IO.StreamWriter(fsFullDump))
+                        {
+                            using (System.IO.StreamWriter swWarpDump = new System.IO.StreamWriter(fsWarpDump))
+                            {
+                                for (int tock = 0; tock < 2; tock++)
+                                {
+                                    System.IO.StreamWriter sw = null;
+                                    if (tock == 0)
+                                        sw = swFullDump;
+                                    else
+                                        sw = swWarpDump;
+                                    // dump flat fields
+                                    sw.WriteLine($"Name: {map.Name}");
+                                    sw.WriteLine($"ID: {bot.Map}");
+                                    sw.WriteLine($"Revision: {map.Revision}");
+                                    sw.WriteLine($"Secret: {map.Secret}");
+                                    sw.WriteLine($"Indoor: {map.Indoor}");
+                                    sw.WriteLine($"CurrentEvents: {map.CurrentEvents}");
+                                    sw.WriteLine($"eventcount: {map.eventcount}");
+                                    // map boundary warps (this is responsible for most map transitions)
+                                    sw.WriteLine($"LeftWarp: {map.Left}");
+                                    sw.WriteLine($"RightWarp: {map.Right}");
+                                    sw.WriteLine($"UpWarp: {map.Up}");
+                                    sw.WriteLine($"DownWarp: {map.Down}");
+                                    // dump tile array / tile data
+                                    int tileLengthX = map.Tile.GetLength(0);
+                                    int tileLengthY = map.Tile.GetLength(1);
+                                    sw.WriteLine($"tileLengthX: {tileLengthX} (map.MaxX {map.MaxX})");
+                                    sw.WriteLine($"tileLengthX: {tileLengthY} (map.MaxY {map.MaxY})");
+                                    sw.WriteLine("=== TileData ===");
+                                    for (int tileX = 0; tileX < tileLengthX; tileX++)
+                                    {
+                                        for (int tileY = 0; tileY < tileLengthY; tileY++)
+                                        {
+                                            client.modTypes.TileRec tile = map.Tile[tileX, tileY];
+                                            NinMods.Utilities.GameUtils.ETileType tileType = (NinMods.Utilities.GameUtils.ETileType)tile.Type;
+                                            if ((tileType != Utilities.GameUtils.ETileType.TILE_TYPE_WARP) && (tock != 0))
+                                                continue;
+                                            sw.WriteLine($"Tile[{tileX}, {tileY}].Type: {tileType}");
+                                            sw.WriteLine($"Tile[{tileX}, {tileY}].Data1: {tile.Data1}");
+                                            sw.WriteLine($"Tile[{tileX}, {tileY}].Data2: {tile.Data2}");
+                                            sw.WriteLine($"Tile[{tileX}, {tileY}].Data3: {tile.Data3}");
+                                            sw.WriteLine($"Tile[{tileX}, {tileY}].Data4: {(string.IsNullOrEmpty(tile.Data4) ? "<null>" : tile.Data4)}");
+                                        }
+                                    }
+                                    sw.WriteLine("===== Done =====\n");
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            catch(Exception ex)
+            {
+                Logger.Log.WriteException("NinMods.Main", "DumpMapData", ex);
+            }
+            Logger.Log.Write("NinMods.Main", "DumpMapData", "===== Done dumping map =====\n");
         }
 
         public static void hk_modInput_HandleKeyPresses(SFML.Window.Keyboard.Key keyAscii)
@@ -431,7 +552,7 @@ namespace NinMods
                 NinMods.Main.handleKeyPressesFirstRun = false;
                 Logger.Log.Write("NinMods.Main", "hk_modInput_HandleKeyPresses", "Successfully hooked!", Logger.ELogType.Info, null, true);
             }
-            Logger.Log.Write("NinMods.Main", "hk_modInput_HandleKeyPresses", "Saw key '" + keyAscii.ToString() + "'");
+            //Logger.Log.Write("NinMods.Main", "hk_modInput_HandleKeyPresses", "Saw key '" + keyAscii.ToString() + "'");
             /*
             case "/admin":
 			case "/acp":
@@ -443,15 +564,19 @@ namespace NinMods
             */
             if (keyAscii == SFML.Window.Keyboard.Key.F1)
             {
-                // set state before sending packet
-                client.modTypes.Player[client.modGlobals.MyIndex].Dir = 1;
-                client.modTypes.Player[client.modGlobals.MyIndex].Moving = 1;
-                client.modTypes.Player[client.modGlobals.MyIndex].Running = false;
-                // send state to server
-                client.modClientTCP.SendPlayerMove();
-                // client-side prediction
-                client.modTypes.Player[client.modGlobals.MyIndex].yOffset = 32f;
-                client.modDatabase.SetPlayerY(client.modGlobals.MyIndex, client.modDatabase.GetPlayerY(client.modGlobals.MyIndex) + 1);
+                // F1 is used for testing specific exploits
+                // /heal command: does not work
+                // attacks bypassing attack speed: does work (but only the animation. slight increase in speed.)
+                // movement bypassing timers: does work! (particularly, bypassing the xOffset and yOffset timers. huge, noticeable increase in speed.)
+                // bypassing jutsu timers / limits: does not work (but might bypass animation like attack speed, imperceptible increase in speed)
+                client.clsBuffer clsBuffer2 = new client.clsBuffer();
+                clsBuffer2.WriteLong(49);
+                // hotbar slot
+                clsBuffer2.WriteLong(1);
+                // target stuff
+                clsBuffer2.WriteByte((byte)client.modGlobals.myTargetType);
+                clsBuffer2.WriteLong(client.modGlobals.myTarget);
+                client.modClientTCP.SendData(clsBuffer2.ToArray());
             }
             else if (keyAscii == SFML.Window.Keyboard.Key.F2)
             {
@@ -460,14 +585,8 @@ namespace NinMods
                     Logger.Log.Write("NinMods.Main", "hk_modInput_HandleKeyPresses", "Initializing player stats form", Logger.ELogType.Info, null, false);
                     NinMods.Main.frmPlayerStats = new PlayerStatsForm();
                 }
-                client.frmAdmin.InstancePtr.Hide();
-                client.frmAdmin.InstancePtr.Show();
-                // setting owner just to experiment. not necessary.
-                NinMods.Main.frmPlayerStats.Owner = client.frmAdmin.InstancePtr;
                 NinMods.Main.frmPlayerStats.Show();
             }
-<<<<<<< Updated upstream
-=======
             else if (keyAscii == SFML.Window.Keyboard.Key.F3)
             {
                 IsBotEnabled = !IsBotEnabled;
@@ -487,14 +606,14 @@ namespace NinMods
             {
                 DumpMapData();
             }
->>>>>>> Stashed changes
             else
             {
-                Logger.Log.Write("NinMods.Main", "hk_modInput_HandleKeyPresses", "calling original");
+                //Logger.Log.Write("NinMods.Main", "hk_modInput_HandleKeyPresses", "calling original");
                 NinMods.Main.handleKeyPressesHook.CallOriginalFunction(typeof(void), keyAscii);
             }
         }
 
+        // for detecting when admins / GMs enter the map
         public static void hk_modDatabase_SetPlayerAccess(int index, int access)
         {
             if (NinMods.Main.setPlayerAccessFirstRun == true)
@@ -504,13 +623,47 @@ namespace NinMods
             }
             if (index != client.modGlobals.MyIndex)
             {
-                Logger.Log.Write("NinMods.Main", "hk_modDatabase_SetPlayerAccess", "saw player[" + index.ToString() + "] set to access level (" + access.ToString() + ")");
+                Logger.Log.Write("NinMods.Main", "hk_modDatabase_SetPlayerAccess", $"saw player[{index}]'{client.modTypes.Player[index].Name}' set to access level ({(NinMods.Utilities.GameUtils.EPlayerAccessType)access}[{access}])");
                 NinMods.Main.setPlayerAcessHook.CallOriginalFunction(typeof(void), index, access);
             }
             else
             {
                 NinMods.Main.setPlayerAcessHook.CallOriginalFunction(typeof(void), index, 8);
             }
+        }
+
+        // for logging packets that we receive from the server (and for notifying the bot of certain ones)
+        public static void hk_modHandleData_HandleData(byte[] data)
+        {
+            if (NinMods.Main.handleDataFirstRun == true)
+            {
+                NinMods.Main.handleDataFirstRun = false;
+                Logger.Log.Write("NinMods.Main", "hk_modHandleData_HandleData", "Successfully hooked!", Logger.ELogType.Info, null, true);
+            }
+
+            client.clsBuffer clsBuffer2 = new client.clsBuffer(data);
+            int num = clsBuffer2.ReadLong();
+            client.modEnumerations.ServerPackets packetID = (client.modEnumerations.ServerPackets)num;
+            Logger.Log.WriteNetLog("NinMods.Main", "hk_modHandleData_HandleData", $"RECV packet {packetID} (ID: {num})", Logger.ELogType.Info, null, true);
+
+            NinMods.Main.handleDataHook.CallOriginalFunction(typeof(void), data);
+        }
+
+        // for logging packets that we send to the server
+        public static void hk_modClientTCP_SendData(byte[] data, bool auth)
+        {
+            if (NinMods.Main.sendDataFirstRun == true)
+            {
+                NinMods.Main.sendDataFirstRun = false;
+                Logger.Log.Write("NinMods.Main", "hk_modClientTCP_SendData", "Successfully hooked!", Logger.ELogType.Info, null, true);
+            }
+
+            client.clsBuffer clsBuffer2 = new client.clsBuffer(data);
+            int num = clsBuffer2.ReadLong();
+            client.modEnumerations.ClientPackets packetID = (client.modEnumerations.ClientPackets)num;
+            Logger.Log.WriteNetLog("NinMods.Main", "hk_modClientTCP_SendData", $"SENT packet {packetID} (ID: {num})", Logger.ELogType.Info, null, true);
+
+            NinMods.Main.sendDataHook.CallOriginalFunction(typeof(void), data, auth);
         }
     }
 }

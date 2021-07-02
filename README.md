@@ -23,3 +23,10 @@ If it can't find the installation directory it will prompt you on startup.
 Injector configuration is saved so you *should* only have to fill in everything once.
 
 The mod itself is bare bones right now: it only demonstrates how to hook game methods and access game data (note: you don't need to hook anything to access the game data - just be wary of thread safety).
+
+## HOW TO CONTRIBUTE ##
+1. Fork it (https://github.com/kotae4/NinOnlineMods/fork)
+2. Create your feature branch (`git checkout -b feature/fooBar`)
+3. Commit your changes (`git commit -am 'Add some fooBar'`)
+4. Push to the branch (`git push origin feature/fooBar`)
+5. Create a new Pull Request

@@ -74,8 +74,6 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-<<<<<<< Updated upstream
-=======
     <Compile Include="Application\bloc\BaseBloc.cs" />
     <Compile Include="Application\bloc\Bloc.cs" />
     <Compile Include="Application\FarmBotBloc\FarmBotBloc.cs" />
@@ -97,7 +95,6 @@
     <Compile Include="Bot\IBotCommand.cs" />
     <Compile Include="Constants.cs" />
     <Compile Include="Pathfinder.cs" />
->>>>>>> Stashed changes
     <Compile Include="PlayerStatsForm.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -116,6 +113,7 @@
     <Compile Include="Hooking\minhook\Trampoline.cs" />
     <Compile Include="Hooking\minhook\Utilities.cs" />
     <Compile Include="Hooking\NativeStubHooker.cs" />
+    <Compile Include="Utilities\GameUtils.cs" />
     <Compile Include="Utilities\Logger.cs" />
     <Compile Include="Main.cs" />
     <Compile Include="InjectedClass.cs" />
@@ -128,5 +126,6 @@
       <DependentUpon>PlayerStatsForm.cs</DependentUpon>
     </EmbeddedResource>
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

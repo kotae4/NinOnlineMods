@@ -19,18 +19,6 @@ namespace NinMods.Application.FarmBotBloc
         // maybe add details and do logging here
     }
 
-    class ItemDroppedEvent : FarmBotEvent {
-
-        public Vector2i newItemPosition;
-
-        public ItemDroppedEvent (Vector2i newItemPositionP)
-        {
-            newItemPosition = newItemPositionP;
-        }
-    }
-
-    class KilledMobSuccesfullyEvent : FarmBotEvent { }
-
     class StartBotEvent : FarmBotEvent { }
 
     class AttackingMobEvent: FarmBotEvent {
@@ -43,11 +31,23 @@ namespace NinMods.Application.FarmBotBloc
             targetMonsterIndex = targetMonsterIndexP;
         }
     }
+    class KilledMobSuccesfullyEvent : FarmBotEvent { }
+    class ItemDroppedEvent : FarmBotEvent {
+
+        public Vector2i newItemPosition;
+
+        public ItemDroppedEvent (Vector2i newItemPositionP)
+        {
+            newItemPosition = newItemPositionP;
+        }
+    }
 
     class HpRestoringEvent : FarmBotEvent { }
     class HpRestoredEvent : FarmBotEvent { }
+
     class MpRestoringEvent : FarmBotEvent { }
     class MpRestoredEvent : FarmBotEvent { }
+
     class CollectingItemEvent : FarmBotEvent {
         public Vector2i newItemPosition;
 
@@ -57,6 +57,4 @@ namespace NinMods.Application.FarmBotBloc
         }
     }
     class CollectedItemEvent : FarmBotEvent { }
-
-
 }

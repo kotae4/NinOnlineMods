@@ -10,11 +10,8 @@ namespace NinMods.Bot
     public class BotCommand_ChargeChakra : IBotBlocCommand<FarmBotEvent>
     {
         int realBotMap = -1;
-
         // for pathing to nearest non-water tile
         Stack<Vector2i> path = null;
-
-       
 
         public FarmBotEvent Perform()
         {
@@ -28,7 +25,7 @@ namespace NinMods.Bot
                 bot.Map = realBotMap;
                 return new MpRestoredEvent();
             }
-
+            
             // NOTE:
             // we set bot.Map here to prevent modGameLogic.CheckCharge() from running and canceling our charge because we aren't holding the key down
             if (realBotMap == -1)

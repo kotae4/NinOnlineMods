@@ -10,6 +10,7 @@ namespace NinMods
     public class Logger
     {
         const string LOG_FILENAME = Main.MAIN_NAME + "_log.txt";
+        const string NETLOG_FILENAME = Main.MAIN_NAME + "_netlog.txt";
 
         public static readonly Logger Log = new Logger();
         static readonly System.Globalization.CultureInfo DateTimeCultureInfo_German = System.Globalization.CultureInfo.CreateSpecificCulture("de-DE");
@@ -26,12 +27,20 @@ namespace NinMods
         // TO-DO:
         // * Is StreamWriter thread-safe?
         StreamWriter logWriter;
+        StreamWriter netlogWriter;
 
         Logger()
         {
             try
             {
+                // TO-DO:
+                // 1. if the file already exists, write some easy to see separator to indicate a new session
+                // 2. if either log gets to be too big, then delete it and start fresh. or maybe move it to a zip archive and start fresh.
+                // 3. adding on to the above, maybe we should create a new log file for each session, and only keep the last ~10 log files.
                 logWriter = new StreamWriter(LOG_FILENAME, true) { AutoFlush = true };
+                // NOTE:
+                // net log will quickly fill up disk space so we don't want to append. might change this later.
+                netlogWriter = new StreamWriter(NETLOG_FILENAME, false) { AutoFlush = true };
             }
             catch (Exception ex)
             {
@@ -51,8 +60,15 @@ namespace NinMods
         {
             if (logWriter != null)
             {
-                logWriter.Flush();
+                if ((logWriter.BaseStream != null) && (logWriter.BaseStream.CanRead))
+                    logWriter.Flush();
                 logWriter.Close();
+            }
+            if (netlogWriter != null)
+            {
+                if ((netlogWriter.BaseStream != null) && (netlogWriter.BaseStream.CanRead))
+                    netlogWriter.Flush();
+                netlogWriter.Close();
             }
         }
 
@@ -89,6 +105,25 @@ namespace NinMods
         {
             System.Windows.Forms.MessageBox.Show(logString, caption, buttons, icon);
             Write(typeSource, methodSource, logString, type, rtxtLog, shouldForceFlush);
+        }
+
+        public void WriteNetLog(string typeSource, string methodSource, string logString, ELogType type = ELogType.Info, System.Windows.Forms.RichTextBox rtxtLog = null, bool shouldForceFlush = false)
+        {
+            logString = $"[{DateTime.Now.ToString("G", DateTimeCultureInfo_German)}][{typeSource}::{methodSource}]: {logString}\n";
+            if (netlogWriter != null)
+            {
+                if (netlogWriter.BaseStream.CanWrite)
+                {
+                    netlogWriter.WriteLine(logString);
+                }
+                if (shouldForceFlush)
+                    netlogWriter.Flush();
+            }
+
+            if (rtxtLog != null)
+            {
+                WinformControl_WriteTextSafe(rtxtLog, logString);
+            }
         }
 
         private delegate void SafeCallDelegate(System.Windows.Forms.RichTextBox richtextControl, string text);
