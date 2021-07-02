@@ -6,13 +6,7 @@ using System.Threading.Tasks;
 
 namespace NinMods.Application.FarmBotBloc
 {
-    public abstract class FarmBotEvent 
-    {
-        public FarmBotEvent()
-        {
-
-        }
-    }
+    public abstract class FarmBotEvent { }
 
     class FarmBotFailureEvent : FarmBotEvent
     {

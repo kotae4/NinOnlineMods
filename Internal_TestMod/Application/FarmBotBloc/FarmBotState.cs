@@ -6,18 +6,13 @@ using System.Threading.Tasks;
 
 namespace NinMods.Application.FarmBotBloc
 {
-    public abstract class FarmBotState {
-        public FarmBotState()
-        {
-
-        }
-    }
+    public abstract class FarmBotState { }
 
     class FarmBotIdleState : FarmBotState { }
     class FarmBotMovingToMapState : FarmBotState { }
     class FarmBotMovingToHotspotState : FarmBotState { }
 
-    class FarmBotAttackingTargetState : FarmBotState { 
+    class FarmBotAttackingTargetState : FarmBotState {
         public client.modTypes.MapNpcRec targetMonster;
         public int targetMonsterIndex;
 

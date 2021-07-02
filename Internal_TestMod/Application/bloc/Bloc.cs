@@ -8,53 +8,48 @@ using System.Text;
 using System.Threading.Tasks;
 
 
-public abstract class Bloc<BlocStateType, BlocEventType> : BaseBloc<BlocStateType, BlocEventType>
+public abstract class Bloc<TBlocStateType, TBlocEventType> : BaseBloc<TBlocStateType, TBlocEventType>
 {
     
-    private BlocStateType _currentState;
-    private BlocStateType _fallbackState;
-    private IBotBlocCommand<BlocEventType> _currentCommand = null;
-   
+    protected TBlocStateType _currentState;
+    protected TBlocStateType _fallbackState;
+    protected IBotBlocCommand<TBlocEventType> _currentCommand = null;
+
+    public TBlocStateType currentState { get => _currentState; set { _currentState = value; } }
+    public TBlocStateType fallbackState { get => _fallbackState; set { _fallbackState = value; } }
+    public IBotBlocCommand<TBlocEventType> currentCommand { get => _currentCommand; set { _currentCommand = value; } }
+
     public bool HasFailedCatastrophically;
 
-    public Bloc(BlocStateType startState, BlocStateType fallbackState)
+    abstract public TBlocStateType mapEventToState(TBlocEventType e);
+    abstract public IBotBlocCommand<TBlocEventType> mapStateToCommand(TBlocStateType state);
+
+    public Bloc(TBlocStateType startState, TBlocStateType fallbackState)
     {
         _currentState = startState;
         _fallbackState = fallbackState;
     }
 
-    public BlocStateType currentState { get => _currentState; set { _currentState = value; } }
-    public BlocStateType fallbackState { get => _fallbackState; set { _fallbackState = value; } }
-    public IBotBlocCommand<BlocEventType> currentCommand { get => _currentCommand; set { _currentCommand = value; } }
-
-
-
-    abstract public BlocStateType mapEventToState(BlocEventType e);
-    public void addEvent(BlocEventType e)
+    public void addEvent(TBlocEventType e)
     {
         // get the new state
         _currentState = mapEventToState(e);
         // trigger command
-        changeCurrentCommandBasedOnCurrentState();
-
-
+        _currentCommand = mapStateToCommand(_currentState);
     }
 
-    abstract public void changeCurrentCommandBasedOnCurrentState();
-
-    public void Run(BlocEventType fallbackEvent)
+    public void Run(TBlocEventType fallbackEvent)
     {
         if (HasFailedCatastrophically)
         {
-            Logger.Log.WriteError("FarmBot", "Update", "Bot failed catastrophically, cannot do anything.");
+            Logger.Log.WriteError("Bloc", "Run", "Bot failed catastrophically, cannot do anything.");
             return;
         }
 
         if (_currentCommand != null)
         {
-            BlocEventType nextEvent = currentCommand.Perform();
+            TBlocEventType nextEvent = currentCommand.Perform();
             addEvent(nextEvent);
-
         }
 
         if (currentCommand == null)
@@ -62,6 +57,4 @@ public abstract class Bloc<BlocStateType, BlocEventType> : BaseBloc<BlocStateTyp
             addEvent(fallbackEvent);
         }
     }
-
 }
-

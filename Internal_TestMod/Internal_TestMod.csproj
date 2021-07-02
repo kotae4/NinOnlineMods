@@ -55,11 +55,11 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="NinOnline">
-      <HintPath>..\..\..\NinNew\Hitspark Interactive\Nin Online Inochi\app\NinOnline.exe</HintPath>
+      <HintPath>..\..\..\Games\Hitspark Interactive\Nin Online Inochi\app\NinOnline.exe</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="SFML.Portable">
-      <HintPath>..\..\..\NinNew\Hitspark Interactive\Nin Online Inochi\app\SFML.Portable.dll</HintPath>
+      <HintPath>..\..\..\Games\Hitspark Interactive\Nin Online Inochi\app\SFML.Portable.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="System" />
@@ -120,6 +120,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Utilities\HookingUtils.cs" />
     <Compile Include="Utilities\TypeCache.cs" />
+    <Compile Include="Utilities\Utils.cs" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="PlayerStatsForm.resx">

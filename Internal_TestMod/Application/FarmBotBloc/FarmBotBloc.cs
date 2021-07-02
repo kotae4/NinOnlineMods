@@ -7,15 +7,15 @@ using System.Threading.Tasks;
 
 namespace NinMods.Application.FarmBotBloc
 {
-     class FarmBotBloc : Bloc<FarmBotState, FarmBotEvent>
+    public class FarmBotBloc : Bloc<FarmBotState, FarmBotEvent>
     {
-
         public static client.modTypes.MapNpcRec targetMonster;
         public static int targetMonsterIndex;
         public static client.modTypes.MapItemRec[] lastFrameMapItems = new client.modTypes.MapItemRec[256];
 
-
-        public FarmBotBloc() : base(new FarmBotIdleState(),new FarmBotIdleState())
+        public FarmBotBloc() :
+            // base(TBlocStateType startState, TBlocStateType fallbackState)
+            base(new FarmBotIdleState(),new FarmBotIdleState())
         {
             // Initialize variables in constructor
             targetMonster = null;
@@ -37,7 +37,7 @@ namespace NinMods.Application.FarmBotBloc
             client.modTypes.PlayerRec bot = BotUtils.GetSelf();
 
             float health = (float)bot.Vital[(int)client.modEnumerations.Vitals.HP];
-            float mana = (float) bot.Vital[(int)client.modEnumerations.Vitals.MP];
+            float mana = (float)bot.Vital[(int)client.modEnumerations.Vitals.MP];
 
             float healthPercentage = health / (float)bot.MaxVital[(int)client.modEnumerations.Vitals.HP];
             float manaPercentage = mana / (float)bot.MaxVital[(int)client.modEnumerations.Vitals.MP];
@@ -45,10 +45,15 @@ namespace NinMods.Application.FarmBotBloc
 
             if (e is KilledMobSuccesfullyEvent || e is HpRestoredEvent || e is MpRestoredEvent || e is StartBotEvent)
             {
+                // if we:
+                // killed our target, restored our vitals, or are just starting, then enter the attacking state
                 return getAttackState(healthPercentage, manaPercentage, mana);          
             }
             else if (e is AttackingMobEvent)
             {
+                // if we are attacking, then continue attacking
+                // NOTE:
+                // instantiating a new instance every frame seems really inefficient? can we change it to only instantiate if we're coming from a different state?
                 AttackingMobEvent ev = e as AttackingMobEvent;
                 return new FarmBotAttackingTargetState(ev.targetMonster, ev.targetMonsterIndex);
             }
@@ -76,34 +81,34 @@ namespace NinMods.Application.FarmBotBloc
             }
         }
 
-        public override void changeCurrentCommandBasedOnCurrentState()
+        public override IBotBlocCommand<FarmBotEvent> mapStateToCommand(FarmBotState state)
         {
-            if (currentState is FarmBotHealingState)
+            if (state is FarmBotHealingState)
             {
-                currentCommand = new BotCommand_Heal();
+                return new BotCommand_Heal();
             }
-            else if (currentState is FarmBotAttackingTargetState)
+            else if (state is FarmBotAttackingTargetState)
             {
                 // if we are in a attacking state we have the target, cause that's the condition to get in that state
-                FarmBotAttackingTargetState state = currentState as FarmBotAttackingTargetState;
-                currentCommand = new BotCommand_Attack(
-                    state.targetMonster,
-                    state.targetMonsterIndex
+                FarmBotAttackingTargetState attackingState = state as FarmBotAttackingTargetState;
+                return new BotCommand_Attack(
+                    attackingState.targetMonster,
+                    attackingState.targetMonsterIndex
                     );
             }
-            else if (currentState is FarmBotChargingChakraState)
+            else if (state is FarmBotChargingChakraState)
             {
-                currentCommand = new BotCommand_ChargeChakra();
-            } 
-            else if (currentState is FarmBotCollectingItemState)
+                return new BotCommand_ChargeChakra();
+            }
+            else if (state is FarmBotCollectingItemState)
             {
-                FarmBotCollectingItemState state = currentState as FarmBotCollectingItemState;
-                currentCommand = new BotCommand_CollectItem(state.newItemPosition);
+                FarmBotCollectingItemState collectItemState = state as FarmBotCollectingItemState;
+                return new BotCommand_CollectItem(collectItemState.newItemPosition);
             }
             else
             {
                 // in case of idle state, which is our fallback, command is null and we will do it again
-                currentCommand = null;
+                return null;
             }
         }
 
@@ -120,7 +125,6 @@ namespace NinMods.Application.FarmBotBloc
                 GetTarget();
                 if (targetMonster != null)
                 {
-
                     return new FarmBotAttackingTargetState(targetMonster, targetMonsterIndex);
                 }
             }
@@ -142,6 +146,20 @@ namespace NinMods.Application.FarmBotBloc
             return null;
         }
 
+        private bool enoughHealth(float healthPercentage)
+        {
+            // TO-DO:
+            // don't hardcode this
+            return healthPercentage > 0.2f;
+        }
+        
+        private bool enoughMana(float manaPercentage, float mana)
+        {
+            // TO-DO:
+            // don't hardcode this
+            return ((manaPercentage > 0.2f) && (mana > 10f));
+        }
+
         void GetTarget()
         {
             Vector2i botLocation = BotUtils.GetSelfLocation();
@@ -150,24 +168,14 @@ namespace NinMods.Application.FarmBotBloc
                 Vector2i monsterLocation = new Vector2i(targetMonster.X, targetMonster.Y);
                 double dist = botLocation.DistanceTo(monsterLocation);
                 if (targetMonster.num > 0)
-                    Logger.Log.Write("FarmBot", "GetTarget", $"Got nearest monster '{(targetMonster.num > 0 ? client.modTypes.Npc[targetMonster.num].Name.Trim() : "<null>")}[{targetMonsterIndex}]' at {monsterLocation} ({dist} away)");
+                    Logger.Log.Write("FarmBotBloc", "GetTarget", $"Got nearest monster '{((client.modTypes.Npc[targetMonster.num] != null && client.modTypes.Npc[targetMonster.num].Name != null) ? client.modTypes.Npc[targetMonster.num].Name.Trim() : "<null>")}[{targetMonsterIndex}]' at {monsterLocation} ({dist} away)");
             }
             else
             {
-                Logger.Log.WriteError("FarmBot", "GetTarget", "Could not get nearest monster");
+                Logger.Log.WriteError("FarmBotBloc", "GetTarget", "Could not get nearest monster");
                 targetMonster = null;
                 targetMonsterIndex = 0;
             }
-        }
-
-        private bool enoughHealth(float healthPercentage)
-        {
-            return healthPercentage > 0.2;
-        }
-        
-        private bool enoughMana(float manaPercentage, float mana)
-        {
-            return ((manaPercentage > 0.2) || (mana > 10.0));
         }
     }
 }

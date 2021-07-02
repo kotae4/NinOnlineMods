@@ -10,8 +10,7 @@ public interface BaseBloc<BlocStateType, BlocEventType>
     BlocStateType currentState { get;set; }  
 
     BlocStateType fallbackState { get;set; }
+
     IBotBlocCommand<BlocEventType> currentCommand { get; set; }
-
-
 }
 
