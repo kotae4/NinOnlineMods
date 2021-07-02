@@ -54,14 +54,6 @@
     <ErrorReport>prompt</ErrorReport>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="NinOnline">
-      <HintPath>..\..\..\Games\Hitspark Interactive\Nin Online Inochi\app\NinOnline.exe</HintPath>
-      <Private>False</Private>
-    </Reference>
-    <Reference Include="SFML.Portable">
-      <HintPath>..\..\..\Games\Hitspark Interactive\Nin Online Inochi\app\SFML.Portable.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Drawing" />
@@ -129,4 +121,5 @@
   </ItemGroup>
   <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <Import Project="find-game-path.targets" />
 </Project>

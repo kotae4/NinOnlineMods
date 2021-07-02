@@ -1,0 +1,18 @@
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+	
+	<PropertyGroup>
+	<RootGamePath Condition="!Exists('$(RootGamePath)')">$([MSBuild]::GetRegistryValueFromView('HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Nin Online Inochi', 'InstallLocation', null, RegistryView.Registry64, RegistryView.Registry32))</RootGamePath>
+	<GamePath Condition="!Exists('$(GamePath)') AND '$(RootGamePath)' != ''">$(RootGamePath)\app</GamePath>
+	</PropertyGroup>
+	
+	<ItemGroup>
+	<Reference Include="NinOnline">
+      <HintPath>$(GamePath)\NinOnline.exe</HintPath>
+      <Private>false</Private>
+    </Reference>
+	<Reference Include="SFML.Portable">
+      <HintPath>$(GamePath)\SFML.Portable.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+	</ItemGroup>
+</Project>
