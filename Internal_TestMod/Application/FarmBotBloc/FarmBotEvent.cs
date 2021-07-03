@@ -39,7 +39,14 @@ namespace NinMods.Application.FarmBotBloc
     class HpRestoringEvent : FarmBotEvent { }
     class HpRestoredEvent : FarmBotEvent { }
 
-    class MpRestoringEvent : FarmBotEvent { }
+    class MpRestoringEvent : FarmBotEvent 
+    {
+        public int realBotMapID = -1;
+        public MpRestoringEvent(int _realBotMapID)
+        {
+            realBotMapID = _realBotMapID;
+        }
+    }
     class MpRestoredEvent : FarmBotEvent { }
 
     class CollectingItemEvent : FarmBotEvent {

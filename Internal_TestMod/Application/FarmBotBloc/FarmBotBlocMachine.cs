@@ -7,13 +7,13 @@ using System.Threading.Tasks;
 
 namespace NinMods.Application.FarmBotBloc
 {
-    public class FarmBotBloc : Bloc<FarmBotState, FarmBotEvent>
+    public class FarmBotBlocMachine : BaseBlocMachine<FarmBotState, FarmBotEvent>
     {
         public static client.modTypes.MapNpcRec targetMonster;
         public static int targetMonsterIndex;
         public static client.modTypes.MapItemRec[] lastFrameMapItems = new client.modTypes.MapItemRec[256];
 
-        public FarmBotBloc() :
+        public FarmBotBlocMachine() :
             // base(TBlocStateType startState, TBlocStateType fallbackState)
             base(new FarmBotIdleState(),new FarmBotIdleState())
         {
@@ -42,12 +42,13 @@ namespace NinMods.Application.FarmBotBloc
             float healthPercentage = health / (float)bot.MaxVital[(int)client.modEnumerations.Vitals.HP];
             float manaPercentage = mana / (float)bot.MaxVital[(int)client.modEnumerations.Vitals.MP];
 
+            FarmBotState retState = null;
 
             if (e is KilledMobSuccesfullyEvent || e is HpRestoredEvent || e is MpRestoredEvent || e is StartBotEvent)
             {
                 // if we:
                 // killed our target, restored our vitals, or are just starting, then enter the attacking state
-                return getAttackState(healthPercentage, manaPercentage, mana);          
+                retState = getAttackState(healthPercentage, manaPercentage, mana);          
             }
             else if (e is AttackingMobEvent)
             {
@@ -55,69 +56,84 @@ namespace NinMods.Application.FarmBotBloc
                 // NOTE:
                 // instantiating a new instance every frame seems really inefficient? can we change it to only instantiate if we're coming from a different state?
                 AttackingMobEvent ev = e as AttackingMobEvent;
-                return new FarmBotAttackingTargetState(ev.targetMonster, ev.targetMonsterIndex);
+                retState = new FarmBotAttackingTargetState(ev.targetMonster, ev.targetMonsterIndex);
+            }
+            else if (e is ItemDroppedEvent)
+            {
+                ItemDroppedEvent ide = e as ItemDroppedEvent;
+                retState = new FarmBotCollectingItemState(ide.newItemPosition);
             }
             else if (e is CollectingItemEvent)
             {
                 CollectingItemEvent ev = e as CollectingItemEvent;
-                return new FarmBotCollectingItemState(ev.newItemPosition);
+                retState = new FarmBotCollectingItemState(ev.newItemPosition);
             }
             else if (e is CollectedItemEvent)
             {
-                return getAttackState(healthPercentage, manaPercentage, mana);
+                retState = getAttackState(healthPercentage, manaPercentage, mana);
             }
             else if (e is HpRestoringEvent)
             {
-                return new FarmBotHealingState();
+                retState = new FarmBotHealingState();
             }
             else if (e is MpRestoringEvent)
             {
-                return new FarmBotChargingChakraState();
+                MpRestoringEvent mre = e as MpRestoringEvent;
+                retState = new FarmBotChargingChakraState(mre.realBotMapID);
             }
             else
             {
                 // if there was a failure, get health and mp and attack again
-                return getAttackState(healthPercentage, manaPercentage, mana);
+                Logger.Log.Write("FarmBotBloc", "mapEventToState", $"Saw failure event or unhandled event, defaulting to an attacking state");
+                retState = getAttackState(healthPercentage, manaPercentage, mana);
             }
+            Logger.Log.Write("FarmBotBloc", "mapEventToState", $"Mapped event '{e}' to state '{retState}'");
+            return retState;
         }
 
         public override IBotBlocCommand<FarmBotEvent> mapStateToCommand(FarmBotState state)
         {
+            IBotBlocCommand<FarmBotEvent> retCommand = null;
+
             if (state is FarmBotHealingState)
             {
-                return new BotCommand_Heal();
+                retCommand = new BotCommand_Heal();
             }
             else if (state is FarmBotAttackingTargetState)
             {
                 // if we are in a attacking state we have the target, cause that's the condition to get in that state
                 FarmBotAttackingTargetState attackingState = state as FarmBotAttackingTargetState;
-                return new BotCommand_Attack(
+                retCommand = new BotCommand_Attack(
                     attackingState.targetMonster,
                     attackingState.targetMonsterIndex
                     );
             }
             else if (state is FarmBotChargingChakraState)
             {
-                return new BotCommand_ChargeChakra();
+                FarmBotChargingChakraState chargeChakraState = state as FarmBotChargingChakraState;
+                retCommand = new BotCommand_ChargeChakra(chargeChakraState.realBotMapID);
             }
             else if (state is FarmBotCollectingItemState)
             {
                 FarmBotCollectingItemState collectItemState = state as FarmBotCollectingItemState;
-                return new BotCommand_CollectItem(collectItemState.newItemPosition);
+                retCommand = new BotCommand_CollectItem(collectItemState.newItemPosition);
             }
             else
             {
                 // in case of idle state, which is our fallback, command is null and we will do it again
-                return null;
+                retCommand = null;
             }
+            Logger.Log.Write("FarmBotBloc", "mapStateToCommand", $"Mapped state '{state}' to command '{retCommand}'");
+            return retCommand;
         }
 
         private FarmBotState getAttackState(float healthPercentage, float manaPercentage, float mana)
         {
+            FarmBotState retState = null;
             FarmBotState vitalsCheckState = getStateForHealthAndMana(healthPercentage, manaPercentage, mana);
             if(vitalsCheckState != null)
             {
-                return vitalsCheckState;
+                retState = vitalsCheckState;
             }
             else
             {
@@ -125,10 +141,15 @@ namespace NinMods.Application.FarmBotBloc
                 GetTarget();
                 if (targetMonster != null)
                 {
-                    return new FarmBotAttackingTargetState(targetMonster, targetMonsterIndex);
+                    retState = new FarmBotAttackingTargetState(targetMonster, targetMonsterIndex);
+                }
+                else
+                {
+                    retState = new FarmBotIdleState();
                 }
             }
-            return new FarmBotIdleState();
+            Logger.Log.Write("FarmBotBloc", "getAttackState", $"Returning state '{retState}' as most viable attacking state (hpPct {healthPercentage}, mpPct {manaPercentage}, mp {mana})");
+            return retState;
         }
 
         private FarmBotState getStateForHealthAndMana( float healthPercentage, float manaPercentage, float mana)
@@ -141,7 +162,11 @@ namespace NinMods.Application.FarmBotBloc
             if (!enoughMana(manaPercentage, mana))
             {
                 //currentCommand = new BotCommand_ChargeChakra();
-                return new FarmBotChargingChakraState();
+                // NOTE:
+                // this should only be called once, at the start of the chakra charging process... right?
+                // from then on mapEventToState should execute the MpRestoringEvent logic instead of calling getAttackState, so this shouldn't be executed anymore
+                client.modTypes.PlayerRec bot = NinMods.Bot.BotUtils.GetSelf();
+                return new FarmBotChargingChakraState(bot.Map);
             }
             return null;
         }

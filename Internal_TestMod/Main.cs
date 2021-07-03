@@ -61,7 +61,13 @@ namespace NinMods
         // just for tile overlays. can remove later, probably.
         public delegate void dDrawWeather();
         public static bool drawWeatherFirstRun = true;
-        public static ManagedHooker.HookEntry drawWeatherHook;
+        public static ManagedHooker.HookEntry drawWeatherHook = null;
+
+        // for HUD overlays
+        public delegate void dDrawGUI();
+        public static bool drawGUIFirstRun = true;
+        public static ManagedHooker.HookEntry drawGUIHook = null;
+
         #endregion
 
         public static SquareGrid MapPathfindingGrid;
@@ -69,7 +75,7 @@ namespace NinMods
         // farmbot
         public static bool IsBotEnabled = false;
         //public static Bot.FarmBot farmBot = new Bot.FarmBot();
-        public static FarmBotBloc farmBotBloc = new FarmBotBloc();
+        public static FarmBotBlocMachine farmBotBloc = new FarmBotBlocMachine();
         // for F3 keybind 'move to cursor' logic
         public static Bot.IBotCommand moveToCursorCmd;
 
@@ -81,9 +87,15 @@ namespace NinMods
         // for tile overlays (might also do other stuff with it, though)
         public delegate void dRenderText(SFML.Graphics.Font font, string text, int x, int y, SFML.Graphics.Color color, bool shadow = false, byte textSize = 13, SFML.Graphics.RenderWindow target = null);
         public static dRenderText oRenderText = null;
+        // debugging network statistics (making sure we aren't flooding their servers [or encountering a bug that causes their server to flood us...])
+        public static long NetBytesSent = 0;
+        public static long NetBytesReceived = 0;
+        // note: this is set to DateTime.Now.Ticks at startup
+        public static long NetTimeStarted = 0;
 
         public static void Initialize()
         {
+            NetTimeStarted = DateTime.Now.Ticks;
             // initialize map items
             for (int itemIndex = 0; itemIndex <= 255; itemIndex++)
             {
@@ -153,8 +165,9 @@ namespace NinMods
             }
             foreach (Vector2i newItemLocation in newItemLocations)
             {
+                Logger.Log.Write("NinMods.Main", "CheckNewItemDrops", "Sending new item to bot for handling");
                 //farmBot.InjectEvent(Bot.FarmBot.EBotEvent.ItemDrop, (object)newItemLocation);
-                farmBotBloc.addEvent(new ItemDroppedEvent(newItemLocation));
+                farmBotBloc.handleEvent(new ItemDroppedEvent(newItemLocation));
             }
         }
 
@@ -237,9 +250,9 @@ namespace NinMods
             MapPathfindingGrid = new SquareGrid(client.modTypes.Map.Tile, client.modTypes.Map.MaxX, client.modTypes.Map.MaxY);
         }
 
-        
-
         // for drawing tile overlays
+        // NOTE:
+        // everything drawn here is in world-space
         public static void hk_modGraphics_DrawWeather()
         {
             if (NinMods.Main.drawWeatherFirstRun == true)
@@ -251,6 +264,22 @@ namespace NinMods
             Utils.DrawTileTypeOverlay();
 
             NinMods.Main.drawWeatherHook.CallOriginalFunction(typeof(void));
+        }
+
+        // for drawing on the screen
+        // NOTE:
+        // everything drawn here is in screen-space
+        public static void hk_modGraphics_DrawGUI()
+        {
+            if (NinMods.Main.drawGUIFirstRun == true)
+            {
+                NinMods.Main.drawGUIFirstRun = false;
+                Logger.Log.Write("NinMods.Main", "hk_modGraphics_DrawGUI", "Successfully hooked!", Logger.ELogType.Info, null, true);
+            }
+
+            Utils.DrawNetStats();
+
+            NinMods.Main.drawGUIHook.CallOriginalFunction(typeof(void));
         }
 
         public static void hk_modInput_HandleKeyPresses(SFML.Window.Keyboard.Key keyAscii)
@@ -303,7 +332,7 @@ namespace NinMods
                 {
                     // if we're enabled it from a disabled state, then just re-instantiate it (alternative is resetting its state but i'm being lazy right now)
                     //farmBot = new Bot.FarmBot();
-                    farmBotBloc = new FarmBotBloc();
+                    farmBotBloc = new FarmBotBlocMachine();
                 }
             }
             else if (keyAscii == SFML.Window.Keyboard.Key.F4)
@@ -350,6 +379,8 @@ namespace NinMods
                 Logger.Log.Write("NinMods.Main", "hk_modHandleData_HandleData", "Successfully hooked!", Logger.ELogType.Info, null, true);
             }
 
+            NinMods.Main.NetBytesReceived += data.Length;
+
             client.clsBuffer clsBuffer2 = new client.clsBuffer(data);
             int num = clsBuffer2.ReadLong();
             client.modEnumerations.ServerPackets packetID = (client.modEnumerations.ServerPackets)num;
@@ -366,6 +397,8 @@ namespace NinMods
                 NinMods.Main.sendDataFirstRun = false;
                 Logger.Log.Write("NinMods.Main", "hk_modClientTCP_SendData", "Successfully hooked!", Logger.ELogType.Info, null, true);
             }
+
+            NinMods.Main.NetBytesSent += data.Length;
 
             client.clsBuffer clsBuffer2 = new client.clsBuffer(data);
             int num = clsBuffer2.ReadLong();

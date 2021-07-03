@@ -24,7 +24,15 @@ namespace NinMods.Application.FarmBotBloc
     }
 
     class FarmBotHealingState : FarmBotState { }
-    class FarmBotChargingChakraState : FarmBotState { }
+
+    class FarmBotChargingChakraState : FarmBotState 
+    {
+        public int realBotMapID = -1;
+        public FarmBotChargingChakraState(int _realBotMapID)
+        {
+            realBotMapID = _realBotMapID;
+        }
+    }
 
     class FarmBotCollectingItemState : FarmBotState {
         public Vector2i newItemPosition;

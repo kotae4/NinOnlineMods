@@ -37,13 +37,14 @@ namespace NinMods.Bot
         {
             if (hasFailedCatastrophically) return new FarmBotFailureEvent();
 
-
             // Not safe for the future chasing mobs, Alex wrote this
             if ((target == null) || (client.modTypes.MapNpc[targetIndex] != target) || (target.Vital[(int)client.modEnumerations.Vitals.HP] <= 0))
             {
                 hasKilledTarget = true;
+                Logger.Log.Write("BotCommand_Attack", "Perform", $"Target has died or is now invalid (target: {target}, targetAtIndex: {client.modTypes.MapNpc[targetIndex]}, targetHP: {(target != null ? target.Vital[(int)client.modEnumerations.Vitals.HP].ToString() : "<null>")})");
                 return new KilledMobSuccesfullyEvent();
             }
+
             Vector2i botLocation = BotUtils.GetSelfLocation();
             targetLocation.x = target.X;
             targetLocation.y = target.Y;
@@ -52,7 +53,7 @@ namespace NinMods.Bot
             // don't hardcode this
             if (dist > 1.6f)
             {
-                Logger.Log.Write("BotCommand_Attack", "Perform", $"Target has moved out of range, beginning chase now (self: {botLocation}, target: {targetLocation}, dist: {dist}");
+                Logger.Log.Write("BotCommand_Attack", "Perform", $"Target has moved out of range, chasing this frame (self: {botLocation}, target: {targetLocation}, dist: {dist}");
                 if (ChaseTarget(botLocation, dist) == false)
                 {
                     hasFailedCatastrophically = true;

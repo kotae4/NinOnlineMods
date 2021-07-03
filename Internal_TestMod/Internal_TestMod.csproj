@@ -66,9 +66,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Application\bloc\BaseBloc.cs" />
-    <Compile Include="Application\bloc\Bloc.cs" />
-    <Compile Include="Application\FarmBotBloc\FarmBotBloc.cs" />
+    <Compile Include="Application\bloc\IBlocInterface.cs" />
+    <Compile Include="Application\bloc\BaseBlocMachine.cs" />
+    <Compile Include="Application\FarmBotBloc\FarmBotBlocMachine.cs" />
     <Compile Include="Application\FarmBotBloc\FarmBotEvent.cs" />
     <Compile Include="Application\FarmBotBloc\FarmBotState.cs" />
     <Compile Include="AStar Pathfinding\AStarSearch.cs" />

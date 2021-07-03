@@ -33,11 +33,22 @@ namespace NinMods.Utilities
 
                 client.modGraphics.DrawWeather();
                 NinMods.Main.drawWeatherHook = ManagedHooker.HookMethod<NinMods.Main.dDrawWeather>(typeof(client.modGraphics), "DrawWeather", NinMods.Main.hk_modGraphics_DrawWeather, 0);
-
                 // WARNING:
                 // no way to force the JIT compilation of these two methods..
                 try
                 {
+                    System.Reflection.MethodInfo methodInfo = typeof(client.modGraphics).GetMethod("DrawGUI", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
+                    if (methodInfo == null)
+                    {
+                        Logger.Log.WriteError("NinMods.Main", "SetupManagedHookerHooks", "Could not get DrawGUI methodinfo");
+                    }
+                    else
+                    {
+                        NinMods.Main.dDrawGUI oDrawGUI = (NinMods.Main.dDrawGUI)methodInfo.CreateDelegate(typeof(NinMods.Main.dDrawGUI));
+                        oDrawGUI();
+                        NinMods.Main.drawGUIHook = ManagedHooker.HookMethod<NinMods.Main.dDrawGUI>(typeof(client.modGraphics), "DrawGUI", NinMods.Main.hk_modGraphics_DrawGUI, 0);
+                    }
+
                     // NOTE: this hook is unstable.
                     //handleMapDataHook = ManagedHooker.HookMethod<dHandleMapData>(typeof(client.modHandleData), "HandleMapData", hk_modHandleData_HandleMapData, 0);
                     NinMods.Main.loadMapHook = ManagedHooker.HookMethod<NinMods.Main.dLoadMap>(typeof(client.modDatabase), "LoadMap", NinMods.Main.hk_modDatabase_LoadMap, 0);
@@ -74,6 +85,17 @@ namespace NinMods.Utilities
                 try
                 {
                     NinMods.Main.loadMapHook = ManagedHooker.HookMethod<NinMods.Main.dLoadMap>(typeof(client.modDatabase), "LoadMap", NinMods.Main.hk_modDatabase_LoadMap, 0);
+                }
+                catch (Exception ex)
+                {
+                    Logger.Log.WriteException("NinMods.Main", "AttemptRehooking", ex);
+                }
+            }
+            if (NinMods.Main.drawGUIHook == null)
+            {
+                try
+                {
+                    NinMods.Main.drawGUIHook = ManagedHooker.HookMethod<NinMods.Main.dDrawGUI>(typeof(client.modGraphics), "DrawGUI", NinMods.Main.hk_modGraphics_DrawGUI, 0);
                 }
                 catch (Exception ex)
                 {
@@ -223,6 +245,15 @@ namespace NinMods.Utilities
             {
                 Logger.Log.WriteException("NinMods.Main", "DrawTileTypeOverlay", ex);
             }
+        }
+
+        public static void DrawNetStats()
+        {
+            // NOTE:
+            // game draws FPS at ScreenHeight - 26, then Ping at -14 from that.
+            // so i assume add/subtract 14 for pretty line spacing.
+            int num = client.modGraphics.ScreenHeight - 82;
+            NinMods.Main.oRenderText(client.modText.Font[1], $"NetSent: {NinMods.Main.NetBytesSent}\nNetRecv: {NinMods.Main.NetBytesReceived}\nPing: {client.modGlobals.Ping}", 9, num, SFML.Graphics.Color.Red, false, 13, client.modGraphics.GameWindowForm.Window);
         }
 
         public static void DumpMapData()

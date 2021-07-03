@@ -40,7 +40,8 @@ namespace NinMods.Bot
                 npcLocation.x = client.modTypes.MapNpc[npcIndex].X;
                 npcLocation.y = client.modTypes.MapNpc[npcIndex].Y;
                 if ((npcLocation.x < 0) || (npcLocation.x > client.modTypes.Map.MaxX) ||
-                    (npcLocation.y < 0) || (npcLocation.y > client.modTypes.Map.MaxY))
+                    (npcLocation.y < 0) || (npcLocation.y > client.modTypes.Map.MaxY) ||
+					(client.modTypes.MapNpc[npcIndex].num <= 0) || (client.modTypes.MapNpc[npcIndex].Vital[(int)client.modEnumerations.Vitals.HP] <= 0))
                     continue;
 
                 distance = from.DistanceTo_Squared(npcLocation);

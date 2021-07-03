@@ -8,7 +8,7 @@ using System.Text;
 using System.Threading.Tasks;
 
 
-public abstract class Bloc<TBlocStateType, TBlocEventType> : BaseBloc<TBlocStateType, TBlocEventType>
+public abstract class BaseBlocMachine<TBlocStateType, TBlocEventType> : IBlocInterface<TBlocStateType, TBlocEventType>
 {
     
     protected TBlocStateType _currentState;
@@ -24,13 +24,13 @@ public abstract class Bloc<TBlocStateType, TBlocEventType> : BaseBloc<TBlocState
     abstract public TBlocStateType mapEventToState(TBlocEventType e);
     abstract public IBotBlocCommand<TBlocEventType> mapStateToCommand(TBlocStateType state);
 
-    public Bloc(TBlocStateType startState, TBlocStateType fallbackState)
+    public BaseBlocMachine(TBlocStateType startState, TBlocStateType fallbackState)
     {
         _currentState = startState;
         _fallbackState = fallbackState;
     }
 
-    public void addEvent(TBlocEventType e)
+    public void handleEvent(TBlocEventType e)
     {
         // get the new state
         _currentState = mapEventToState(e);
@@ -42,19 +42,21 @@ public abstract class Bloc<TBlocStateType, TBlocEventType> : BaseBloc<TBlocState
     {
         if (HasFailedCatastrophically)
         {
-            Logger.Log.WriteError("Bloc", "Run", "Bot failed catastrophically, cannot do anything.");
+            Logger.Log.WriteError("BaseBlocMachine", "Run", "Bot failed catastrophically, cannot do anything.");
             return;
         }
 
         if (_currentCommand != null)
         {
+            Logger.Log.Write("BaseBlocMachine", "Run", $"Performing command '{_currentCommand}'");
             TBlocEventType nextEvent = currentCommand.Perform();
-            addEvent(nextEvent);
+            handleEvent(nextEvent);
         }
 
         if (currentCommand == null)
         {
-            addEvent(fallbackEvent);
+            Logger.Log.Write("BaseBlocMachine", "Run", $"No active command, falling back via arg '{fallbackEvent}'");
+            handleEvent(fallbackEvent);
         }
     }
 }

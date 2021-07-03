@@ -9,9 +9,18 @@ namespace NinMods.Bot
 {
     public class BotCommand_ChargeChakra : IBotBlocCommand<FarmBotEvent>
     {
+        // WARNING:
+        // due to instantiating BotCommand_ChargeChakra each frame, realBotMap will always be -1 (and thus bot.Map will always be 0 - invalid).
+        // this breaks the game.
         int realBotMap = -1;
         // for pathing to nearest non-water tile
         Stack<Vector2i> path = null;
+
+        public BotCommand_ChargeChakra(int _realBotMap)
+        {
+            Logger.Log.Write("BotCommand_ChargeChakra", "ctor", $"Storing realBotMap as {_realBotMap}, this needs to stick!");
+            realBotMap = _realBotMap;
+        }
 
         public FarmBotEvent Perform()
         {
@@ -22,6 +31,7 @@ namespace NinMods.Bot
             {
                 // NOTE:
                 // see other note in Perform() below.
+                Logger.Log.Write("BotCommand_ChargeChakra", "Perform", $"Finished charging chakra, reset bot.Map to {realBotMap}");
                 bot.Map = realBotMap;
                 return new MpRestoredEvent();
             }
@@ -46,7 +56,11 @@ namespace NinMods.Bot
             {
                 Logger.Log.Write("BotCommand_ChargeChakra", "Perform", $"Sending ChargeChakra packet (bot.chargeChakra: {bot.ChargeChakra})");
                 BotUtils.ChargeChakra();
-                return new MpRestoringEvent();
+                return new MpRestoringEvent(realBotMap);
+            }
+            else if (bot.ChargeChakra)
+            {
+                return new MpRestoringEvent(realBotMap);
             }
             return new FarmBotFailureEvent();
         }

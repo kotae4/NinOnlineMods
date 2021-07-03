@@ -26,7 +26,9 @@ namespace NinMods.Bot
             if (path == null) hasFailedCatastrophically = true;
             if (hasFailedCatastrophically) return new FarmBotFailureEvent();
 
-            if (path.Count == 0)
+            Vector2i botLocation = BotUtils.GetSelfLocation();
+
+            if ((path.Count == 0) || (botLocation == targetLocation))
             {
                 // we've arrived at the item, now collect it
                 BotUtils.CollectItem();
@@ -37,7 +39,6 @@ namespace NinMods.Bot
             else if (BotUtils.CanMove())
             {
                 //Logger.Log.Write("BotCommand_MoveToStaticPoint", "Perform", "Got permission to perform movement this tick");
-                Vector2i botLocation = BotUtils.GetSelfLocation();
                 Vector2i nextTile = path.Pop();
                 Vector2i tileDirection = nextTile - botLocation;
 
