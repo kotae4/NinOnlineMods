@@ -73,6 +73,28 @@ namespace NinMods.Bot
             }
         }
 
+        bool MoveToRestorationState_IfNecessary()
+        {
+            client.modTypes.PlayerRec bot = BotUtils.GetSelf();
+            float healthPercentage = (float)bot.Vital[(int)client.modEnumerations.Vitals.HP] / (float)bot.MaxVital[(int)client.modEnumerations.Vitals.HP];
+            float manaPercentage = (float)bot.Vital[(int)client.modEnumerations.Vitals.MP] / (float)bot.MaxVital[(int)client.modEnumerations.Vitals.MP];
+            // TO-DO:
+            // don't hardcode this
+            if ((manaPercentage <= 0.2f) || (bot.Vital[(int)client.modEnumerations.Vitals.MP] < 10))
+            {
+                currentCommand = new BotCommand_ChargeChakra();
+                currentState = EBotState.ChargingChakra;
+                return true;
+            }
+            if (healthPercentage <= 0.35f)
+            {
+                currentCommand = new BotCommand_Heal();
+                currentState = EBotState.Healing;
+                return true;
+            }
+            return false;
+        }
+
         void NextState()
         {
             EBotState oldState = currentState;
@@ -98,6 +120,9 @@ namespace NinMods.Bot
                 case EBotState.Healing:
                 case EBotState.ChargingChakra:
                     {
+                        // we may have finished charging chakra but still need to heal before going into combat again, so check that first
+                        if (MoveToRestorationState_IfNecessary())
+                            break;
                         // we have arrived at the map (and finished loading), so move to the closest target
                         // or we have arrived at a 'hotspot' on the current map, so move to the closest target
                         // or we have finished healing, so move to closest target
@@ -120,23 +145,8 @@ namespace NinMods.Bot
                         // we have killed the target, so check if we need to heal / charge chakra, do that if necessary, otherwise move to closest target
                         // or we're in an idle state in which case we should check our health before engaging
                         // or we finished picking up an item (which could happen immediately after attacking - so we want to check our health still)
-                        client.modTypes.PlayerRec bot = BotUtils.GetSelf();
-                        float healthPercentage = (float)bot.Vital[(int)client.modEnumerations.Vitals.HP] / (float)bot.MaxVital[(int)client.modEnumerations.Vitals.HP];
-                        float manaPercentage = (float)bot.Vital[(int)client.modEnumerations.Vitals.MP] / (float)bot.MaxVital[(int)client.modEnumerations.Vitals.MP];
-                        // TO-DO:
-                        // don't hardcode this
-                        if (healthPercentage <= 0.35f)
-                        {
-                            currentCommand = new BotCommand_Heal();
-                            currentState = EBotState.Healing;
+                        if (MoveToRestorationState_IfNecessary())
                             break;
-                        }
-                        if ((manaPercentage <= 0.2f) || (bot.Vital[(int)client.modEnumerations.Vitals.MP] < 10))
-                        {
-                            currentCommand = new BotCommand_ChargeChakra();
-                            currentState = EBotState.ChargingChakra;
-                            break;
-                        }
                         GetTarget();
                         if (targetMonster != null)
                         {
