@@ -58,6 +58,9 @@
       <HintPath>..\..\..\..\Games\Hitspark Interactive\Nin Online Inochi\app\NinOnline.exe</HintPath>
       <Private>False</Private>
     </Reference>
+    <Reference Include="QuikGraph, Version=2.3.0.0, Culture=neutral, PublicKeyToken=46bd58b0789759cb, processorArchitecture=MSIL">
+      <HintPath>..\packages\QuikGraph.2.3.0\lib\net45\QuikGraph.dll</HintPath>
+    </Reference>
     <Reference Include="SFML.Portable">
       <HintPath>..\..\..\..\Games\Hitspark Interactive\Nin Online Inochi\app\SFML.Portable.dll</HintPath>
       <Private>False</Private>
@@ -119,6 +122,9 @@
     <EmbeddedResource Include="PlayerStatsForm.resx">
       <DependentUpon>PlayerStatsForm.cs</DependentUpon>
     </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
