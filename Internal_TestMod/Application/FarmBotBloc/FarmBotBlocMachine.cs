@@ -13,9 +13,8 @@ namespace NinMods.Application.FarmBotBloc
         public static int targetMonsterIndex;
         public static client.modTypes.MapItemRec[] lastFrameMapItems = new client.modTypes.MapItemRec[256];
 
-        public FarmBotBlocMachine() :
-            // base(TBlocStateType startState, TBlocStateType fallbackState)
-            base(new FarmBotIdleState(),new FarmBotIdleState())
+        // TIL you can call static methods in base constructor forwarding :)
+        public FarmBotBlocMachine() : base(FarmBotIdleState.Get(), FarmBotIdleState.Get())
         {
             // Initialize variables in constructor
             targetMonster = null;
@@ -43,43 +42,45 @@ namespace NinMods.Application.FarmBotBloc
             float manaPercentage = mana / (float)bot.MaxVital[(int)client.modEnumerations.Vitals.MP];
 
             FarmBotState retState = null;
-
-            if (e is KilledMobSuccesfullyEvent || e is HpRestoredEvent || e is MpRestoredEvent || e is StartBotEvent)
+            // WARNING:
+            // casting e to derived event type is still an expensive operation in C# (example: e as AttackingMobEvent)
+            // this is why abstracting the data off the state / event classes somehow would be better (and then get rid of the event / state classes altogether)
+            if (e.EventType == EBotEvent.KilledMobSuccesfully || e.EventType == EBotEvent.HpRestoredEvent || e.EventType == EBotEvent.MpRestoredEvent || e.EventType == EBotEvent.StartBotEvent)
             {
                 // if we:
                 // killed our target, restored our vitals, or are just starting, then enter the attacking state
                 retState = getAttackState(healthPercentage, manaPercentage, mana);          
             }
-            else if (e is AttackingMobEvent)
+            else if (e.EventType == EBotEvent.AttackingMobEvent)
             {
                 // if we are attacking, then continue attacking
                 // NOTE:
                 // instantiating a new instance every frame seems really inefficient? can we change it to only instantiate if we're coming from a different state?
                 AttackingMobEvent ev = e as AttackingMobEvent;
-                retState = new FarmBotAttackingTargetState(ev.targetMonster, ev.targetMonsterIndex);
+                retState = FarmBotAttackingTargetState.ReInitialize(ev.targetMonster, ev.targetMonsterIndex);
             }
-            else if (e is ItemDroppedEvent)
+            else if (e.EventType == EBotEvent.ItemDroppedEvent)
             {
                 ItemDroppedEvent ide = e as ItemDroppedEvent;
-                retState = new FarmBotCollectingItemState(ide.newItemPosition);
+                retState = FarmBotCollectingItemState.ReInitialize(ide.newItemPosition);
             }
-            else if (e is CollectingItemEvent)
+            else if (e.EventType == EBotEvent.CollectingItemEvent)
             {
                 CollectingItemEvent ev = e as CollectingItemEvent;
-                retState = new FarmBotCollectingItemState(ev.newItemPosition);
+                retState = FarmBotCollectingItemState.ReInitialize(ev.newItemPosition);
             }
-            else if (e is CollectedItemEvent)
+            else if (e.EventType == EBotEvent.CollectedItemEvent)
             {
                 retState = getAttackState(healthPercentage, manaPercentage, mana);
             }
-            else if (e is HpRestoringEvent)
+            else if (e.EventType == EBotEvent.HpRestoringEvent)
             {
-                retState = new FarmBotHealingState();
+                retState = FarmBotHealingState.Get();
             }
-            else if (e is MpRestoringEvent)
+            else if (e.EventType == EBotEvent.MpRestoringEvent)
             {
                 MpRestoringEvent mre = e as MpRestoringEvent;
-                retState = new FarmBotChargingChakraState(mre.realBotMapID);
+                retState = FarmBotChargingChakraState.ReInitialize(mre.realBotMapID);
             }
             else
             {
@@ -141,11 +142,11 @@ namespace NinMods.Application.FarmBotBloc
                 GetTarget();
                 if (targetMonster != null)
                 {
-                    retState = new FarmBotAttackingTargetState(targetMonster, targetMonsterIndex);
+                    retState = FarmBotAttackingTargetState.ReInitialize(targetMonster, targetMonsterIndex);
                 }
                 else
                 {
-                    retState = new FarmBotIdleState();
+                    retState = FarmBotIdleState.Get();
                 }
             }
             Logger.Log.Write("FarmBotBloc", "getAttackState", $"Returning state '{retState}' as most viable attacking state (hpPct {healthPercentage}, mpPct {manaPercentage}, mp {mana})");
@@ -157,7 +158,7 @@ namespace NinMods.Application.FarmBotBloc
             if (!enoughHealth(healthPercentage))
             {
                 //currentCommand = new BotCommand_Heal();
-                return new FarmBotHealingState();
+                return FarmBotHealingState.Get();
             }
             if (!enoughMana(manaPercentage, mana))
             {
@@ -166,7 +167,7 @@ namespace NinMods.Application.FarmBotBloc
                 // this should only be called once, at the start of the chakra charging process... right?
                 // from then on mapEventToState should execute the MpRestoringEvent logic instead of calling getAttackState, so this shouldn't be executed anymore
                 client.modTypes.PlayerRec bot = NinMods.Bot.BotUtils.GetSelf();
-                return new FarmBotChargingChakraState(bot.Map);
+                return FarmBotChargingChakraState.ReInitialize(bot.Map);
             }
             return null;
         }

@@ -167,7 +167,7 @@ namespace NinMods
             {
                 Logger.Log.Write("NinMods.Main", "CheckNewItemDrops", "Sending new item to bot for handling");
                 //farmBot.InjectEvent(Bot.FarmBot.EBotEvent.ItemDrop, (object)newItemLocation);
-                farmBotBloc.handleEvent(new ItemDroppedEvent(newItemLocation));
+                farmBotBloc.handleEvent(ItemDroppedEvent.ReInitialize(newItemLocation));
             }
         }
 
@@ -197,7 +197,7 @@ namespace NinMods
                 */
                 if (IsBotEnabled)
                 {
-                    farmBotBloc.Run(new StartBotEvent());
+                    farmBotBloc.Run(StartBotEvent.Get());
                     //farmBot.Update();
                 }
                 if ((moveToCursorCmd != null) && (moveToCursorCmd.IsComplete() == false))

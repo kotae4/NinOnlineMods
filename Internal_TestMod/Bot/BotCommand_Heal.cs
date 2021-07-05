@@ -26,9 +26,9 @@ namespace NinMods.Bot
             // don't hardcode this
             if (healthPercentage > 0.9f)
             {
-                return new HpRestoredEvent();
+                return HpRestoredEvent.Get();
             }
-            return new HpRestoringEvent();
+            return HpRestoringEvent.Get();
         }
     }
 }

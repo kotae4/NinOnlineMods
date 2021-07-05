@@ -24,7 +24,7 @@ namespace NinMods.Bot
         public FarmBotEvent Perform()
         {
             if (path == null) hasFailedCatastrophically = true;
-            if (hasFailedCatastrophically) return new FarmBotFailureEvent();
+            if (hasFailedCatastrophically) return FarmBotFailureEvent.Get();
 
             Vector2i botLocation = BotUtils.GetSelfLocation();
 
@@ -34,7 +34,7 @@ namespace NinMods.Bot
                 BotUtils.CollectItem();
                 // TO-DO:
                 // wait until verification from server. maybe keep retrying if necessary (probably not a good idea, though).
-                return new CollectedItemEvent();
+                return CollectedItemEvent.Get();
             }
             else if (BotUtils.CanMove())
             {
@@ -46,10 +46,10 @@ namespace NinMods.Bot
                 {
                     Logger.Log.WriteError("BotCommand_MoveToStaticPoint", "Perform", $"Could not move bot at {botLocation} in direction {tileDirection}");
                     hasFailedCatastrophically = true;
-                    return new FarmBotFailureEvent();
+                    return FarmBotFailureEvent.Get();
                 }
             }
-            return new CollectingItemEvent(targetLocation);
+            return CollectingItemEvent.ReInitialize(targetLocation);
         }
     }
 }

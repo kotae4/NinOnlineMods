@@ -33,7 +33,7 @@ namespace NinMods.Bot
                 // see other note in Perform() below.
                 Logger.Log.Write("BotCommand_ChargeChakra", "Perform", $"Finished charging chakra, reset bot.Map to {realBotMap}");
                 bot.Map = realBotMap;
-                return new MpRestoredEvent();
+                return MpRestoredEvent.Get();
             }
             
             // NOTE:
@@ -49,20 +49,20 @@ namespace NinMods.Bot
                 if (PathToClosestNonWaterTile(bot, botLocation) == false)
                 {
                     Logger.Log.Write("BotCommand_ChargeChakra", "Perform", "Cannot path to non-water tile. Cannot continue.");
-                    return new FarmBotFailureEvent();
+                    return FarmBotFailureEvent.Get();
                 }
             }
             if (BotUtils.CanChargeChakra())
             {
                 Logger.Log.Write("BotCommand_ChargeChakra", "Perform", $"Sending ChargeChakra packet (bot.chargeChakra: {bot.ChargeChakra})");
                 BotUtils.ChargeChakra();
-                return new MpRestoringEvent(realBotMap);
+                return MpRestoringEvent.ReInitialize(realBotMap);
             }
             else if (bot.ChargeChakra)
             {
-                return new MpRestoringEvent(realBotMap);
+                return MpRestoringEvent.ReInitialize(realBotMap);
             }
-            return new FarmBotFailureEvent();
+            return FarmBotFailureEvent.Get();
         }
 
         bool PathToClosestNonWaterTile(client.modTypes.PlayerRec bot, Vector2i botLocation)

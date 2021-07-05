@@ -50,6 +50,10 @@ public abstract class BaseBlocMachine<TBlocStateType, TBlocEventType> : IBlocInt
         {
             Logger.Log.Write("BaseBlocMachine", "Run", $"Performing command '{_currentCommand}'");
             TBlocEventType nextEvent = currentCommand.Perform();
+            // WARNING:
+            // need to figure out how we can skip this call if the command still needs to do more work
+            // there's no need to call this if we're going to end up with the same exact state / command and it'd be a huge optimization
+            // (this is why the IsComplete() function on each command exists in my design)
             handleEvent(nextEvent);
         }
 
