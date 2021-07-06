@@ -26,17 +26,20 @@ namespace NinMods.Utilities
                 client.modDatabase.SetPlayerAccess(-1, 1);
                 NinMods.Main.setPlayerAcessHook = ManagedHooker.HookMethod<NinMods.Main.dOpenSetPlayerAccess>(typeof(client.modDatabase), "SetPlayerAccess", NinMods.Main.hk_modDatabase_SetPlayerAccess, 0);
 
-                // NOTE:
-                // no way to force an early exit here. hopefully doesn't cause a packet to be missed.
-                client.modGameLogic.GameLoop();
-                NinMods.Main.gameLoopHook = ManagedHooker.HookMethod<NinMods.Main.dOpenGameLoop>(typeof(client.modGameLogic), "GameLoop", NinMods.Main.hk_modGameLogic_GameLoop, 0);
-
                 client.modGraphics.DrawWeather();
                 NinMods.Main.drawWeatherHook = ManagedHooker.HookMethod<NinMods.Main.dDrawWeather>(typeof(client.modGraphics), "DrawWeather", NinMods.Main.hk_modGraphics_DrawWeather, 0);
                 // WARNING:
                 // no way to force the JIT compilation of these two methods..
                 try
                 {
+                    client.clsBuffer dummyPacket = new client.clsBuffer();
+                    // packet IDs of 0 are ignored.
+                    dummyPacket.WriteLong(0);
+                    byte[] dummyPacketBuf = dummyPacket.ToArray();
+                    client.modHandleData.HandleData(dummyPacketBuf);
+                    NinMods.Main.handleDataHook = ManagedHooker.HookMethod<NinMods.Main.dHandleData>(typeof(client.modHandleData), "HandleData", NinMods.Main.hk_modHandleData_HandleData, 0);
+                    NinMods.Main.sendDataHook = ManagedHooker.HookMethod<NinMods.Main.dSendData>(typeof(client.modClientTCP), "SendData", NinMods.Main.hk_modClientTCP_SendData, 0);
+
                     System.Reflection.MethodInfo methodInfo = typeof(client.modGraphics).GetMethod("DrawGUI", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
                     if (methodInfo == null)
                     {
@@ -52,9 +55,6 @@ namespace NinMods.Utilities
                     // NOTE: this hook is unstable.
                     //handleMapDataHook = ManagedHooker.HookMethod<dHandleMapData>(typeof(client.modHandleData), "HandleMapData", hk_modHandleData_HandleMapData, 0);
                     NinMods.Main.loadMapHook = ManagedHooker.HookMethod<NinMods.Main.dLoadMap>(typeof(client.modDatabase), "LoadMap", NinMods.Main.hk_modDatabase_LoadMap, 0);
-
-                    NinMods.Main.handleDataHook = ManagedHooker.HookMethod<NinMods.Main.dHandleData>(typeof(client.modHandleData), "HandleData", NinMods.Main.hk_modHandleData_HandleData, 0);
-                    NinMods.Main.sendDataHook = ManagedHooker.HookMethod<NinMods.Main.dSendData>(typeof(client.modClientTCP), "SendData", NinMods.Main.hk_modClientTCP_SendData, 0);
                 }
                 catch (Exception ex)
                 {
@@ -66,7 +66,22 @@ namespace NinMods.Utilities
                 Logger.Log.Alert("NinMods.Main", "SetupManagedHookerHooks", "exception '" + ex.GetType().Name + "' occurred: " + ex.Message + "\n\n" + ex.StackTrace, NinMods.Main.MAIN_CAPTION, System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error, Logger.ELogType.Error, null, true);
                 return;
             }
-            if ((NinMods.Main.handleKeyPressesHook == null) || (NinMods.Main.setPlayerAcessHook == null) || (NinMods.Main.gameLoopHook == null) || (NinMods.Main.drawWeatherHook == null))
+            // NOTE:
+            // no way to force an early exit here. hopefully doesn't cause a packet to be missed.
+            try
+            {
+                client.modGameLogic.GameLoop();
+            }
+            catch (Exception ex)
+            {
+                Logger.Log.WriteException("Utils", "SetupManagedHookerHooks", ex);
+                Logger.Log.Write("Utils", "SetupManagedHookerHooks", "The above exception is probably safe!");
+            }
+            NinMods.Main.gameLoopHook = ManagedHooker.HookMethod<NinMods.Main.dGameLoop>(typeof(client.modGameLogic), "GameLoop", NinMods.Main.hk_modGameLogic_GameLoop, 0);
+            // for auto-login
+            NinMods.Main.menuLoopHook = ManagedHooker.HookMethod<NinMods.Main.dMenuLoop>(typeof(client.modGameLogic), "MenuLoop", NinMods.Main.hk_modGameLogic_MenuLoop, 0);
+
+            if ((NinMods.Main.handleKeyPressesHook == null) || (NinMods.Main.setPlayerAcessHook == null) || (NinMods.Main.menuLoopHook == null) || (NinMods.Main.gameLoopHook == null) || (NinMods.Main.drawWeatherHook == null))
             {
                 Logger.Log.Alert("NinMods.Main", "SetupManagedHookerHooks", "Could not install hooks for unknown reason", NinMods.Main.MAIN_CAPTION, System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error, Logger.ELogType.Info, null, true);
             }

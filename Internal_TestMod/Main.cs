@@ -25,6 +25,10 @@ namespace NinMods
         public const string MAIN_NAME = "NinMods";
         public const string MAIN_CAPTION = "NinMods";
 
+        // for auto-login. written by the injector to a config file which is then read by the bootstrapper and sent as argument to InjectedClass.InjectedEntryPoint(...)
+        public static string AutoLogin_Username = "";
+        public static string AutoLogin_Password = "";
+
         public static bool HasInitialized = false;
         #region Hook instance data
         public delegate void dOpenHandleKeyPresses(SFML.Window.Keyboard.Key keyAscii);
@@ -35,7 +39,11 @@ namespace NinMods
         public static bool setPlayerAccessFirstRun = true;
         public static ManagedHooker.HookEntry setPlayerAcessHook;
 
-        public delegate void dOpenGameLoop();
+        public delegate void dMenuLoop();
+        public static bool menuLoopFirstRun = true;
+        public static ManagedHooker.HookEntry menuLoopHook;
+
+        public delegate void dGameLoop();
         public static bool gameLoopFirstRun = true;
         public static ManagedHooker.HookEntry gameLoopHook;
 
@@ -115,14 +123,93 @@ namespace NinMods
             MapPathfindingGrid = new SquareGrid(client.modTypes.Map.Tile, client.modTypes.Map.MaxX, client.modTypes.Map.MaxY);
 
             Logger.Log.Write("NinMods.Main", "Initialize", "Installing hooks...", Logger.ELogType.Info, null, false);
-            // NOTE:
-            // this hook keeps crashing, so i'm going to try forcing JIT compilation here and maybe that'll fix it?
-            // logs show minhook pointing to clr!ThePreStub or something, which makes me think it's not JIT compiled by time minhook gets to it
-            // although... that shouldn't crash it on the first instance. only from the second on. and that isn't the case. i don't know.
-            //hk_modHandleData_HandleSpawnItem(0, null, 0, 0);
-            Utils.SetupManagedHookerHooks();
-            Logger.Log.Write("NinMods.Main", "Initialize", "Done installing hooks!", Logger.ELogType.Info, null, true);
+            try
+            {
+                Utils.SetupManagedHookerHooks();
+                Logger.Log.Write("NinMods.Main", "Initialize", "Done installing hooks!", Logger.ELogType.Info, null, true);
+            }
+            catch (Exception ex)
+            {
+                Logger.Log.WriteException("NinMods.Main", "Initialize", ex);
+            }
             HasInitialized = true;
+        }
+
+        public static void BeginAutoLogin()
+        {
+            if ((string.IsNullOrEmpty(NinMods.Main.AutoLogin_Username)) || (string.IsNullOrEmpty(NinMods.Main.AutoLogin_Password)))
+            {
+                Logger.Log.WriteError("NinMods.Main", "BeginAutoLogin", "Username and/or password are empty, cannot auto-login");
+                return;
+            }
+            if (client.modInterface.IsWinEntityVisible("winMsgBox") == true)
+            {
+                client.modGameLogic.ResetMsgBox();
+                Logger.Log.Write("NinMods.Main", "BeginAutoLogin", "Suppressed message box");
+            }
+            if (client.modGlobals.IsLoggingIn == false)
+            {
+                Logger.Log.Write("NinMods.Main", "BeginAutoLogin", $"Trying to auto-login now with username '{NinMods.Main.AutoLogin_Username}' and password '{NinMods.Main.AutoLogin_Password}'");
+                client.modGlobals.LoginUsernameText = NinMods.Main.AutoLogin_Username;
+                client.modGlobals.LoginPasswordText = NinMods.Main.AutoLogin_Password;
+                client.modGeneral.MenuState(2);
+                // NOTE:
+                // client sends Auth_Login packet (id: 1)
+                // if successful, server sends us Auth_ServerDetails (id: 2) [client also starts sending CCheckPing packets here (id: 51) every 1 second]
+                // selecting a server then sends Auth_SelectServer packet (id: 2)
+                // if success the server sends us Auth_ServerSelect (id: 3)
+                // to which the client sends CLogin packet (id: 9)
+                // the server then sends a BUNCH of packets initializing game state (honestly way too much...)
+                // one packet the server sends in this flurry is SLoginOk (id: 7)
+                // and then SPlayerXYMap and SCheckForMap near the end of the flurry
+                // to which the client replies with CNeedMap
+                // and the server continues with SInGame and a bunch of player and npc-related data (probably specific to the map)
+                // WARNING:
+                // if the user enters incorrect login details, nothing is received at all, yet the socket remains connected...
+                // confirmed my recv packet hook is working, so it really is the case.
+            }
+            else
+            {
+                Logger.Log.Write("NinMods.Main", "BeginAutoLogin", $"Game is in invalid state for auto-login. (IsLogging: {client.modGlobals.IsLogging}, IsLoggingIn: {client.modGlobals.IsLoggingIn}, msgBoxVisible: {client.modInterface.IsWinEntityVisible("winMsgBox")})");
+            }
+        }
+
+        public static void FinishAutoLogin()
+        {
+            // client.modAuth.Auth_HandleServerDetails is the method that handles the Auth_ServerDetails packet
+            // it instantiates and fills in the client.modAuth.ServerDetails array
+            // the index into this array is eventually passed to client.modAuth.ServerSelect(int serverIndex) which sends the Auth_SelectServer packet and finalizes the login process.
+            // the status of the server is checked first. it must not be 0 or 2.
+            if ((client.modAuth.ServerDetails != null) && (client.modAuth.ServerDetails[1].Status != 0) && (client.modAuth.ServerDetails[1].Status != 2))
+            {
+                Logger.Log.Write("NinMods.Main", "FinishAutoLogin", "Selecting first server to finish login process...");
+                client.modAuth.ServerSelect(1);
+            }
+            else
+            {
+                Logger.Log.WriteError("NinMods.Main", "FinishAutoLogin", "Cannot select server because ServerDetails are invalid");
+            }
+        }
+
+        // for auto-login
+        public static void hk_modGameLogic_MenuLoop()
+        {
+            if (NinMods.Main.menuLoopFirstRun == true)
+            {
+                NinMods.Main.menuLoopFirstRun = false;
+                Logger.Log.Write("NinMods.Main", "hk_modGameLogic_MenuLoop", "Successfully hooked!", Logger.ELogType.Info, null, true);
+            }
+            if (client.modGlobals.InGame == false)
+            {
+                // WARNING:
+                // TO-DO:
+                // if returning to main menu from in-game (or, presumably, if you're kicked / disconnected from the game) then auto-login will fail on the server select screen
+                // i think we need to add a timer and only start the auto-login process after like... 10 seconds or something. the game's logout process messes up game state so much.
+                BeginAutoLogin();
+                // call original
+                NinMods.Main.menuLoopHook.CallOriginalFunction(typeof(void));
+                return;
+            }
         }
 
         public static void CheckNewItemDrops()
@@ -171,12 +258,11 @@ namespace NinMods
         // the heart of the bot. this runs every tick on the game's thread.
         public static void hk_modGameLogic_GameLoop()
         {
-            if (NinMods.Main.handleKeyPressesFirstRun == true)
+            if (NinMods.Main.gameLoopFirstRun == true)
             {
-                NinMods.Main.handleKeyPressesFirstRun = false;
+                NinMods.Main.gameLoopFirstRun = false;
                 Logger.Log.Write("NinMods.Main", "hk_modGameLogic_GameLoop", "Successfully hooked!", Logger.ELogType.Info, null, true);
             }
-
             if (NinMods.Main.HasInitialized)
                 Utils.AttemptRehooking();
 
@@ -297,7 +383,6 @@ namespace NinMods
                 // movement bypassing timers: does work! (particularly, bypassing the xOffset and yOffset timers, a very considerable increase)
                 // bypassing jutsu timers / limits: does not work (but, bypassing the animation timers like in attack speed might defer a slight advantage)
                 // speeding up server-side health regen: doesn't work :( (tried sending 50 ping packets on tmr100 interval, no change)
-
             }
             else if (keyAscii == SFML.Window.Keyboard.Key.F2)
             {
@@ -368,6 +453,16 @@ namespace NinMods
             Logger.Log.WriteNetLog("NinMods.Main", "hk_modHandleData_HandleData", $"RECV packet {packetID} (ID: {num})", Logger.ELogType.Info, null, true);
 
             NinMods.Main.handleDataHook.CallOriginalFunction(typeof(void), data);
+
+            // NOTE:
+            // special handling for auto-login process.
+            // instead of hooking client.modAuth.Auth_HandleServerDetails we'll just check for that packet here
+            // it is important that client.modAuth.Auth_HandleServerDetails is called before we reach this point, though.
+            // we ensure that's the case w/ the CallOriginalFunction above.
+            if (packetID == client.modEnumerations.ServerPackets.Auth_ServerDetails)
+            {
+                FinishAutoLogin();
+            }
         }
 
         // for logging packets that we send to the server
