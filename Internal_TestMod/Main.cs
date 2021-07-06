@@ -25,6 +25,7 @@ namespace NinMods
         public const string MAIN_NAME = "NinMods";
         public const string MAIN_CAPTION = "NinMods";
 
+        public static bool HasInitialized = false;
         #region Hook instance data
         public delegate void dOpenHandleKeyPresses(SFML.Window.Keyboard.Key keyAscii);
         public static bool handleKeyPressesFirstRun = true;
@@ -121,6 +122,7 @@ namespace NinMods
             //hk_modHandleData_HandleSpawnItem(0, null, 0, 0);
             Utils.SetupManagedHookerHooks();
             Logger.Log.Write("NinMods.Main", "Initialize", "Done installing hooks!", Logger.ELogType.Info, null, true);
+            HasInitialized = true;
         }
 
         public static void CheckNewItemDrops()
@@ -174,7 +176,10 @@ namespace NinMods
                 NinMods.Main.handleKeyPressesFirstRun = false;
                 Logger.Log.Write("NinMods.Main", "hk_modGameLogic_GameLoop", "Successfully hooked!", Logger.ELogType.Info, null, true);
             }
-            Utils.AttemptRehooking();
+
+            if (NinMods.Main.HasInitialized)
+                Utils.AttemptRehooking();
+
             try
             {
                 if (NinMods.Main.frmPlayerStats == null)
@@ -291,14 +296,8 @@ namespace NinMods
                 // attacks bypassing attack speed: does work! (bypassing animation timers, only a slight increase imo)
                 // movement bypassing timers: does work! (particularly, bypassing the xOffset and yOffset timers, a very considerable increase)
                 // bypassing jutsu timers / limits: does not work (but, bypassing the animation timers like in attack speed might defer a slight advantage)
-                client.clsBuffer clsBuffer2 = new client.clsBuffer();
-                clsBuffer2.WriteLong(49);
-                // hotbar slot
-                clsBuffer2.WriteLong(1);
-                // target stuff
-                clsBuffer2.WriteByte((byte)client.modGlobals.myTargetType);
-                clsBuffer2.WriteLong(client.modGlobals.myTarget);
-                client.modClientTCP.SendData(clsBuffer2.ToArray());
+                // speeding up server-side health regen: doesn't work :( (tried sending 50 ping packets on tmr100 interval, no change)
+
             }
             else if (keyAscii == SFML.Window.Keyboard.Key.F2)
             {
@@ -361,6 +360,7 @@ namespace NinMods
                 NinMods.Main.handleDataFirstRun = false;
                 Logger.Log.Write("NinMods.Main", "hk_modHandleData_HandleData", "Successfully hooked!", Logger.ELogType.Info, null, true);
             }
+            NinMods.Main.NetBytesReceived += data.Length;
 
             client.clsBuffer clsBuffer2 = new client.clsBuffer(data);
             int num = clsBuffer2.ReadLong();
@@ -378,6 +378,7 @@ namespace NinMods
                 NinMods.Main.sendDataFirstRun = false;
                 Logger.Log.Write("NinMods.Main", "hk_modClientTCP_SendData", "Successfully hooked!", Logger.ELogType.Info, null, true);
             }
+            NinMods.Main.NetBytesSent += data.Length;
 
             client.clsBuffer clsBuffer2 = new client.clsBuffer(data);
             int num = clsBuffer2.ReadLong();
