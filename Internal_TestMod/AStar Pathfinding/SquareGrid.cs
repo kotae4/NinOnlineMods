@@ -46,11 +46,8 @@ namespace NinMods.Pathfinding
             }
         }
 
-        public bool IsPassable(Vector2i id, bool isTransitioningToNewMap = false)
+        public bool IsPassable(Vector2i id)
         {
-            if ((isTransitioningToNewMap) && ((id.x < 0) || (id.y < 0) || (id.x > width) || (id.y > height)))
-                return true;
-
             client.modTypes.TileRec cell = m_GridData[id.x, id.y];
 
             return !((cell.Type == Constants.TILE_TYPE_BLOCKED) ||
@@ -75,7 +72,7 @@ namespace NinMods.Pathfinding
             foreach (var dir in Vector2i.directions_Eight)
             {
                 Vector2i next = new Vector2i(id.x + dir.x, id.y + dir.y);
-                if (IsInBounds(next, isTransitioningToNewMap) && IsPassable(next, isTransitioningToNewMap))
+                if (IsInBounds(next, isTransitioningToNewMap) && IsPassable(next))
                 {
                     yield return next;
                 }

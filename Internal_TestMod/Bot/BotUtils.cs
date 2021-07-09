@@ -516,5 +516,24 @@ namespace NinMods.Bot
             // add sanity checks (checking if we're in-game and our player has fully loaded)
             return new Vector2i(client.modTypes.Player[client.modGlobals.MyIndex].X, client.modTypes.Player[client.modGlobals.MyIndex].Y);
         }
+
+		public static List<Vector2i> GetAllTilesMatchingPredicate(Func<int, int, bool> predicate)
+		{
+			List<Vector2i> matchingTiles = new List<Vector2i>();
+			client.modTypes.MapRec currentMap = client.modTypes.Map;
+			int tileLengthX = currentMap.Tile.GetLength(0);
+			int tileLengthY = currentMap.Tile.GetLength(1);
+			for (int tileX = 0; tileX < tileLengthX; tileX++)
+			{
+				for (int tileY = 0; tileY < tileLengthY; tileY++)
+				{
+					if (predicate(tileX, tileY))
+                    {
+						matchingTiles.Add(new Vector2i(tileX, tileY));
+                    }
+				}
+			}
+			return matchingTiles;
+		}
     }
 }

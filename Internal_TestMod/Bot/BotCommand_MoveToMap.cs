@@ -16,6 +16,7 @@ namespace NinMods.Bot
         Queue<int> interMapPath = new Queue<int>();
         Stack<Vector2i> intraMapPath = new Stack<Vector2i>();
         int lastFrameMapID = -1;
+        Vector2i intraMapWarpDirection = new Vector2i(0, 0);
 
         public BotCommand_MoveToMap(int targetMapID)
         {
@@ -34,8 +35,16 @@ namespace NinMods.Bot
                 interMapPath.Enqueue(edge.Target);
                 Logger.Log.Write("BotCommand_MoveToMap", "ctor", $"Enqueued mapID {edge.Target} (from {edge.Source})");
             }
-            Logger.Log.Write("BotCommand_MoveToMap", "ctor", $"Finished initializing BotCommand_MoveToMap, there are {interMapPath.Count} maps to traverse. Bot is starting on map {bot.Map}.");
+            Logger.Log.Write("BotCommand_MoveToMap", "ctor", $"Finished constructing intermap queue, there are {interMapPath.Count} maps to traverse. Bot is starting on map {bot.Map}.");
+            int nextMapID = interMapPath.Dequeue();
+            if (LoadPathToNextMap(nextMapID) == false)
+            {
+                Logger.Log.WriteError("BotCommand_MoveToMap", "Perform", $"Could not find a path through map '{bot.Map}' to reach map '{nextMapID}'. Cannot continue.");
+                hasFailedCatastrophically = true;
+                return;
+            }
             lastFrameMapID = bot.Map;
+            Logger.Log.Write("BotCommand_MoveToMap", "ctor", $"Finished initializing BotCommand_MoveToMap. Pathing to {nextMapID} via {intraMapPath.Count} tiles then facing direction {intraMapWarpDirection}.");
         }
 
         public bool IsComplete()
@@ -60,7 +69,7 @@ namespace NinMods.Bot
             // WARNING:
             // this is probably not a good idea.
             // we need some way of notifying this command when a map load occurs and use that to determine when to calculate the next intraMapPath.
-            if ((intraMapPath.Count == 0) || (lastFrameMapID != bot.Map))
+            if (((intraMapPath.Count == 0) || (lastFrameMapID != bot.Map)) && (client.modGlobals.GettingMap == false))
             {
                 // we're either just starting or have just loaded into a new map
                 // so we have to find a path from this map to the warp point of the next map
@@ -85,6 +94,16 @@ namespace NinMods.Bot
                     hasFailedCatastrophically = true;
                     return false;
                 }
+                // if it's the last element, make the bot face the warp direction
+                if (intraMapPath.Count == 0)
+                {
+                    if (BotUtils.FaceDir(intraMapWarpDirection) == false)
+                    {
+                        Logger.Log.WriteError("BotCommand_MoveToMap", "Perform", $"Could not force bot to face warp direction {intraMapWarpDirection}");
+                        hasFailedCatastrophically = true;
+                        return false;
+                    }
+                }
             }
             lastFrameMapID = bot.Map;
             return true;
@@ -98,147 +117,65 @@ namespace NinMods.Bot
             client.modTypes.MapRec currentMap = client.modTypes.Map;
             int tileLengthX = currentMap.Tile.GetLength(0);
             int tileLengthY = currentMap.Tile.GetLength(1);
-            // my brain is fried. there has to be a more elegant way of writing this.
-            // TO-DO:
-            // revisit this later when brain worky good
             Stack<Vector2i> shortestPath = new Stack<Vector2i>();
+            Func<int, int, bool> tilePredicate;
+            // construct predicate based on where the warp position is within the map
             if (currentMap.Left == nextMapID)
             {
                 // find shortest path to X=0,Y=Any
                 Logger.Log.Write("BotCommand_MoveToMap", "LoadPathToNextMap", "Pathing to left edge of current map, where X=0,Y=Any");
-                for (int tileY = 0; tileY < tileLengthY; tileY++)
-                {
-                    shortestPath.Clear();
-                    if (Pathfinder.IsValidTile(0, tileY) == false)
-                        continue;
-                    // TO-DO:
-                    // optimize this. add a GetPathTo_NonAlloc version.
-                    shortestPath = Pathfinder.GetPathTo(-1, tileY, true);
-                    if ((shortestPath != null) && ((shortestPath.Count < intraMapPath.Count) || (intraMapPath.Count == 0)))
-                    {
-                        // should be a deep-copy. expensive but oh well, this shouldn't run very frequently.
-                        Logger.Log.Write("BotCommand_MoveToMap", "LoadPathToNextMap", $"Got valid path to ({-1}, {tileY}) of length {shortestPath.Count} (prevLength: {intraMapPath.Count})");
-                        intraMapPath = new Stack<Vector2i>(shortestPath.ToArray().Reverse());
-                    }
-                    else
-                    {
-                        if (shortestPath == null)
-                            Logger.Log.Write("BotCommand_MoveToMap", "LoadPathToNextMap", $"Couldn't path to ({-1}, {tileY})");
-                        if (shortestPath.Count >= intraMapPath.Count)
-                            Logger.Log.Write("BotCommand_MoveToMap", "LoadPathToNextMap", $"Path to ({-1}, {tileY}) was longer than existing path ({shortestPath.Count} vs {intraMapPath.Count})");
-                    }
-                }
+                tilePredicate = (x, y) => { return ((x == 0) && (Pathfinder.IsValidTile(x, y))); };
+                intraMapWarpDirection = Vector2i.directions_Eight[(int)Constants.DIR_LEFT];
             }
             else if (currentMap.Up == nextMapID)
             {
                 // find shortest path to X=Any,Y=0
                 Logger.Log.Write("BotCommand_MoveToMap", "LoadPathToNextMap", "Pathing to top edge of current map, where X=Any,Y=0");
-                for (int tileX = 0; tileX < tileLengthX; tileX++)
-                {
-                    shortestPath.Clear();
-                    if (Pathfinder.IsValidTile(tileX, 0) == false)
-                        continue;
-                    // TO-DO:
-                    // optimize this. add a GetPathTo_NonAlloc version.
-                    shortestPath = Pathfinder.GetPathTo(tileX, -1, true);
-                    if ((shortestPath != null) && ((shortestPath.Count < intraMapPath.Count) || (intraMapPath.Count == 0)))
-                    {
-                        // should be a deep-copy. expensive but oh well, this shouldn't run very frequently.
-                        Logger.Log.Write("BotCommand_MoveToMap", "LoadPathToNextMap", $"Got valid path to ({tileX}, {-1}) of length {shortestPath.Count} (prevLength: {intraMapPath.Count})");
-                        intraMapPath = new Stack<Vector2i>(shortestPath.ToArray().Reverse());
-                    }
-                    else
-                    {
-                        if (shortestPath == null)
-                            Logger.Log.Write("BotCommand_MoveToMap", "LoadPathToNextMap", $"Couldn't path to ({tileX}, {-1})");
-                        if (shortestPath.Count >= intraMapPath.Count)
-                            Logger.Log.Write("BotCommand_MoveToMap", "LoadPathToNextMap", $"Path to ({tileX}, {-1}) was longer than existing path ({shortestPath.Count} vs {intraMapPath.Count})");
-                    }
-                }
+                tilePredicate = (x, y) => { return ((y == 0) && (Pathfinder.IsValidTile(x, y))); };
+                intraMapWarpDirection = Vector2i.directions_Eight[(int)Constants.DIR_UP];
             }
             else if (currentMap.Right == nextMapID)
             {
                 // find shortest path to X=Map.MaxX,Y=Any
                 Logger.Log.Write("BotCommand_MoveToMap", "LoadPathToNextMap", "Pathing to right edge of current map, where X=MaxX,Y=Any");
-                for (int tileY = 0; tileY < tileLengthY; tileY++)
-                {
-                    shortestPath.Clear();
-                    if (Pathfinder.IsValidTile(currentMap.MaxX, tileY) == false)
-                        continue;
-                    // TO-DO:
-                    // optimize this. add a GetPathTo_NonAlloc version.
-                    shortestPath = Pathfinder.GetPathTo(currentMap.MaxX + 1, tileY, true);
-                    if ((shortestPath != null) && ((shortestPath.Count < intraMapPath.Count) || (intraMapPath.Count == 0)))
-                    {
-                        // should be a deep-copy. expensive but oh well, this shouldn't run very frequently.
-                        Logger.Log.Write("BotCommand_MoveToMap", "LoadPathToNextMap", $"Got valid path to ({currentMap.MaxX + 1}, {tileY}) of length {shortestPath.Count} (prevLength: {intraMapPath.Count})");
-                        intraMapPath = new Stack<Vector2i>(shortestPath.ToArray().Reverse());
-                    }
-                    else
-                    {
-                        if (shortestPath == null)
-                            Logger.Log.Write("BotCommand_MoveToMap", "LoadPathToNextMap", $"Couldn't path to ({currentMap.MaxX + 1}, {tileY})");
-                        if (shortestPath.Count >= intraMapPath.Count)
-                            Logger.Log.Write("BotCommand_MoveToMap", "LoadPathToNextMap", $"Path to ({currentMap.MaxX + 1}, {tileY}) was longer than existing path ({shortestPath.Count} vs {intraMapPath.Count})");
-                    }
-                }
+                tilePredicate = (x, y) => { return ((x == currentMap.MaxX) && (Pathfinder.IsValidTile(x, y))); };
+                intraMapWarpDirection = Vector2i.directions_Eight[(int)Constants.DIR_RIGHT];
             }
             else if (currentMap.Down == nextMapID)
             {
                 // find shortest path to X=Any,Y=Map.MaxY
                 Logger.Log.Write("BotCommand_MoveToMap", "LoadPathToNextMap", "Pathing to down edge of current map, where X=Any,Y=MaxY");
-                for (int tileX = 0; tileX < tileLengthX; tileX++)
-                {
-                    shortestPath.Clear();
-                    if (Pathfinder.IsValidTile(tileX, currentMap.MaxY) == false)
-                        continue;
-                    // TO-DO:
-                    // optimize this. add a GetPathTo_NonAlloc version.
-                    shortestPath = Pathfinder.GetPathTo(tileX, currentMap.MaxY + 1, true);
-                    if ((shortestPath != null) && ((shortestPath.Count < intraMapPath.Count) || (intraMapPath.Count == 0)))
-                    {
-                        // should be a deep-copy. expensive but oh well, this shouldn't run very frequently.
-                        Logger.Log.Write("BotCommand_MoveToMap", "LoadPathToNextMap", $"Got valid path to ({tileX}, {currentMap.MaxY + 1}) of length {shortestPath.Count} (prevLength: {intraMapPath.Count})");
-                        intraMapPath = new Stack<Vector2i>(shortestPath.ToArray().Reverse());
-                    }
-                    else
-                    {
-                        if (shortestPath == null)
-                            Logger.Log.Write("BotCommand_MoveToMap", "LoadPathToNextMap", $"Couldn't path to ({tileX}, {currentMap.MaxY + 1})");
-                        if (shortestPath.Count >= intraMapPath.Count)
-                            Logger.Log.Write("BotCommand_MoveToMap", "LoadPathToNextMap", $"Path to ({tileX}, {currentMap.MaxY + 1}) was longer than existing path ({shortestPath.Count} vs {intraMapPath.Count})");
-                    }
-                }
+                tilePredicate = (x, y) => { return ((y == currentMap.MaxY) && (Pathfinder.IsValidTile(x, y))); };
+                intraMapWarpDirection = Vector2i.directions_Eight[(int)Constants.DIR_DOWN];
             }
             else
             {
+                // find shortest path to any valid warp tile
                 Logger.Log.Write("BotCommand_MoveToMap", "LoadPathToNextMap", "Map transition isn't on any edge, searching warp points now...");
-                for (int tileX = 0; tileX < tileLengthX; tileX++)
+                tilePredicate = (x, y) => { return ((currentMap.Tile[x, y].Type == (byte)Utilities.GameUtils.ETileType.TILE_TYPE_WARP) 
+                    && (currentMap.Tile[x, y].Data1 == nextMapID) 
+                    && (Pathfinder.IsValidTile(x, y))); };
+                intraMapWarpDirection = Vector2i.zero;
+            }
+            // now that we have the predicate, get all matching tiles and try pathfinding to each of them
+            List<Vector2i> warpTiles = BotUtils.GetAllTilesMatchingPredicate(tilePredicate);
+            Logger.Log.Write("BotCommand_MoveToMap", "LoadPathToNextMap", $"Predicate matched {warpTiles.Count} tiles. Pathfinding to each of them now...");
+            foreach (Vector2i warpTile in warpTiles)
+            {
+                shortestPath.Clear();
+                shortestPath = Pathfinder.GetPathTo(warpTile.x, warpTile.y, true);
+                if ((shortestPath != null) && ((shortestPath.Count < intraMapPath.Count) || (intraMapPath.Count == 0)))
                 {
-                    for (int tileY = 0; tileY < tileLengthY; tileY++)
-                    {
-                        client.modTypes.TileRec tile = currentMap.Tile[tileX, tileY];
-                        NinMods.Utilities.GameUtils.ETileType tileType = (NinMods.Utilities.GameUtils.ETileType)tile.Type;
-                        if ((tileType == Utilities.GameUtils.ETileType.TILE_TYPE_WARP) && (tile.Data1 == nextMapID))
-                        {
-                            // path to this exact tile
-                            Logger.Log.Write("BotCommand_MoveToMap", "LoadPathToNextMap", $"Saw valid warp point at ({tileX}, {tileY}), trying to path to it now");
-                            shortestPath = Pathfinder.GetPathTo(tileX, tileY, true);
-                            if ((shortestPath != null) && ((shortestPath.Count < intraMapPath.Count) || (intraMapPath.Count == 0)))
-                            {
-                                // should be a deep-copy. expensive but oh well, this shouldn't run very frequently.
-                                Logger.Log.Write("BotCommand_MoveToMap", "LoadPathToNextMap", $"Got valid path to ({tileX}, {tileY}) of length {shortestPath.Count} (prevLength: {intraMapPath.Count})");
-                                intraMapPath = new Stack<Vector2i>(shortestPath.ToArray().Reverse());
-                            }
-                            else
-                            {
-                                if (shortestPath == null)
-                                    Logger.Log.Write("BotCommand_MoveToMap", "LoadPathToNextMap", $"Couldn't path to ({tileX}, {tileY})");
-                                if (shortestPath.Count >= intraMapPath.Count)
-                                    Logger.Log.Write("BotCommand_MoveToMap", "LoadPathToNextMap", $"Path to ({tileX}, {tileY}) was longer than existing path ({shortestPath.Count} vs {intraMapPath.Count})");
-                            }
-                        }
-                    }
+                    // should be a deep-copy. expensive but oh well, this shouldn't run very frequently.
+                    Logger.Log.Write("BotCommand_MoveToMap", "LoadPathToNextMap", $"Got valid path to {warpTile} of length {shortestPath.Count} (prevLength: {intraMapPath.Count})");
+                    intraMapPath = new Stack<Vector2i>(shortestPath.ToArray().Reverse());
+                }
+                else
+                {
+                    if (shortestPath == null)
+                        Logger.Log.Write("BotCommand_MoveToMap", "LoadPathToNextMap", $"Couldn't path to {warpTile}");
+                    if (shortestPath.Count >= intraMapPath.Count)
+                        Logger.Log.Write("BotCommand_MoveToMap", "LoadPathToNextMap", $"Path to {warpTile} was longer than existing path ({shortestPath.Count} vs {intraMapPath.Count})");
                 }
             }
             Logger.Log.Write("BotCommand_MoveToMap", "LoadPathToNextMap", $"Found shortest path to reach map {nextMapID} (length: {intraMapPath.Count}, lastTile: {intraMapPath.DefaultIfEmpty(new Vector2i(-1, -1)).LastOrDefault()})");
