@@ -18,7 +18,7 @@ namespace NinMods.Pathfinding
             return Math.Abs(a.x - b.x) + Math.Abs(a.y - b.y);
         }
 
-        public AStarSearch(IWeightedGraph<Vector2i> graph, Vector2i start, Vector2i goal)
+        public AStarSearch(IWeightedGraph<Vector2i> graph, Vector2i start, Vector2i goal, bool isTransitioningToNewMap = false)
         {
             var frontier = new PriorityQueue<Vector2i>();
             frontier.Enqueue(start, 0);
@@ -35,7 +35,7 @@ namespace NinMods.Pathfinding
                     break;
                 }
 
-                foreach (var next in graph.Neighbors(current))
+                foreach (var next in graph.Neighbors(current, isTransitioningToNewMap))
                 {
                     double newCost = costSoFar[current]
                         + graph.GetCost(current, next);

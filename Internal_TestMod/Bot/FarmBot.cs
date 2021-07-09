@@ -35,11 +35,13 @@ namespace NinMods.Bot
 
         public enum EBotEvent
         {
-            ItemDrop
+            ItemDrop,
+            MapLoad
         }
 
         EBotState currentState = EBotState.Idle;
         IBotCommand currentCommand = null;
+        int TargetMapID = -1;
         // this is used for events that need to be handled but shouldn't interrupt the current state
         // in other words, the current state is more important than the injected event
         // in cases where the current state is *less* important, then we simply switch states (interrupting the current state) to handle the event right away
@@ -98,8 +100,11 @@ namespace NinMods.Bot
         void NextState()
         {
             EBotState oldState = currentState;
+            client.modTypes.PlayerRec bot = BotUtils.GetSelf();
             if (injectedEventQueue.Count > 0)
             {
+                // NOTE:
+                // map load events will never be in the queue because they always interrupt the current state
                 InjectedEventData injectedEvent = injectedEventQueue.Dequeue();
                 switch (injectedEvent.eventType)
                 {
@@ -170,6 +175,7 @@ namespace NinMods.Bot
             // NOTE:
             // it was at this point that i realized a proper state machine implementation would be invaluable :)
             // more closely tying events, states (and commands - the logic of a state), and the conditionals that glue it together would be great
+            client.modTypes.PlayerRec bot = BotUtils.GetSelf();
             switch (eventType)
             {
                 case EBotEvent.ItemDrop:
@@ -186,6 +192,19 @@ namespace NinMods.Bot
                             currentCommand = new BotCommand_CollectItem((Vector2i)eventData);
                             currentState = EBotState.CollectingItem;
                         }
+                        break;
+                    }
+                case EBotEvent.MapLoad:
+                    {
+                        if ((TargetMapID == (int)eventData) || (bot.Map == (int)eventData))
+                        {
+                            Logger.Log.Write("FarmBot", "InjectEvent", $"Ignoring injected event {eventType} because we are already at or moving to target map ID {(int)eventData}");
+                            return;
+                        }
+                        TargetMapID = (int)eventData;
+                        currentCommand = new BotCommand_MoveToMap(TargetMapID);
+                        currentState = EBotState.MovingToMap;
+                        Logger.Log.Write("FarmBot", "InjectEvent", $"Interrupting current state to handle {eventType} event");
                         break;
                     }
             }

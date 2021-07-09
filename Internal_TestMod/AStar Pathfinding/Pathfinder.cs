@@ -28,11 +28,13 @@ namespace NinMods
                 (client.modTypes.Map.Tile[x, y].Type == Constants.TILE_TYPE_RESOURCE));
         }
 
-        public static Stack<Vector2i> GetPathTo(int tileX, int tileY)
+        // TO-DO:
+        // optimize this. add a GetPathTo_NonAlloc version.
+        public static Stack<Vector2i> GetPathTo(int tileX, int tileY, bool isTransitioningToNewMap = false)
         {
             Vector2i playerLoc = new Vector2i(client.modTypes.Player[client.modGlobals.MyIndex].X, client.modTypes.Player[client.modGlobals.MyIndex].Y);
             Vector2i targetLoc = new Vector2i(tileX, tileY);
-            AStarSearch pathfinder = new AStarSearch(NinMods.Main.MapPathfindingGrid, playerLoc, targetLoc);
+            AStarSearch pathfinder = new AStarSearch(NinMods.Main.MapPathfindingGrid, playerLoc, targetLoc, isTransitioningToNewMap);
             Vector2i step;
             if (!pathfinder.cameFrom.TryGetValue(targetLoc, out step))
             {
@@ -56,6 +58,7 @@ namespace NinMods
                     break;
                 }
             }
+            Logger.Log.Write("Pathfinder", "GetPathTo", $"Done constructing path stack from {playerLoc} to {targetLoc}");
             return pathStack;
         }
     }

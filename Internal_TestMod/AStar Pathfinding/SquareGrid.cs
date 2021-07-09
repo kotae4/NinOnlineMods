@@ -32,14 +32,25 @@ namespace NinMods.Pathfinding
             set { m_GridData[x, y] = value; }
         }
 
-        public bool IsInBounds(Vector2i id)
+        public bool IsInBounds(Vector2i id, bool isTransitioningToNewMap = false)
         {
-            return 0 <= id.x && id.x < width
-                && 0 <= id.y && id.y < height;
+            if (isTransitioningToNewMap)
+            {
+                return id.x >= 0 && id.x <= width
+                    && id.y >= 0 && id.y <= height;
+            }
+            else
+            {
+                return id.x > 0 && id.x < width
+                    && id.y > 0 && id.y < height;
+            }
         }
 
-        public bool IsPassable(Vector2i id)
+        public bool IsPassable(Vector2i id, bool isTransitioningToNewMap = false)
         {
+            if ((isTransitioningToNewMap) && ((id.x < 0) || (id.y < 0) || (id.x > width) || (id.y > height)))
+                return true;
+
             client.modTypes.TileRec cell = m_GridData[id.x, id.y];
 
             return !((cell.Type == Constants.TILE_TYPE_BLOCKED) ||
@@ -59,12 +70,12 @@ namespace NinMods.Pathfinding
             return 1;
         }
 
-        public IEnumerable<Vector2i> Neighbors(Vector2i id)
+        public IEnumerable<Vector2i> Neighbors(Vector2i id, bool isTransitioningToNewMap = false)
         {
             foreach (var dir in Vector2i.directions_Eight)
             {
                 Vector2i next = new Vector2i(id.x + dir.x, id.y + dir.y);
-                if (IsInBounds(next) && IsPassable(next))
+                if (IsInBounds(next, isTransitioningToNewMap) && IsPassable(next, isTransitioningToNewMap))
                 {
                     yield return next;
                 }

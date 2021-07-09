@@ -48,13 +48,13 @@ namespace NinMods
         public static ManagedHooker.HookEntry gameLoopHook;
 
         // for making sure we always have the latest tiledata for pathfinding
-        public delegate void dHandleMapData(int index, byte[] data, int startAddr, int extraVar);
-        public static bool handleMapDataFirstRun = true;
-        public static ManagedHooker.HookEntry handleMapDataHook = null;
-
         public delegate void dLoadMap(int mapID);
         public static bool loadMapFirstRun = true;
         public static ManagedHooker.HookEntry loadMapHook = null;
+
+        public delegate void dHandleMapDone(int Index, byte[] data, int StartAddr, int ExtraVar);
+        public static bool handleMapDoneFirstRun = true;
+        public static ManagedHooker.HookEntry handleMapDoneHook = null;
 
         // for logging incoming network messages (this is what receives all packets and then dispatches them to the specific packet handlers)
         public delegate void dHandleData(byte[] data);
@@ -120,8 +120,6 @@ namespace NinMods
             }
             oRenderText = (dRenderText)methodInfo.CreateDelegate(typeof(dRenderText));
 
-            MapPathfindingGrid = new SquareGrid(client.modTypes.Map.Tile, client.modTypes.Map.MaxX, client.modTypes.Map.MaxY);
-
             Logger.Log.Write("NinMods.Main", "Initialize", "Installing hooks...", Logger.ELogType.Info, null, false);
             try
             {
@@ -132,7 +130,39 @@ namespace NinMods
             {
                 Logger.Log.WriteException("NinMods.Main", "Initialize", ex);
             }
+            InterMapPathfinding.IntermapPathfinding.Initialize();
             HasInitialized = true;
+        }
+
+        static void StartGrindBot()
+        {
+            if (HasInitialized == false) return;
+            farmBot = new Bot.FarmBot();
+            client.modTypes.PlayerRec bot = Bot.BotUtils.GetSelf();
+            int targetMapID = -1;
+            if (bot.Level <= 5)
+            {
+                // grind larva on map Larva Road (id: 26)
+                targetMapID = 26;
+            }
+            else if (bot.Level <= 10)
+            {
+                // grind spiders on map Moist Plains (id: 99)
+                targetMapID = 99;
+            }
+            else if (bot.Level <= 20)
+            {
+                // grind wolves on map Outskirts Dead End (id: 130)
+                targetMapID = 130;
+            }
+            else
+            {
+                targetMapID = bot.Map;
+            }
+            if (bot.Map != targetMapID)
+            {
+                farmBot.InjectEvent(Bot.FarmBot.EBotEvent.MapLoad, targetMapID);
+            }
         }
 
         public static void BeginAutoLogin()
@@ -263,9 +293,20 @@ namespace NinMods
                 NinMods.Main.gameLoopFirstRun = false;
                 Logger.Log.Write("NinMods.Main", "hk_modGameLogic_GameLoop", "Successfully hooked!", Logger.ELogType.Info, null, true);
             }
-            if (NinMods.Main.HasInitialized)
-                Utils.AttemptRehooking();
-
+            if (NinMods.Main.HasInitialized == false)
+            {
+                // early exit
+                NinMods.Main.gameLoopHook.CallOriginalFunction(typeof(void));
+                return;
+            }
+            Utils.AttemptRehooking();
+            // TO-DO:
+            // check exactly when game state becomes valid for us.
+            // now that we're injecting at game startup rather than once we're fully loaded in-game, we **have** to make sure the game state is valid before running any of our logic
+            if ((MapPathfindingGrid == null) && (client.modTypes.Map != null) && (string.IsNullOrEmpty(client.modTypes.Map.Name) == false))
+            {
+                MapPathfindingGrid = new SquareGrid(client.modTypes.Map.Tile, client.modTypes.Map.MaxX, client.modTypes.Map.MaxY);
+            }
             try
             {
                 if (NinMods.Main.frmPlayerStats == null)
@@ -306,21 +347,6 @@ namespace NinMods
         }
 
         // for updating our pathfinding grid (and probably some other stuff later)
-        // note: i think this is only called as a result of an admin command? not sure
-        public static void hk_modHandleData_HandleMapData(int index, byte[] data, int startAddr, int extraVar)
-        {
-            if (NinMods.Main.handleMapDataFirstRun == true)
-            {
-                NinMods.Main.handleMapDataFirstRun = false;
-                Logger.Log.Write("NinMods.Main", "hk_modHandleData_HandleMapData", "Successfully hooked!", Logger.ELogType.Info, null, true);
-            }
-
-            NinMods.Main.handleMapDataHook.CallOriginalFunction(typeof(void), index, data, startAddr, extraVar);
-
-            MapPathfindingGrid = new SquareGrid(client.modTypes.Map.Tile, client.modTypes.Map.MaxX, client.modTypes.Map.MaxY);
-        }
-
-        // for updating our pathfinding grid (and probably some other stuff later)
         public static void hk_modDatabase_LoadMap(int mapID)
         {
             if (NinMods.Main.loadMapFirstRun == true)
@@ -331,7 +357,30 @@ namespace NinMods
 
             NinMods.Main.loadMapHook.CallOriginalFunction(typeof(void), mapID);
 
+            client.modTypes.PlayerRec bot = Bot.BotUtils.GetSelf();
+            Logger.Log.Write("NinMods.Main", "hk_modDatabase_LoadMap", $"Loaded new map {mapID} (bot.Map: {bot.Map})", Logger.ELogType.Info, null, true);
             MapPathfindingGrid = new SquareGrid(client.modTypes.Map.Tile, client.modTypes.Map.MaxX, client.modTypes.Map.MaxY);
+            // WARNING:
+            // bot.Map is still set to the old map at this point...
+            //StartGrindBot();
+        }
+
+        // this *should* be the best hook for map transitions. player & game state should be fully loaded w/ new map values by time this is called.
+        public static void hk_modHandleData_HandleMapDone(int Index, byte[] data, int StartAddr, int ExtraVar)
+        {
+            if (NinMods.Main.handleMapDoneFirstRun == true)
+            {
+                NinMods.Main.handleMapDoneFirstRun = false;
+                Logger.Log.Write("NinMods.Main", "hk_modHandleData_HandleMapDone", "Successfully hooked!", Logger.ELogType.Info, null, true);
+            }
+
+            NinMods.Main.handleMapDoneHook.CallOriginalFunction(typeof(void), Index, data, StartAddr, ExtraVar);
+
+            client.modTypes.PlayerRec bot = Bot.BotUtils.GetSelf();
+            Logger.Log.Write("NinMods.Main", "hk_modHandleData_HandleMapDone", $"Loaded new map {bot.Map}", Logger.ELogType.Info, null, true);
+            MapPathfindingGrid = new SquareGrid(client.modTypes.Map.Tile, client.modTypes.Map.MaxX, client.modTypes.Map.MaxY);
+            // 
+            StartGrindBot();
         }
 
         // for drawing tile overlays
@@ -366,6 +415,7 @@ namespace NinMods
             NinMods.Main.drawGUIHook.CallOriginalFunction(typeof(void));
         }
 
+        // for our keybinds :)
         public static void hk_modInput_HandleKeyPresses(SFML.Window.Keyboard.Key keyAscii)
         {
             if (NinMods.Main.handleKeyPressesFirstRun == true)
@@ -399,7 +449,7 @@ namespace NinMods
                 if (IsBotEnabled)
                 {
                     // if we're enabled it from a disabled state, then just re-instantiate it (alternative is resetting its state but i'm being lazy right now)
-                    farmBot = new Bot.FarmBot();
+                    StartGrindBot();
                 }
             }
             else if (keyAscii == SFML.Window.Keyboard.Key.F4)

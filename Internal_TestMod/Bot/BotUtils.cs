@@ -63,7 +63,7 @@ namespace NinMods.Bot
             path = Pathfinder.GetPathTo(attackingTile.x, attackingTile.y);
             if (path != null)
             {
-                Logger.Log.Write("BotUtils", "GetPathToMonster", $"Returning early, found ideal attacking tile {attackingTile}");
+                Logger.Log.Write("BotUtils", "GetPathToMonster", $"Returning early, found ideal attacking tile {attackingTile} from target tile ({monster.X}, {monster.Y})");
                 return path;
             }
 
@@ -73,7 +73,7 @@ namespace NinMods.Bot
                 path = Pathfinder.GetPathTo(attackingTile.x, attackingTile.y);
                 if (path != null)
                 {
-                    Logger.Log.Write("BotUtils", "GetPathToMonster", $"Returning from loop, found attacking tile {attackingTile}");
+                    Logger.Log.Write("BotUtils", "GetPathToMonster", $"Returning from loop, found attacking tile {attackingTile} from target tile ({monster.X}, {monster.Y})");
                     return path;
                 }
             }

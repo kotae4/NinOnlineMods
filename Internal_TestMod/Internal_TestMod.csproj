@@ -78,12 +78,14 @@
     <Compile Include="Bot\BotCommand_ChargeChakra.cs" />
     <Compile Include="Bot\BotCommand_CollectItem.cs" />
     <Compile Include="Bot\BotCommand_Heal.cs" />
+    <Compile Include="Bot\BotCommand_MoveToMap.cs" />
     <Compile Include="Bot\BotCommand_MoveToStaticPoint.cs" />
     <Compile Include="Bot\BotUtils.cs" />
     <Compile Include="Bot\FarmBot.cs" />
     <Compile Include="Bot\IBotCommand.cs" />
     <Compile Include="Constants.cs" />
-    <Compile Include="Pathfinder.cs" />
+    <Compile Include="Inter-Map Pathfinding\IntermapPathfinding.cs" />
+    <Compile Include="AStar Pathfinding\Pathfinder.cs" />
     <Compile Include="PlayerStatsForm.cs">
       <SubType>Form</SubType>
     </Compile>

@@ -54,6 +54,7 @@ namespace NinMods.Utilities
 
                     // NOTE: this hook is unstable.
                     //handleMapDataHook = ManagedHooker.HookMethod<dHandleMapData>(typeof(client.modHandleData), "HandleMapData", hk_modHandleData_HandleMapData, 0);
+                    NinMods.Main.handleMapDoneHook = ManagedHooker.HookMethod<NinMods.Main.dHandleMapDone>(typeof(client.modHandleData), "HandleMapDone", NinMods.Main.hk_modHandleData_HandleMapDone, 0);
                     NinMods.Main.loadMapHook = ManagedHooker.HookMethod<NinMods.Main.dLoadMap>(typeof(client.modDatabase), "LoadMap", NinMods.Main.hk_modDatabase_LoadMap, 0);
                 }
                 catch (Exception ex)
@@ -131,6 +132,17 @@ namespace NinMods.Utilities
                 }
             }
             */
+            if (NinMods.Main.handleMapDoneHook == null)
+            {
+                try
+                {
+                    NinMods.Main.handleMapDoneHook = ManagedHooker.HookMethod<NinMods.Main.dHandleMapDone>(typeof(client.modHandleData), "HandleMapDone", NinMods.Main.hk_modHandleData_HandleMapDone, 0);
+                }
+                catch (Exception ex)
+                {
+                    Logger.Log.WriteException("NinMods.Main", "AttemptRehooking", ex);
+                }
+            }
             if (NinMods.Main.handleDataHook == null)
             {
                 try
