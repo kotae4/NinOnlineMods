@@ -32,18 +32,10 @@ namespace NinMods.Pathfinding
             set { m_GridData[x, y] = value; }
         }
 
-        public bool IsInBounds(Vector2i id, bool isTransitioningToNewMap = false)
+        public bool IsInBounds(Vector2i id)
         {
-            if (isTransitioningToNewMap)
-            {
-                return id.x >= 0 && id.x <= width
-                    && id.y >= 0 && id.y <= height;
-            }
-            else
-            {
-                return id.x > 0 && id.x < width
-                    && id.y > 0 && id.y < height;
-            }
+            return id.x > 0 && id.x < width
+                && id.y > 0 && id.y < height;
         }
 
         public bool IsPassable(Vector2i id)
@@ -67,12 +59,12 @@ namespace NinMods.Pathfinding
             return 1;
         }
 
-        public IEnumerable<Vector2i> Neighbors(Vector2i id, bool isTransitioningToNewMap = false)
+        public IEnumerable<Vector2i> Neighbors(Vector2i id)
         {
             foreach (var dir in Vector2i.directions_Eight)
             {
                 Vector2i next = new Vector2i(id.x + dir.x, id.y + dir.y);
-                if (IsInBounds(next, isTransitioningToNewMap) && IsPassable(next))
+                if (IsInBounds(next) && IsPassable(next))
                 {
                     yield return next;
                 }

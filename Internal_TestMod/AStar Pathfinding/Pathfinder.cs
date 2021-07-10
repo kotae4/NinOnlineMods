@@ -30,11 +30,11 @@ namespace NinMods
 
         // TO-DO:
         // optimize this. add a GetPathTo_NonAlloc version.
-        public static Stack<Vector2i> GetPathTo(int tileX, int tileY, bool isTransitioningToNewMap = false)
+        public static Stack<Vector2i> GetPathTo(int tileX, int tileY)
         {
             Vector2i playerLoc = new Vector2i(client.modTypes.Player[client.modGlobals.MyIndex].X, client.modTypes.Player[client.modGlobals.MyIndex].Y);
             Vector2i targetLoc = new Vector2i(tileX, tileY);
-            AStarSearch pathfinder = new AStarSearch(NinMods.Main.MapPathfindingGrid, playerLoc, targetLoc, isTransitioningToNewMap);
+            AStarSearch pathfinder = new AStarSearch(NinMods.Main.MapPathfindingGrid, playerLoc, targetLoc);
             Vector2i step;
             if (!pathfinder.cameFrom.TryGetValue(targetLoc, out step))
             {

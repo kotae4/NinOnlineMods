@@ -137,7 +137,7 @@ namespace NinMods
         static void StartGrindBot()
         {
             if (HasInitialized == false) return;
-            farmBot = new Bot.FarmBot();
+            //farmBot = new Bot.FarmBot();
             client.modTypes.PlayerRec bot = Bot.BotUtils.GetSelf();
             int targetMapID = -1;
             if (bot.Level <= 5)
@@ -379,8 +379,10 @@ namespace NinMods
             client.modTypes.PlayerRec bot = Bot.BotUtils.GetSelf();
             Logger.Log.Write("NinMods.Main", "hk_modHandleData_HandleMapDone", $"Loaded new map {bot.Map}", Logger.ELogType.Info, null, true);
             MapPathfindingGrid = new SquareGrid(client.modTypes.Map.Tile, client.modTypes.Map.MaxX, client.modTypes.Map.MaxY);
-            // 
-            StartGrindBot();
+            if (IsBotEnabled)
+            {
+                StartGrindBot();
+            }
         }
 
         // for drawing tile overlays

@@ -201,10 +201,10 @@ namespace NinMods.Bot
                             Logger.Log.Write("FarmBot", "InjectEvent", $"Ignoring injected event {eventType} because we are already at or moving to target map ID {(int)eventData}");
                             return;
                         }
+                        Logger.Log.Write("FarmBot", "InjectEvent", $"Interrupting current state to handle {eventType} event");
                         TargetMapID = (int)eventData;
                         currentCommand = new BotCommand_MoveToMap(TargetMapID);
                         currentState = EBotState.MovingToMap;
-                        Logger.Log.Write("FarmBot", "InjectEvent", $"Interrupting current state to handle {eventType} event");
                         break;
                     }
             }
@@ -225,6 +225,7 @@ namespace NinMods.Bot
                     // if the current command fails for some reason then switch to idle and hope we don't face the same issue repeatedly
                     // this is definitely bad, but i want to get my character leveled as quickly as possible so i can develop the bot further
                     // so i'll risk getting stuck in a nasty loop over not having the chance to recover at all
+                    Logger.Log.Write("FarmBot", "Update", "Command failed to perform, moving to Idle and then finding next state");
                     currentState = EBotState.Idle;
                     currentCommand = null;
                     NextState();
@@ -239,6 +240,7 @@ namespace NinMods.Bot
 
             if (currentCommand == null)
             {
+                Logger.Log.Write("FarmBot", "Update", "No command this tick, moving to next state");
                 NextState();
             }
         }

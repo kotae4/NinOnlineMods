@@ -10,6 +10,6 @@ namespace NinMods.Pathfinding
     public interface IWeightedGraph<L>
     {
         double GetCost(Vector2i a, Vector2i b);
-        IEnumerable<Vector2i> Neighbors(Vector2i id, bool isTransitioningToNewMap = false);
+        IEnumerable<Vector2i> Neighbors(Vector2i id);
     }
 }
