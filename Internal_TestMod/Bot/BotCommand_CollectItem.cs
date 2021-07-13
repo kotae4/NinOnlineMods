@@ -32,7 +32,9 @@ namespace NinMods.Bot
             if (path.Count == 0)
             {
                 // we've arrived at the item, now collect it
-                BotUtils.CollectItem();
+                //BotUtils.CollectItem();
+                // exploit testing:
+                GameExploits.CollectItem();
                 // TO-DO:
                 // wait until verification from server. maybe keep retrying if necessary (probably not a good idea, though).
                 hasCollectedItem = true;

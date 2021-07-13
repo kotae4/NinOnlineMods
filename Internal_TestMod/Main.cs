@@ -29,9 +29,7 @@ namespace NinMods
         public static string AutoLogin_Password = "";
 
         public static bool HasInitialized = false;
-        #region Hook instance data
-        
-        #endregion
+        public static object _lock = 0;
 
         public static SquareGrid MapPathfindingGrid;
 
@@ -43,7 +41,6 @@ namespace NinMods
 
         // for determing if a new item has dropped
         public static client.modTypes.MapItemRec[] lastFrameMapItems = new client.modTypes.MapItemRec[256];
-
 
         // debugging / visuals
         public static PlayerStatsForm frmPlayerStats = null;
@@ -263,18 +260,24 @@ namespace NinMods
             // now that we're injecting at game startup rather than once we're fully loaded in-game, we **have** to make sure the game state is valid before running any of our logic
             if ((MapPathfindingGrid == null) && (client.modTypes.Map != null) && (string.IsNullOrEmpty(client.modTypes.Map.Name) == false))
             {
-                MapPathfindingGrid = new SquareGrid(client.modTypes.Map.Tile, client.modTypes.Map.MaxX, client.modTypes.Map.MaxY);
+                MapPathfindingGrid = new SquareGrid(client.modTypes.Map, client.modTypes.Map.Tile);
             }
             try
             {
-                if (NinMods.Main.frmPlayerStats == null)
+                lock (_lock)
                 {
-                    Logger.Log.Write("Initializing player stats form", Logger.ELogType.Info, null, false);
-                    NinMods.Main.frmPlayerStats = new PlayerStatsForm();
-                    NinMods.Main.frmPlayerStats.Show();
+                    if (NinMods.Main.frmPlayerStats == null)
+                    {
+                        Logger.Log.Write("Initializing player stats form", Logger.ELogType.Info, null, false);
+                        NinMods.Main.frmPlayerStats = new PlayerStatsForm();
+                        NinMods.Main.frmPlayerStats.Show();
+                    }
+                    if (NinMods.Main.frmPlayerStats.Visible)
+                    {
+                        client.modTypes.PlayerRec bot = Bot.BotUtils.GetSelf();
+                        NinMods.Main.frmPlayerStats.UpdatePlayerStats(bot);
+                    }
                 }
-                if (NinMods.Main.frmPlayerStats.Visible)
-                    NinMods.Main.frmPlayerStats.UpdatePlayerStats(client.modTypes.Player[client.modGlobals.MyIndex]);
                 /*
                 Logger.Log.Write("NinMods.Main", "hk_modGameLogic_GameLoop", $"Player pos: " +
                     $"{client.modTypes.Player[client.modGlobals.MyIndex].X}, {client.modTypes.Player[client.modGlobals.MyIndex].Y} " +
@@ -311,7 +314,15 @@ namespace NinMods
         {
             client.modTypes.PlayerRec bot = Bot.BotUtils.GetSelf();
             Logger.Log.Write($"Loaded new map {bot.Map}", Logger.ELogType.Info, null, true);
-            MapPathfindingGrid = new SquareGrid(client.modTypes.Map.Tile, client.modTypes.Map.MaxX, client.modTypes.Map.MaxY);
+            if ((client.modTypes.Map != null) && (string.IsNullOrEmpty(client.modTypes.Map.Name) == false))
+            {
+                MapPathfindingGrid = new SquareGrid(client.modTypes.Map, client.modTypes.Map.Tile);
+            }
+            else
+            {
+                Logger.Log.WriteError($"Not loading map into pathfinding grid because it's invalid (map: {client.modTypes.Map}, name: {(client.modTypes.Map == null ? "<invalid>" : client.modTypes.Map.Name)})");
+                return;
+            }
             if (IsBotEnabled)
             {
                 StartGrindBot();
@@ -361,12 +372,12 @@ namespace NinMods
             }
             else if (keyAscii == SFML.Window.Keyboard.Key.F2)
             {
-                if (NinMods.Main.frmPlayerStats == null)
+                lock (_lock)
                 {
-                    Logger.Log.Write("Initializing player stats form", Logger.ELogType.Info, null, false);
-                    NinMods.Main.frmPlayerStats = new PlayerStatsForm();
+                    if ((NinMods.Main.frmPlayerStats != null) && (NinMods.Main.frmPlayerStats.Visible))
+                        NinMods.Main.frmPlayerStats.Close();
+                    NinMods.Main.frmPlayerStats = null;
                 }
-                NinMods.Main.frmPlayerStats.Show();
             }
             else if (keyAscii == SFML.Window.Keyboard.Key.F3)
             {

@@ -501,8 +501,10 @@ namespace NinMods.Bot
 
         public static client.modTypes.PlayerRec GetSelf()
         {
-            // TO-DO:
-            // add sanity checks (checking if we're in-game and our player has fully loaded)
+			// TO-DO:
+			// add sanity checks (checking if we're in-game and our player has fully loaded)
+			if ((client.modTypes.Player == null) || (client.modGlobals.MyIndex <= 0) || (client.modGlobals.MyIndex >= client.modTypes.Player.Length))
+				return null;
             return client.modTypes.Player[client.modGlobals.MyIndex];
         }
 
