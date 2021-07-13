@@ -77,6 +77,7 @@
     <Compile Include="Bot\BotCommand_Attack.cs" />
     <Compile Include="Bot\BotCommand_ChargeChakra.cs" />
     <Compile Include="Bot\BotCommand_CollectItem.cs" />
+    <Compile Include="Bot\BotCommand_ExploitMovementToStaticPoint.cs" />
     <Compile Include="Bot\BotCommand_Heal.cs" />
     <Compile Include="Bot\BotCommand_MoveToMap.cs" />
     <Compile Include="Bot\BotCommand_MoveToStaticPoint.cs" />
@@ -84,6 +85,7 @@
     <Compile Include="Bot\FarmBot.cs" />
     <Compile Include="Bot\IBotCommand.cs" />
     <Compile Include="Constants.cs" />
+    <Compile Include="GameExploits.cs" />
     <Compile Include="GameHooks.cs" />
     <Compile Include="GenericGameHookClass.cs" />
     <Compile Include="Inter-Map Pathfinding\IntermapPathfinding.cs" />

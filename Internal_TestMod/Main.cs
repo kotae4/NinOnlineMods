@@ -123,10 +123,17 @@ namespace NinMods
                 // grind spiders on map Moist Plains (id: 99)
                 targetMapID = 99;
             }
-            else if (bot.Level <= 20)
+            else if (bot.Level <= 18)
             {
                 // grind wolves on map Outskirts Dead End (id: 130)
                 targetMapID = 130;
+            }
+            // TO-DO:
+            // check if tigers are more viable. either option is bad tbh.
+            else if (bot.Level <= 25)
+            {
+                // grind bees / hornets on map End of the Valley (id: 188)
+                targetMapID = 188;
             }
             else
             {
@@ -348,6 +355,9 @@ namespace NinMods
                 // /heal command: does not work
                 // attacks bypassing attack speed: does work! (bypassing animation timers, only a slight increase imo)
                 // movement bypassing timers: does work! (particularly, bypassing the xOffset and yOffset timers, a very considerable increase)
+                Vector2i cursorTileLocation = Utilities.GameUtils.GetTilePosFromCursor();
+                moveToCursorCmd = new Bot.BotCommand_ExploitMovementToStaticPoint(cursorTileLocation);
+                IsBotEnabled = false;
                 // bypassing jutsu timers / limits: does not work (but, bypassing the animation timers like in attack speed might defer a slight advantage)
                 // speeding up server-side health regen: doesn't work :( (tried sending 50 ping packets on tmr100 interval, no change)
             }
