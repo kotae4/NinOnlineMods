@@ -88,6 +88,7 @@
     <Compile Include="GenericGameHookClass.cs" />
     <Compile Include="Inter-Map Pathfinding\IntermapPathfinding.cs" />
     <Compile Include="AStar Pathfinding\Pathfinder.cs" />
+    <Compile Include="MapData.cs" />
     <Compile Include="PlayerStatsForm.cs">
       <SubType>Form</SubType>
     </Compile>

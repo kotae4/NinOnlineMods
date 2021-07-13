@@ -513,17 +513,20 @@ namespace NinMods.Bot
             return new Vector2i(client.modTypes.Player[client.modGlobals.MyIndex].X, client.modTypes.Player[client.modGlobals.MyIndex].Y);
         }
 
-		public static List<Vector2i> GetAllTilesMatchingPredicate(Func<int, int, bool> predicate)
+		public static List<Vector2i> GetAllTilesMatchingPredicate(Func<Vector2i, bool> predicate)
 		{
 			List<Vector2i> matchingTiles = new List<Vector2i>();
 			client.modTypes.MapRec currentMap = client.modTypes.Map;
 			int tileLengthX = currentMap.Tile.GetLength(0);
 			int tileLengthY = currentMap.Tile.GetLength(1);
+			Vector2i tilePos = new Vector2i();
 			for (int tileX = 0; tileX < tileLengthX; tileX++)
 			{
 				for (int tileY = 0; tileY < tileLengthY; tileY++)
 				{
-					if (predicate(tileX, tileY))
+					tilePos.x = tileX;
+					tilePos.y = tileY;
+					if (predicate(tilePos))
                     {
 						matchingTiles.Add(new Vector2i(tileX, tileY));
                     }
