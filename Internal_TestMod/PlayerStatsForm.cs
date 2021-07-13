@@ -71,7 +71,7 @@ namespace NinMods
             System.Reflection.MethodInfo methodInfo = typeof(System.Windows.Forms.ListView).GetMethod("SetItemText", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic, null, new Type[] { typeof(int), typeof(int), typeof(string) }, null);
             if (methodInfo == null)
             {
-                Logger.Log.WriteError("PlayerStatsForm", "PlayerStatsForm::ctor", "Could not get SetItemText methodinfo");
+                Logger.Log.WriteError("Could not get SetItemText methodinfo");
                 return;
             }
             oListView_SetItemText = (dListView_SetItemText)methodInfo.CreateDelegate(typeof(dListView_SetItemText), listviewPlayerStats);
@@ -89,7 +89,7 @@ namespace NinMods
 
         public void Reposition_OnDesktop(int x, int y)
         {
-            Logger.Log.Write("PlayerStatsForm", "Reposition_OnDesktop", $"Repositioning form to {x}, {y}");
+            Logger.Log.Write($"Repositioning form to {x}, {y}");
             this.SetDesktopLocation(x, y);
         }
 

@@ -182,7 +182,7 @@ namespace NinMods.Hooking.LowLevel
                 // The block has at least one unused slot.
                 if (pBlock->pFree != null)
                 {
-                    Logger.Log.Write("MinHook", "GetMemoryBlock32", "Using free slot from existing buffer block");
+                    Logger.Log.Write("Using free slot from existing buffer block");
                     return pBlock;
                 }
             }
@@ -193,7 +193,7 @@ namespace NinMods.Hooking.LowLevel
             if (bufAddr == IntPtr.Zero)
             {
                 int errCode = Marshal.GetLastWin32Error();
-                Logger.Log.Alert("Minhook", "GetMemoryBlock32", "Could not allocate memory (errCode: " + errCode.ToString() + " [0x" + errCode.ToString("X") + "])", NinMods.Main.MAIN_CAPTION);
+                Logger.Log.Alert($"Could not allocate memory (errCode: {errCode} [0x{errCode.ToString("X")}])", NinMods.Main.MAIN_CAPTION);
             }
             pBlock = (MEMORY_BLOCK_S*)bufAddr;
             if (pBlock != null)

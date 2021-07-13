@@ -45,7 +45,7 @@ namespace NinMods.Bot
 
                 if (BotUtils.MoveDir(tileDirection) == false)
                 {
-                    Logger.Log.WriteError("BotCommand_MoveToStaticPoint", "Perform", $"Could not move bot at {botLocation} in direction {tileDirection}");
+                    Logger.Log.WriteError($"Could not move bot at {botLocation} in direction {tileDirection}");
                     hasFailedCatastrophically = true;
                     return false;
                 }

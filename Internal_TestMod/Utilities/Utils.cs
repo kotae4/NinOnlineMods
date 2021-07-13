@@ -112,7 +112,7 @@ namespace NinMods.Utilities
             }
             catch (Exception ex)
             {
-                Logger.Log.WriteException("NinMods.Main", "DrawTileTypeOverlay", ex);
+                Logger.Log.WriteException(ex);
             }
         }
 
@@ -129,7 +129,7 @@ namespace NinMods.Utilities
         {
             client.modTypes.PlayerRec bot = NinMods.Bot.BotUtils.GetSelf();
             client.modTypes.MapRec map = client.modTypes.Map;
-            Logger.Log.Write("NinMods.Main", "DumpMapData", $"\n===== Dumping map ({bot.Map}) =====");
+            Logger.Log.Write($"\n===== Dumping map ({bot.Map}) =====");
             try
             {
                 if (System.IO.Directory.Exists("GAME_DUMP") == false)
@@ -199,9 +199,9 @@ namespace NinMods.Utilities
             }
             catch (Exception ex)
             {
-                Logger.Log.WriteException("NinMods.Main", "DumpMapData", ex);
+                Logger.Log.WriteException(ex);
             }
-            Logger.Log.Write("NinMods.Main", "DumpMapData", "===== Done dumping map =====\n");
+            Logger.Log.Write("===== Done dumping map =====\n");
         }
     }
 }

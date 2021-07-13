@@ -38,7 +38,7 @@ namespace NinMods.Hooking.Utilities
                     catch (BadImageFormatException bife)
                     {
                         // silently log the error, but continue execution after. this doesn't necessarily indicate failure.
-                        Logger.Log.Write("NinMods.Hooking.Utilities.Utility", "GetMethodAddrByName", $"BadImageFormatException when preparing target method '{name}' via RuntimeHelpers.", Logger.ELogType.Error);
+                        Logger.Log.Write($"BadImageFormatException when preparing target method '{name}' via RuntimeHelpers.", Logger.ELogType.Error);
                     }
                     return methodInfo.MethodHandle.GetFunctionPointer();
                 }

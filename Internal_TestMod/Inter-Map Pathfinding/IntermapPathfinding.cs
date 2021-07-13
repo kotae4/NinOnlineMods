@@ -89,7 +89,7 @@ namespace NinMods.InterMapPathfinding
 
             allShortestPathAlgo = new FloydWarshallAllShortestPathAlgorithm<int, Edge<int>>(adjacencyMatrix, GetWeightForEdge);
             allShortestPathAlgo.Compute();
-            Logger.Log.Write("IntermapPathfinding", "Initialize", "Initialized intermap pathfinding algorithm");
+            Logger.Log.Write("Initialized intermap pathfinding algorithm");
         }
 
         public static bool GetPathFromTo(int fromMapID, int toMapID, out IEnumerable<Edge<int>> path)

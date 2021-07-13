@@ -38,10 +38,10 @@ namespace NinMods
             Vector2i step;
             if (!pathfinder.cameFrom.TryGetValue(targetLoc, out step))
             {
-                Logger.Log.Write("Pathfinder", "GetPathTo", $"Pathfinder could not find path to {targetLoc}");
+                Logger.Log.Write($"Pathfinder could not find path to {targetLoc}");
                 return null;
             }
-            Logger.Log.Write("Pathfinder", "GetPathTo", $"Done pathfinding from {playerLoc} to {targetLoc}, constructing pathStack now");
+            Logger.Log.Write($"Done pathfinding from {playerLoc} to {targetLoc}, constructing pathStack now");
             Stack<Vector2i> pathStack = new Stack<Vector2i>();
             pathStack.Push(targetLoc);
             while (true)
@@ -54,11 +54,11 @@ namespace NinMods
                 //Logger.Log.Write("Pathfinder", "GetPathTo", $"Pathfinder stepped from {step}");
                 if (!pathfinder.cameFrom.TryGetValue(step, out step))
                 {
-                    Logger.Log.WriteError("Pathfinder", "GetPathTo", $"Pathfinder stopped unexpectedly at {step}");
+                    Logger.Log.WriteError($"Pathfinder stopped unexpectedly at {step}");
                     break;
                 }
             }
-            Logger.Log.Write("Pathfinder", "GetPathTo", $"Done constructing path stack from {playerLoc} to {targetLoc}");
+            Logger.Log.Write($"Done constructing path stack from {playerLoc} to {targetLoc}");
             return pathStack;
         }
     }

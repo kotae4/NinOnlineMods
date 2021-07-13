@@ -65,7 +65,7 @@ namespace NinMods.Bot
             path = Pathfinder.GetPathTo(attackingTile.x, attackingTile.y);
             if (path != null)
             {
-                Logger.Log.Write("BotUtils", "GetPathToMonster", $"Returning early, found ideal attacking tile {attackingTile} from target tile ({monster.X}, {monster.Y})");
+                Logger.Log.Write($"Returning early, found ideal attacking tile {attackingTile} from target tile ({monster.X}, {monster.Y})");
                 return path;
             }
 
@@ -75,7 +75,7 @@ namespace NinMods.Bot
                 path = Pathfinder.GetPathTo(attackingTile.x, attackingTile.y);
                 if (path != null)
                 {
-                    Logger.Log.Write("BotUtils", "GetPathToMonster", $"Returning from loop, found attacking tile {attackingTile} from target tile ({monster.X}, {monster.Y})");
+                    Logger.Log.Write($"Returning from loop, found attacking tile {attackingTile} from target tile ({monster.X}, {monster.Y})");
                     return path;
                 }
             }
@@ -102,10 +102,10 @@ namespace NinMods.Bot
 
             if (gameDir == 255)
             {
-                Logger.Log.WriteError("BotUtils", "MoveDir", $"Could not get direction out of {tileDirection} (self: {botLocation}; nextTile: {nextTile})");
+                Logger.Log.WriteError($"Could not get direction out of {tileDirection} (self: {botLocation}; nextTile: {nextTile})");
                 return false;
             }
-            Logger.Log.Write("BotUtils", "MoveDir", $"Moving bot from {botLocation} to {nextTile} in direction {gameDir} (tileDir: {tileDirection})", Logger.ELogType.Info, null, true);
+            Logger.Log.Write($"Moving bot from {botLocation} to {nextTile} in direction {gameDir} (tileDir: {tileDirection})", Logger.ELogType.Info, null, true);
             // perform next movement
             // set state before sending packet
             client.modTypes.Player[client.modGlobals.MyIndex].Dir = gameDir;
@@ -121,7 +121,7 @@ namespace NinMods.Bot
             client.modTypes.Player[client.modGlobals.MyIndex].yOffset = System.Math.Abs(tileDirection.y * 32f);
             client.modTypes.Player[client.modGlobals.MyIndex].X = (byte)(botLocation.x + tileDirection.x);
             client.modTypes.Player[client.modGlobals.MyIndex].Y = (byte)(botLocation.y + tileDirection.y);
-            Logger.Log.Write("BotUtils", "MoveDir", $"Predicted: ({client.modTypes.Player[client.modGlobals.MyIndex].X}, " +
+            Logger.Log.Write($"Predicted: ({client.modTypes.Player[client.modGlobals.MyIndex].X}, " +
                 $"{client.modTypes.Player[client.modGlobals.MyIndex].Y}) (offset: " +
                 $"{client.modTypes.Player[client.modGlobals.MyIndex].xOffset}, " +
                 $"{client.modTypes.Player[client.modGlobals.MyIndex].yOffset})");
@@ -144,11 +144,11 @@ namespace NinMods.Bot
             }
             if (gameDir == client.modTypes.Player[client.modGlobals.MyIndex].Dir)
             {
-                Logger.Log.Write("BotUtils", "FaceDir", "Bot is already facing target, no need to send dir packet");
+                Logger.Log.Write("Bot is already facing target, no need to send dir packet");
             }
             else
             {
-                Logger.Log.Write("BotUtils", "FaceDir", $"Setting bot to face target (was {client.modTypes.Player[client.modGlobals.MyIndex].Dir} now {gameDir})");
+                Logger.Log.Write($"Setting bot to face target (was {client.modTypes.Player[client.modGlobals.MyIndex].Dir} now {gameDir})");
                 client.modTypes.Player[client.modGlobals.MyIndex].Dir = gameDir;
                 client.clsBuffer clsBuffer2 = new client.clsBuffer();
                 clsBuffer2.WriteLong(18);
@@ -227,14 +227,14 @@ namespace NinMods.Bot
         {
             if (client.modGlobals.tmr25 >= client.modGlobals.Tick)
             {
-                Logger.Log.Write("BotUtils", "CanMove", $"Skipping frame because tmr25 isn't ready yet ({client.modGlobals.tmr25} > {client.modGlobals.Tick})");
+                Logger.Log.Write($"Skipping frame because tmr25 isn't ready yet ({client.modGlobals.tmr25} > {client.modGlobals.Tick})");
                 return false;
             }
             // NOTE:
             // taken from client.modGameLogic.CheckMovement()
             if ((client.modTypes.Player[client.modGlobals.MyIndex].Moving > 0) || (client.modTypes.Player[client.modGlobals.MyIndex].DeathTimer > 0))
             {
-                Logger.Log.Write("BotUtils", "CanMove", $"Skipping frame because player is in invalid state ({client.modTypes.Player[client.modGlobals.MyIndex].Moving}, {client.modTypes.Player[client.modGlobals.MyIndex].DeathTimer})");
+                Logger.Log.Write($"Skipping frame because player is in invalid state ({client.modTypes.Player[client.modGlobals.MyIndex].Moving}, {client.modTypes.Player[client.modGlobals.MyIndex].DeathTimer})");
                 return false;
             }
             return true;
@@ -263,27 +263,27 @@ namespace NinMods.Bot
 			client.modTypes.PlayerRec bot = GetSelf();
 			if (bot.ChargeChakra == true)
             {
-				Logger.Log.Write("BotUtils", "CanChargeChakra", "Cannot charge chakra because we're already charging chakra", Logger.ELogType.Error);
+				Logger.Log.Write("Cannot charge chakra because we're already charging chakra", Logger.ELogType.Error);
 				return false;
             }
 			if ((bot.Village != 3) && (bot.Village != 13) && (client.modTypes.Map.Tile[bot.X, bot.Y].Type == Constants.TILE_TYPE_WATER))
 			{
-				Logger.Log.Write("BotUtils", "CanChargeChakra", $"Cannot charge chakra in water (botLoc ({bot.X}, {bot.Y}), botVillage {bot.Village}, tileType {client.modTypes.Map.Tile[bot.X, bot.Y].Type})", Logger.ELogType.Error);
+				Logger.Log.Write($"Cannot charge chakra in water (botLoc ({bot.X}, {bot.Y}), botVillage {bot.Village}, tileType {client.modTypes.Map.Tile[bot.X, bot.Y].Type})", Logger.ELogType.Error);
 				return false;
 			}
 			if (((double)(bot.ChargeTimer + 500) - (double)bot.Stat[5] * 0.2 * 5.0) > (double)client.modGlobals.Tick)
             {
-				Logger.Log.Write("BotUtils", "CanChargeChakra", $"Cannot charge chakra while on cooldown (chargeTimer {bot.ChargeTimer}, effectiveTimer {((double)(bot.ChargeTimer + 500) - (double)bot.Stat[5] * 0.2 * 5.0)}, tick {(double)client.modGlobals.Tick})", Logger.ELogType.Error);
+				Logger.Log.Write($"Cannot charge chakra while on cooldown (chargeTimer {bot.ChargeTimer}, effectiveTimer {((double)(bot.ChargeTimer + 500) - (double)bot.Stat[5] * 0.2 * 5.0)}, tick {(double)client.modGlobals.Tick})", Logger.ELogType.Error);
 				return false;
 			}
 			if (client.modGameLogic.CanPlayerInteract(Ignore:true) == false)
             {
-				Logger.Log.Write("BotUtils", "CanChargeChakra", "Cannot charge chakra while in a menu or CC'd", Logger.ELogType.Error);
+				Logger.Log.Write("Cannot charge chakra while in a menu or CC'd", Logger.ELogType.Error);
 				return false;
 			}
 			if (bot.Vital[(int)client.modEnumerations.Vitals.MP] == bot.MaxVital[(int)client.modEnumerations.Vitals.MP])
             {
-				Logger.Log.Write("BotUtils", "CanChargeChakra", $"Cannot charge chakra because it's already full ({bot.Vital[(int)client.modEnumerations.Vitals.MP]} / {bot.MaxVital[(int)client.modEnumerations.Vitals.MP]})", Logger.ELogType.Error);
+				Logger.Log.Write($"Cannot charge chakra because it's already full ({bot.Vital[(int)client.modEnumerations.Vitals.MP]} / {bot.MaxVital[(int)client.modEnumerations.Vitals.MP]})", Logger.ELogType.Error);
 				return false;
 			}
 			return true;

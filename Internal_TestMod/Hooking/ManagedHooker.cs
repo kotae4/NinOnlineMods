@@ -76,7 +76,7 @@ namespace NinMods.Hooking
                     var getMethodDescriptorInfo = typeof(DynamicMethod).GetMethod("GetMethodDescriptor", BindingFlags.NonPublic | BindingFlags.Instance);
                     if (getMethodDescriptorInfo == null)
                     {
-                        Logger.Log.Write("ManagedHooker", "GetMethodRuntimeHandle", "Could not get 'GetMethodDescriptor' of DynamicMethod type");
+                        Logger.Log.Write("Could not get 'GetMethodDescriptor' of DynamicMethod type");
                         throw new Exception("Could not get 'GetMethodDescriptor' of DynamicMethod type");
                     }
                     else
@@ -87,7 +87,7 @@ namespace NinMods.Hooking
                     var fieldInfo = typeof(DynamicMethod).GetField("m_method", BindingFlags.NonPublic | BindingFlags.Instance);
                     if (fieldInfo == null)
                     {
-                        Logger.Log.Write("ManagedHooker", "GetMethodRuntimeHandle", "Could not get 'm_method' of DynamicMethod type");
+                        Logger.Log.Write("Could not get 'm_method' of DynamicMethod type");
                         throw new Exception("Could not get 'm_method' of DynamicMethod type");
                     }
                     else
@@ -96,7 +96,7 @@ namespace NinMods.Hooking
             }
             catch (Exception ex)
             {
-                Logger.Log.WriteException("ManagedHooker", "GetMethodRuntimeHandle", ex);
+                Logger.Log.WriteException(ex);
                 throw ex;
             }
             /*
@@ -110,17 +110,17 @@ namespace NinMods.Hooking
         {
             if (HookedDict.TryGetValue(chainName, out hookEntry))
             {
-                Logger.Log.Write("ManagedHooker", "GetOrCreateChainedHooker", "Retrieved existing hook chain");
+                Logger.Log.Write("Retrieved existing hook chain");
                 return EChainedHookerStatus.Existing;
             }
-            Logger.Log.Write("ManagedHooker", "GetOrCreateChainedHooker", "Creating new hook chain");
+            Logger.Log.Write("Creating new hook chain");
             hookEntry = null;
 
             ParameterInfo[] args = targetMethodInfo.GetParameters();
             Type[] argTypes;
             if (!targetMethodInfo.IsStatic)
             {
-                Logger.Log.Write("ManagedHooker", "GetOrCreateChainedHooker", "Target method is not static. Including 'this' parameter in signature.");
+                Logger.Log.Write("Target method is not static. Including 'this' parameter in signature.");
                 argTypes = new Type[args.Length + 1];
                 argTypes[0] = targetMethodInfo.DeclaringType;
                 for (int i = 0; i < args.Length; i++)
@@ -128,7 +128,7 @@ namespace NinMods.Hooking
             }
             else
             {
-                Logger.Log.Write("ManagedHooker", "GetOrCreateChainedHooker", "Target method is static. Not using 'this' parameter.");
+                Logger.Log.Write("Target method is static. Not using 'this' parameter.");
                 argTypes = new Type[args.Length];
                 for (int i = 0; i < args.Length; i++)
                     argTypes[i] = args[i].ParameterType;
@@ -144,7 +144,7 @@ namespace NinMods.Hooking
                 false
                 );
 
-            Logger.Log.Write("ManagedHooker", "GetOrCreateChainedHooker", "Instantiated blank DynamicMethod, filling now...");
+            Logger.Log.Write("Instantiated blank DynamicMethod, filling now...");
 
             #region Boilerplate Type Definitions
             Type thisType = typeof(ManagedHooker);
@@ -154,22 +154,22 @@ namespace NinMods.Hooking
             FieldInfo hookInfoHooksField = hookInfoType.GetField("_PRIV_Hooks", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
             if (hookInfoHooksField != null)
             {
-                Logger.Log.Write("ManagedHooker", "GetOrCreateChainedHooker", "hookInfoHooksField: " + hookInfoHooksField.ToString());
+                Logger.Log.Write($"hookInfoHooksField: {hookInfoHooksField}");
             }
             else
             {
-                Logger.Log.Write("ManagedHooker", "GetOrCreateChainedHooker", "hookInfoHooksField failed!!!");
+                Logger.Log.Write("hookInfoHooksField failed!!!");
                 return EChainedHookerStatus.Failed;
             }
 
             FieldInfo hookInfoHasCalledField = hookInfoType.GetField("HasOriginalFunctionBeenCalled", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
             if (hookInfoHasCalledField != null)
             {
-                Logger.Log.Write("ManagedHooker", "GetOrCreateChainedHooker", "hookInfoHasCalledField: " + hookInfoHasCalledField.ToString());
+                Logger.Log.Write($"hookInfoHasCalledField: {hookInfoHasCalledField}");
             }
             else
             {
-                Logger.Log.Write("ManagedHooker", "GetOrCreateChainedHooker", "hookInfoHasCalledField failed!!!");
+                Logger.Log.Write("hookInfoHasCalledField failed!!!");
                 return EChainedHookerStatus.Failed;
             }
 
@@ -187,11 +187,11 @@ namespace NinMods.Hooking
             */
             if (dictGetFieldMethod != null)
             {
-                Logger.Log.Write("ManagedHooker", "GetOrCreateChainedHooker", "DictGetFieldMethod: " + dictGetFieldMethod.ToString() + " is generic? " + dictGetFieldMethod.ContainsGenericParameters.ToString());
+                Logger.Log.Write($"DictGetFieldMethod: {dictGetFieldMethod} is generic? {dictGetFieldMethod.ContainsGenericParameters}");
             }
             else
             {
-                Logger.Log.Write("ManagedHooker", "GetOrCreateChainedHooker", "DictGetFieldMethod failed!!!");
+                Logger.Log.Write("DictGetFieldMethod failed!!!");
                 return EChainedHookerStatus.Failed;
             }
 
@@ -201,11 +201,11 @@ namespace NinMods.Hooking
             MethodInfo listGetEnumeratorMethod = listType.GetMethod("GetEnumerator");
             if (listGetEnumeratorMethod != null)
             {
-                Logger.Log.Write("ManagedHooker", "GetOrCreateChainedHooker", "listGetEnumeratorMethod: " + listGetEnumeratorMethod.ToString());
+                Logger.Log.Write($"listGetEnumeratorMethod: {listGetEnumeratorMethod}");
             }
             else
             {
-                Logger.Log.Write("ManagedHooker", "GetOrCreateChainedHooker", "listGetEnumeratorMethod failed!!!");
+                Logger.Log.Write("listGetEnumeratorMethod failed!!!");
                 return EChainedHookerStatus.Failed;
             }
 
@@ -213,31 +213,31 @@ namespace NinMods.Hooking
             MethodInfo listEnumeratorGetCurrentMethod = listEnumeratorType.GetMethod("get_Current");
             if (listEnumeratorGetCurrentMethod != null)
             {
-                Logger.Log.Write("ManagedHooker", "GetOrCreateChainedHooker", "listEnumeratorGetCurrentMethod: " + listEnumeratorGetCurrentMethod.ToString());
+                Logger.Log.Write($"listEnumeratorGetCurrentMethod: {listEnumeratorGetCurrentMethod}");
             }
             else
             {
-                Logger.Log.Write("ManagedHooker", "GetOrCreateChainedHooker", "listEnumeratorGetCurrentMethod failed!!!");
+                Logger.Log.Write("listEnumeratorGetCurrentMethod failed!!!");
                 return EChainedHookerStatus.Failed;
             }
             MethodInfo listEnumeratorMoveNextMethod = listEnumeratorType.GetMethod("MoveNext");
             if (listEnumeratorMoveNextMethod != null)
             {
-                Logger.Log.Write("ManagedHooker", "GetOrCreateChainedHooker", "listEnumeratorMoveNextMethod: " + listEnumeratorMoveNextMethod.ToString());
+                Logger.Log.Write($"listEnumeratorMoveNextMethod: " + listEnumeratorMoveNextMethod.ToString());
             }
             else
             {
-                Logger.Log.Write("ManagedHooker", "GetOrCreateChainedHooker", "listEnumeratorMoveNextMethod failed!!!");
+                Logger.Log.Write("listEnumeratorMoveNextMethod failed!!!");
                 return EChainedHookerStatus.Failed;
             }
             MethodInfo listEnumeratorDispose = listEnumeratorType.GetMethod("Dispose");
             if (listEnumeratorDispose != null)
             {
-                Logger.Log.Write("ManagedHooker", "GetOrCreateChainedHooker", "listEnumeratorDispose: " + listEnumeratorDispose.ToString());
+                Logger.Log.Write($"listEnumeratorDispose: {listEnumeratorDispose}");
             }
             else
             {
-                Logger.Log.Write("ManagedHooker", "GetOrCreateChainedHooker", "listEnumeratorDispose failed!!!");
+                Logger.Log.Write("listEnumeratorDispose failed!!!");
                 return EChainedHookerStatus.Failed;
             }
 
@@ -245,11 +245,11 @@ namespace NinMods.Hooking
             MethodInfo delegateDynamicInvokeMethod = delegateType.GetMethod("DynamicInvoke");
             if (delegateDynamicInvokeMethod != null)
             {
-                Logger.Log.Write("ManagedHooker", "GetOrCreateChainedHooker", "delegateDynamicInvokeMethod: " + delegateDynamicInvokeMethod.ToString());
+                Logger.Log.Write($"delegateDynamicInvokeMethod: {delegateDynamicInvokeMethod}");
             }
             else
             {
-                Logger.Log.Write("ManagedHooker", "GetOrCreateChainedHooker", "delegateDynamicInvokeMethod failed!!!");
+                Logger.Log.Write("delegateDynamicInvokeMethod failed!!!");
                 return EChainedHookerStatus.Failed;
             }
             #endregion
@@ -321,7 +321,7 @@ namespace NinMods.Hooking
             il.Emit(OpCodes.Ldloc_2);
             il.Emit(OpCodes.Ldc_I4, argTypes.Length);
             il.Emit(OpCodes.Newarr, typeof(Object));
-            Logger.Log.Write("ManagedHooker", "GetOrCreateChainedHooker", "There are " + argTypes.Length.ToString() + " args.");
+            Logger.Log.Write($"There are {argTypes.Length} args.");
             for (int index = 0; index < argTypes.Length; index++)
             {
                 il.Emit(OpCodes.Dup);
@@ -332,7 +332,7 @@ namespace NinMods.Hooking
                     il.Emit(OpCodes.Box, argTypes[index]);
                 }
                 il.Emit(OpCodes.Stelem_Ref);
-                Logger.Log.Write("ManagedHooker", "GetOrCreateChainedHooker", "Emitted arg " + argTypes[index].Name);
+                Logger.Log.Write($"Emitted arg {argTypes[index].Name}");
             }
             // END PROCESS DYNAMIC ARGUMENTS
             il.Emit(OpCodes.Callvirt, delegateDynamicInvokeMethod);
@@ -382,7 +382,7 @@ namespace NinMods.Hooking
             il.Emit(OpCodes.Ret);
 
 
-            Logger.Log.Write("ManagedHooker", "GetOrCreateChainedHooker", "Finalizing chain hook dynMethod by creating delegate");
+            Logger.Log.Write("Finalizing chain hook dynMethod by creating delegate");
             Delegate finalizedDynMethod = iterateChainedHooksDynFunc.CreateDelegate(closedDelegateType);
 
             // DESIGN FLAWS:
@@ -413,7 +413,7 @@ namespace NinMods.Hooking
                 // and determining whether it's pre-JIT or post-JIT is quite hard
                 throw new Exception($"Could not get address for target method '{targetMethod}'");
             }
-            Logger.Log.Write("ManagedHooker", "HookMethod", $"Target method '{targetMethod}' is at address {targetMethodAddr.ToString("X2")}");
+            Logger.Log.Write($"Target method '{targetMethod}' is at address {targetMethodAddr.ToString("X2")}");
             MethodInfo hookMethodInfo;
             IntPtr hookMethodAddr = Utility.GetMethodAddrByName(hookType, hookMethod, out hookMethodInfo);
             if (hookMethodAddr == IntPtr.Zero)
@@ -427,7 +427,7 @@ namespace NinMods.Hooking
             {
                 throw new Exception($"Could not create delegate for hook method '{targetMethod}'");
             }
-            Logger.Log.Write("ManagedHooker", "HookMethod", $"Hook method '{hookMethod}' is at address {hookMethodAddr.ToString("X2")}, created delegate {hookDel}");
+            Logger.Log.Write($"Hook method '{hookMethod}' is at address {hookMethodAddr.ToString("X2")}, created delegate {hookDel}");
 
             string dynName = $"{targetMethodInfo.Name}_{targetMethod.GetHashCode()}";
             DynamicMethod jmpToTrampDynFunc;
@@ -443,7 +443,7 @@ namespace NinMods.Hooking
             EChainedHookerStatus chainedHookStatus = GetOrCreateChainedHooker(dynName, targetMethodInfo, closedDelegateType, out hookEntry);
             if (chainedHookStatus == EChainedHookerStatus.Failed)
             {
-                Logger.Log.Write("ManagedHooker", "HookMethod", "Error retrieving chained hooker. (Target function: " + dynName + ")");
+                Logger.Log.Write($"Error retrieving chained hooker. (Target function: {dynName})");
                 return null;
             }
             else if (chainedHookStatus == EChainedHookerStatus.New)
@@ -453,7 +453,7 @@ namespace NinMods.Hooking
                 // we will then write our jmp bytes to this method's addr and store its invocable delegate for it to later be called from within the hook.
                 // so we must match the signature of the target method (what we're jmp'ing to)
                 // and have a bare minimum compilable body (the actual body won't be executed since we're writing our jmp bytes over it)
-                Logger.Log.Write("ManagedHooker", "HookMethod", "Creating dummy dynMethod for trampoline hack");
+                Logger.Log.Write("Creating dummy dynMethod for trampoline hack");
                 ParameterInfo[] args = targetMethodInfo.GetParameters();
                 Type[] argTypes;
                 if (!targetMethodInfo.IsStatic)
@@ -496,22 +496,22 @@ namespace NinMods.Hooking
 
                 // 3. Detour target function using minhook, get trampoline address out from minhook
                 // We detour to the chained hooker address, which then services each hook
-                Logger.Log.Write("ManagedHooker", "HookMethod", "Creating hook to chain via MinHook");
+                Logger.Log.Write("Creating hook to chain via MinHook");
                 IntPtr tramp;
                 mhStatus = MinHook.CreateHook(targetMethodAddr, hookEntry._PRIV_pChainedHooker, out tramp);
                 if (mhStatus != MinHook.MH_STATUS.MH_OK)
                 {
-                    Logger.Log.Write("ManagedHooker", "HookMethod", "Error creating hook: " + mhStatus.ToString());
+                    Logger.Log.Write("Error creating hook: " + mhStatus.ToString());
                     return null;
                 }
 
                 // 4. Get JIT'd address of jmpToTrampDynFunc (DynamicMethod.CreateDelegate finalizes the dynamicmethod)
-                Logger.Log.Write("ManagedHooker", "HookMethod", "Finalizing dummy dynMethod for trampoline hack by creating delegate");
+                Logger.Log.Write("Finalizing dummy dynMethod for trampoline hack by creating delegate");
                 Delegate trampDynFuncDelegate = jmpToTrampDynFunc.CreateDelegate(closedDelegateType);
                 IntPtr dynJITAddr = GetMethodRuntimeHandle(jmpToTrampDynFunc.GetBaseDefinition()).GetFunctionPointer();
                 // 5. Write jmp to trampoline over JIT'd code of jmpToTrampDynFunc.
                 // don't need to worry about freezing threads or correcting IPs since the code it's writing over isn't called by anything yet
-                Logger.Log.Write("ManagedHooker", "HookMethod", "Writing jmp to native trampoline over dummy dynMethod");
+                Logger.Log.Write("Writing jmp to native trampoline over dummy dynMethod");
                 AllocationProtect oldProt;
                 if (IntPtr.Size == 8)
                 {
@@ -559,10 +559,10 @@ namespace NinMods.Hooking
             if (chainedHookStatus == EChainedHookerStatus.Existing)
             {
                 // re-sort the hook priorities
-                Logger.Log.Write("ManagedHooker", "HookMethod", "Sorting hook chain");
+                Logger.Log.Write("Sorting hook chain");
                 if (hookEntry._PRIV_Hooks.Count != hookEntry._PRIV_HookPriorities.Count)
                 {
-                    Logger.Log.Write("ManagedHooker", "HookMethod", "The thing you knew would happen happened. You suck at programming. Nice error message btw good luck re-learning your own shit code and figuring out why this problem exists. This is your punishment.");
+                    Logger.Log.Write("The thing you knew would happen happened. You suck at programming. Nice error message btw good luck re-learning your own shit code and figuring out why this problem exists. This is your punishment.");
                     return null;
                 }
                 // insertion sort, hopefully keeping both lists in sync with each other
@@ -590,16 +590,16 @@ namespace NinMods.Hooking
             // 8. Enable the MinHook hook if this is the first time we've seen this target method
             if (chainedHookStatus == EChainedHookerStatus.New)
             {
-                Logger.Log.Write("ManagedHooker", "HookMethod", "Enabling hook via MinHook");
+                Logger.Log.Write("Enabling hook via MinHook");
                 mhStatus = MinHook.EnableHook(targetMethodAddr);
                 if (mhStatus != MinHook.MH_STATUS.MH_OK)
                 {
-                    Logger.Log.Write("ManagedHooker", "HookMethod", "Error enabling hook: " + mhStatus.ToString());
+                    Logger.Log.Write("Error enabling hook: " + mhStatus.ToString());
                     return null;
                 }
             }
             // 9. Return the hook entry, which contains an invokable delegate of jmpToTrampDynFunc and some useful fields
-            Logger.Log.Write("ManagedHooker", "HookMethod", "Successfully hooked managed function");
+            Logger.Log.Write("Successfully hooked managed function");
             return hookEntry;
         }
     }
