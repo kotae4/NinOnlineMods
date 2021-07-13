@@ -179,7 +179,15 @@ namespace NinMods.Bot
             {
                 case EBotEvent.ItemDrop:
                     {
-                        if (currentState == EBotState.AttackingTarget)
+                        if (currentState == EBotState.MovingToMap)
+                        {
+                            // just ignore items while we're moving to our grind maps.
+                            // TO-DO:
+                            // don't ignore items while moving to grind map
+                            Logger.Log.Write("FarmBot", "InjectEvent", $"Ignoring {eventType} event because we are moving to a new map");
+                            return;
+                        }
+                        else if (currentState == EBotState.AttackingTarget)
                         {
                             Logger.Log.Write("FarmBot", "InjectEvent", $"Enqueuing {eventType} event because we are in an uninterruptible state");
                             injectedEventQueue.Enqueue(new InjectedEventData(eventType, eventData));

@@ -84,6 +84,8 @@
     <Compile Include="Bot\FarmBot.cs" />
     <Compile Include="Bot\IBotCommand.cs" />
     <Compile Include="Constants.cs" />
+    <Compile Include="GameHooks.cs" />
+    <Compile Include="GenericGameHookClass.cs" />
     <Compile Include="Inter-Map Pathfinding\IntermapPathfinding.cs" />
     <Compile Include="AStar Pathfinding\Pathfinder.cs" />
     <Compile Include="PlayerStatsForm.cs">

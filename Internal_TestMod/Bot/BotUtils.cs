@@ -41,7 +41,9 @@ namespace NinMods.Bot
                 npcLocation.y = client.modTypes.MapNpc[npcIndex].Y;
                 if ((npcLocation.x < 0) || (npcLocation.x > client.modTypes.Map.MaxX) ||
                     (npcLocation.y < 0) || (npcLocation.y > client.modTypes.Map.MaxY) ||
-					(client.modTypes.MapNpc[npcIndex].num <= 0) || (client.modTypes.MapNpc[npcIndex].num > 255) || (client.modTypes.MapNpc[npcIndex].Vital[(int)client.modEnumerations.Vitals.HP] <= 0))
+					(client.modTypes.MapNpc[npcIndex].num <= 0) || (client.modTypes.MapNpc[npcIndex].num > 255) 
+					|| (client.modTypes.MapNpc[npcIndex].Vital[(int)client.modEnumerations.Vitals.HP] <= 0)
+					|| (client.modTypes.Npc[client.modTypes.MapNpc[npcIndex].num].Village == client.modTypes.Player[client.modGlobals.MyIndex].Village))
                     continue;
 
                 distance = from.DistanceTo_Squared(npcLocation);
@@ -158,6 +160,8 @@ namespace NinMods.Bot
 
         public static void BasicAttack()
         {
+			// TO-DO:
+			// send animation too (to fix the long-standing speedhack... no one's noticed yet, though)
             client.clsBuffer clsBuffer2 = new client.clsBuffer();
             clsBuffer2.WriteLong(20);
             client.modClientTCP.SendData(clsBuffer2.ToArray());
@@ -244,7 +248,7 @@ namespace NinMods.Bot
             int playerAttackSpeed = client.modDatabase.GetPlayerAttackSpeed(client.modGlobals.MyIndex);
             int nextAttackTime = client.modGlobals.TimeSinceAttack + playerAttackSpeed + 30;
             // NOTE:
-            // we ignore some things because we can be reasonably sure the bot won't be in that state
+            // we ignore some things because we can be reasonably sure the bot won't be in that state (like whether certain menus are open, etc)
             // taken from client.modGameLogic.CheckAttack()
             if ((nextAttackTime > client.modGlobals.Tick) || (client.modGlobals.SpellBuffer > 0) || (client.modGameLogic.CanPlayerInteract() == false))
                 return false;
@@ -283,13 +287,6 @@ namespace NinMods.Bot
 				return false;
 			}
 			return true;
-			/*
-				return ((bot.ChargeChakra == false)
-				&& ((bot.Village == 3) || (bot.Village == 13) || (client.modTypes.Map.Tile[bot.X, bot.Y].Type != Constants.TILE_TYPE_WATER))
-				&& (((double)(bot.ChargeTimer + 500) - (double)bot.Stat[5] * 0.2 * 5.0) <= (double)client.modGlobals.Tick)
-				&& (CanInteract(Ignore: true))
-				&& (bot.Vital[(int)client.modEnumerations.Vitals.MP] != bot.MaxVital[(int)client.modEnumerations.Vitals.MP]));
-			*/
 		}
 
 		// NOTE:
@@ -401,8 +398,7 @@ namespace NinMods.Bot
 			{
 				case 2:
 				case 3:
-					// uhhh... they are checking the BuffTexture for w..........
-					// nah, not even going to question this developer's logic, not ever. not worth the brain power.
+					// uhhh... they are checking the BuffTexture for uhhh... i dunno, but i'll do it too!
 					// NOTE:
 					// pretty sure these shouldn't be &&'s but it's how the game does it, so i'm keeping it
 					if ((client.modGlobals.myTarget == 0) && (client.modGlobals.SelfCastKeyDown == false) && (spell.Buff.BuffTexture == 0))
@@ -415,7 +411,7 @@ namespace NinMods.Bot
 						// optimized away 18 calls and 38 lines of code...
 						bool hasDirectionalTarget = false;
 						Vector2i spellHitPos = botPos + Vector2i.directions_Eight[bot.Dir];
-						// (game only supports 300 players online at once? actually, i bet it's 255 because the dev doesn't know what a byte is)
+						// (game only supports 300 players online at once?)
 						// NOTE:
 						// checks all possible players to see if they're on the tile our spell is targeting... and then sets our myTarget to 1 instead of their playerIndex because of a bug..
 						for (int i = 1; i <= 300; i++)

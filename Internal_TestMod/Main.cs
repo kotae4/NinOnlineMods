@@ -6,7 +6,6 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using NinOnline;
 using System.Reflection;
-using NinMods.Hooking;
 using NinMods.Pathfinding;
 using NinMods.Utilities;
 
@@ -31,50 +30,7 @@ namespace NinMods
 
         public static bool HasInitialized = false;
         #region Hook instance data
-        public delegate void dOpenHandleKeyPresses(SFML.Window.Keyboard.Key keyAscii);
-        public static bool handleKeyPressesFirstRun = true;
-        public static ManagedHooker.HookEntry handleKeyPressesHook;
-
-        public delegate void dOpenSetPlayerAccess(int index, int access);
-        public static bool setPlayerAccessFirstRun = true;
-        public static ManagedHooker.HookEntry setPlayerAcessHook;
-
-        public delegate void dMenuLoop();
-        public static bool menuLoopFirstRun = true;
-        public static ManagedHooker.HookEntry menuLoopHook;
-
-        public delegate void dGameLoop();
-        public static bool gameLoopFirstRun = true;
-        public static ManagedHooker.HookEntry gameLoopHook;
-
-        // for making sure we always have the latest tiledata for pathfinding
-        public delegate void dLoadMap(int mapID);
-        public static bool loadMapFirstRun = true;
-        public static ManagedHooker.HookEntry loadMapHook = null;
-
-        public delegate void dHandleMapDone(int Index, byte[] data, int StartAddr, int ExtraVar);
-        public static bool handleMapDoneFirstRun = true;
-        public static ManagedHooker.HookEntry handleMapDoneHook = null;
-
-        // for logging incoming network messages (this is what receives all packets and then dispatches them to the specific packet handlers)
-        public delegate void dHandleData(byte[] data);
-        public static bool handleDataFirstRun = true;
-        public static ManagedHooker.HookEntry handleDataHook = null;
-
-        // for logging outgoing network messages
-        public delegate void dSendData(byte[] data, bool auth);
-        public static bool sendDataFirstRun = true;
-        public static ManagedHooker.HookEntry sendDataHook = null;
-
-        // just for tile overlays. can remove later, probably.
-        public delegate void dDrawWeather();
-        public static bool drawWeatherFirstRun = true;
-        public static ManagedHooker.HookEntry drawWeatherHook;
-
-        // for HUD overlays
-        public delegate void dDrawGUI();
-        public static bool drawGUIFirstRun = true;
-        public static ManagedHooker.HookEntry drawGUIHook = null;
+        
         #endregion
 
         public static SquareGrid MapPathfindingGrid;
@@ -123,7 +79,7 @@ namespace NinMods
             Logger.Log.Write("NinMods.Main", "Initialize", "Installing hooks...", Logger.ELogType.Info, null, false);
             try
             {
-                Utils.SetupManagedHookerHooks();
+                RegisterEventHandlers();
                 Logger.Log.Write("NinMods.Main", "Initialize", "Done installing hooks!", Logger.ELogType.Info, null, true);
             }
             catch (Exception ex)
@@ -132,6 +88,23 @@ namespace NinMods
             }
             InterMapPathfinding.IntermapPathfinding.Initialize();
             HasInitialized = true;
+        }
+
+        static void RegisterEventHandlers()
+        {
+            GameHooks.RegisterEventHandler(GameHooks.EEventType.OnMenuLoop, EHookExecutionState.Pre, typeof(NinMods.Main), "Main_OnMenuLoop_Pre");
+            GameHooks.RegisterEventHandler(GameHooks.EEventType.OnGameLoop, EHookExecutionState.Pre, typeof(NinMods.Main), "Main_OnGameLoop_Pre");
+            GameHooks.RegisterEventHandler(GameHooks.EEventType.OnGameLoop, EHookExecutionState.Post, typeof(NinMods.Main), "Main_OnGameLoop_Post");
+            GameHooks.RegisterEventHandler(GameHooks.EEventType.OnMapLoaded, EHookExecutionState.Post, typeof(NinMods.Main), "Main_OnMapLoaded_Post");
+            GameHooks.RegisterEventHandler(GameHooks.EEventType.OnCombatMsg, EHookExecutionState.Post, typeof(NinMods.Main), "Main_OnCombatMsg_Post");
+            GameHooks.RegisterEventHandler(GameHooks.EEventType.OnDraw_Worldspace, EHookExecutionState.Pre, typeof(NinMods.Main), "Main_OnDraw_Worldspace_Pre");
+            GameHooks.RegisterEventHandler(GameHooks.EEventType.OnDraw_Screenspace, EHookExecutionState.Pre, typeof(NinMods.Main), "Main_OnDraw_Screenspace_Pre");
+            GameHooks.RegisterEventHandler(GameHooks.EEventType.OnKeyPress, EHookExecutionState.Pre, typeof(NinMods.Main), "Main_OnKeyPress_Pre");
+            GameHooks.RegisterEventHandler(GameHooks.EEventType.OnSetPlayerAccess, EHookExecutionState.Post, typeof(NinMods.Main), "Main_OnSetPlayerAccess_Post");
+            GameHooks.RegisterEventHandler(GameHooks.EEventType.OnNetRecv, EHookExecutionState.Post, typeof(NinMods.Main), "Main_OnNetRecv_Post");
+            GameHooks.RegisterEventHandler(GameHooks.EEventType.OnNetSend, EHookExecutionState.Post, typeof(NinMods.Main), "Main_OnNetSend_Post");
+
+            GameHooks.SetupManagedHookerHooks();
         }
 
         static void StartGrindBot()
@@ -222,13 +195,8 @@ namespace NinMods
         }
 
         // for auto-login
-        public static void hk_modGameLogic_MenuLoop()
+        public static void Main_OnMenuLoop_Pre()
         {
-            if (NinMods.Main.menuLoopFirstRun == true)
-            {
-                NinMods.Main.menuLoopFirstRun = false;
-                Logger.Log.Write("NinMods.Main", "hk_modGameLogic_MenuLoop", "Successfully hooked!", Logger.ELogType.Info, null, true);
-            }
             if (client.modGlobals.InGame == false)
             {
                 // WARNING:
@@ -236,9 +204,6 @@ namespace NinMods
                 // if returning to main menu from in-game (or, presumably, if you're kicked / disconnected from the game) then auto-login will fail on the server select screen
                 // i think we need to add a timer and only start the auto-login process after like... 10 seconds or something. the game's logout process messes up game state so much.
                 BeginAutoLogin();
-                // call original
-                NinMods.Main.menuLoopHook.CallOriginalFunction(typeof(void));
-                return;
             }
         }
 
@@ -286,20 +251,8 @@ namespace NinMods
         }
 
         // the heart of the bot. this runs every tick on the game's thread.
-        public static void hk_modGameLogic_GameLoop()
+        public static void Main_OnGameLoop_Pre()
         {
-            if (NinMods.Main.gameLoopFirstRun == true)
-            {
-                NinMods.Main.gameLoopFirstRun = false;
-                Logger.Log.Write("NinMods.Main", "hk_modGameLogic_GameLoop", "Successfully hooked!", Logger.ELogType.Info, null, true);
-            }
-            if (NinMods.Main.HasInitialized == false)
-            {
-                // early exit
-                NinMods.Main.gameLoopHook.CallOriginalFunction(typeof(void));
-                return;
-            }
-            Utils.AttemptRehooking();
             // TO-DO:
             // check exactly when game state becomes valid for us.
             // now that we're injecting at game startup rather than once we're fully loaded in-game, we **have** to make sure the game state is valid before running any of our logic
@@ -311,7 +264,7 @@ namespace NinMods
             {
                 if (NinMods.Main.frmPlayerStats == null)
                 {
-                    Logger.Log.Write("NinMods.Main", "hk_modGameLogic_GameLoop", "Initializing player stats form", Logger.ELogType.Info, null, false);
+                    Logger.Log.Write("NinMods.Main", "Main_OnGameLoop_Pre", "Initializing player stats form", Logger.ELogType.Info, null, false);
                     NinMods.Main.frmPlayerStats = new PlayerStatsForm();
                     NinMods.Main.frmPlayerStats.Show();
                 }
@@ -329,55 +282,30 @@ namespace NinMods
                 {
                     if (moveToCursorCmd.Perform() == false)
                     {
-                        Logger.Log.Write("NinMods.Main", "hk_modGameLogic_GameLoop", "Catastrophic error occurred performing MoveToCursor command");
+                        Logger.Log.Write("NinMods.Main", "Main_OnGameLoop_Pre", "Catastrophic error occurred performing MoveToCursor command");
                         moveToCursorCmd = null;
                     }
                 }
             }
             catch (Exception ex)
             {
-                Logger.Log.WriteException("NinMods.Main", "hk_modGameLogic_GameLoop", ex);
+                Logger.Log.WriteException("NinMods.Main", "Main_OnGameLoop_Pre", ex);
             }
-            // call original
-            NinMods.Main.gameLoopHook.CallOriginalFunction(typeof(void));
+        }
 
+        public static void Main_OnGameLoop_Post()
+        {
             // i think we have to call this after the original function
             // too lazy to double check
             CheckNewItemDrops();
         }
 
         // for updating our pathfinding grid (and probably some other stuff later)
-        public static void hk_modDatabase_LoadMap(int mapID)
-        {
-            if (NinMods.Main.loadMapFirstRun == true)
-            {
-                NinMods.Main.loadMapFirstRun = false;
-                Logger.Log.Write("NinMods.Main", "hk_modDatabase_LoadMap", "Successfully hooked!", Logger.ELogType.Info, null, true);
-            }
-
-            NinMods.Main.loadMapHook.CallOriginalFunction(typeof(void), mapID);
-
-            client.modTypes.PlayerRec bot = Bot.BotUtils.GetSelf();
-            Logger.Log.Write("NinMods.Main", "hk_modDatabase_LoadMap", $"Loaded new map {mapID} (bot.Map: {bot.Map})", Logger.ELogType.Info, null, true);
-            MapPathfindingGrid = new SquareGrid(client.modTypes.Map.Tile, client.modTypes.Map.MaxX, client.modTypes.Map.MaxY);
-            // WARNING:
-            // bot.Map is still set to the old map at this point...
-            //StartGrindBot();
-        }
-
         // this *should* be the best hook for map transitions. player & game state should be fully loaded w/ new map values by time this is called.
-        public static void hk_modHandleData_HandleMapDone(int Index, byte[] data, int StartAddr, int ExtraVar)
+        public static void Main_OnMapLoaded_Post(int Index, byte[] data, int StartAddr, int ExtraVar)
         {
-            if (NinMods.Main.handleMapDoneFirstRun == true)
-            {
-                NinMods.Main.handleMapDoneFirstRun = false;
-                Logger.Log.Write("NinMods.Main", "hk_modHandleData_HandleMapDone", "Successfully hooked!", Logger.ELogType.Info, null, true);
-            }
-
-            NinMods.Main.handleMapDoneHook.CallOriginalFunction(typeof(void), Index, data, StartAddr, ExtraVar);
-
             client.modTypes.PlayerRec bot = Bot.BotUtils.GetSelf();
-            Logger.Log.Write("NinMods.Main", "hk_modHandleData_HandleMapDone", $"Loaded new map {bot.Map}", Logger.ELogType.Info, null, true);
+            Logger.Log.Write("NinMods.Main", "Main_OnMapLoaded_Post", $"Loaded new map {bot.Map}", Logger.ELogType.Info, null, true);
             MapPathfindingGrid = new SquareGrid(client.modTypes.Map.Tile, client.modTypes.Map.MaxX, client.modTypes.Map.MaxY);
             if (IsBotEnabled)
             {
@@ -385,47 +313,34 @@ namespace NinMods
             }
         }
 
+        // for damage log / spell accuracy
+        public static void Main_OnCombatMsg_Post(int Index, byte[] data, int StartAddr, int ExtraVar)
+        {
+            client.clsBuffer clsBuffer2 = new client.clsBuffer(data);
+            string text = clsBuffer2.ReadString();
+            byte tColor = clsBuffer2.ReadByte();
+            Logger.Log.Write("NinMods.Main", "Main_OnCombatMsg_Post", $"Saw combat msg {text} with color {tColor}");
+        }
+
         // for drawing tile overlays
         // NOTE:
         // everything drawn here is in world-space (coords are tile coords)
-        public static void hk_modGraphics_DrawWeather()
+        public static void Main_OnDraw_Worldspace_Pre()
         {
-            if (NinMods.Main.drawWeatherFirstRun == true)
-            {
-                NinMods.Main.drawWeatherFirstRun = false;
-                Logger.Log.Write("NinMods.Main", "hk_modGraphics_DrawWeather", "Successfully hooked!", Logger.ELogType.Info, null, true);
-            }
-
             Utils.DrawTileTypeOverlay();
-
-            NinMods.Main.drawWeatherHook.CallOriginalFunction(typeof(void));
         }
 
         // for drawing on the screen
         // NOTE:
         // everything drawn here is in screen-space
-        public static void hk_modGraphics_DrawGUI()
+        public static void Main_OnDraw_Screenspace_Pre()
         {
-            if (NinMods.Main.drawGUIFirstRun == true)
-            {
-                NinMods.Main.drawGUIFirstRun = false;
-                Logger.Log.Write("NinMods.Main", "hk_modGraphics_DrawGUI", "Successfully hooked!", Logger.ELogType.Info, null, true);
-            }
-
             Utils.DrawNetStats();
-
-            NinMods.Main.drawGUIHook.CallOriginalFunction(typeof(void));
         }
 
         // for our keybinds :)
-        public static void hk_modInput_HandleKeyPresses(SFML.Window.Keyboard.Key keyAscii)
+        public static void Main_OnKeyPress_Pre(SFML.Window.Keyboard.Key keyAscii)
         {
-            if (NinMods.Main.handleKeyPressesFirstRun == true)
-            {
-                NinMods.Main.handleKeyPressesFirstRun = false;
-                Logger.Log.Write("NinMods.Main", "hk_modInput_HandleKeyPresses", "Successfully hooked!", Logger.ELogType.Info, null, true);
-            }
-            //Logger.Log.Write("NinMods.Main", "hk_modInput_HandleKeyPresses", "Saw key '" + keyAscii.ToString() + "'");
             if (keyAscii == SFML.Window.Keyboard.Key.F1)
             {
                 // NOTE:
@@ -440,7 +355,7 @@ namespace NinMods
             {
                 if (NinMods.Main.frmPlayerStats == null)
                 {
-                    Logger.Log.Write("NinMods.Main", "hk_modInput_HandleKeyPresses", "Initializing player stats form", Logger.ELogType.Info, null, false);
+                    Logger.Log.Write("NinMods.Main", "Main_OnKeyPress_Pre", "Initializing player stats form", Logger.ELogType.Info, null, false);
                     NinMods.Main.frmPlayerStats = new PlayerStatsForm();
                 }
                 NinMods.Main.frmPlayerStats.Show();
@@ -463,49 +378,24 @@ namespace NinMods
             {
                 Utils.DumpMapData();
             }
-            else
-            {
-                //Logger.Log.Write("NinMods.Main", "hk_modInput_HandleKeyPresses", "calling original");
-                NinMods.Main.handleKeyPressesHook.CallOriginalFunction(typeof(void), keyAscii);
-            }
         }
 
         // for detecting when admins / GMs enter the map
-        public static void hk_modDatabase_SetPlayerAccess(int index, int access)
+        public static void Main_OnSetPlayerAccess_Post(int index, int access)
         {
-            if (NinMods.Main.setPlayerAccessFirstRun == true)
-            {
-                NinMods.Main.setPlayerAccessFirstRun = false;
-                Logger.Log.Write("NinMods.Main", "hk_modDatabase_SetPlayerAccess", "successfully hooked!", Logger.ELogType.Info, null, true);
-            }
-            if (index != client.modGlobals.MyIndex)
-            {
-                Logger.Log.Write("NinMods.Main", "hk_modDatabase_SetPlayerAccess", $"saw player[{index}]'{client.modTypes.Player[index].Name}' set to access level ({(NinMods.Utilities.GameUtils.EPlayerAccessType)access}[{access}])");
-                NinMods.Main.setPlayerAcessHook.CallOriginalFunction(typeof(void), index, access);
-            }
-            else
-            {
-                NinMods.Main.setPlayerAcessHook.CallOriginalFunction(typeof(void), index, 8);
-            }
+            client.modTypes.PlayerRec bot = NinMods.Bot.BotUtils.GetSelf();
+            bot.Access = 8;
         }
 
         // for logging packets that we receive from the server (and for notifying the bot of certain ones)
-        public static void hk_modHandleData_HandleData(byte[] data)
+        public static void Main_OnNetRecv_Post(byte[] data)
         {
-            if (NinMods.Main.handleDataFirstRun == true)
-            {
-                NinMods.Main.handleDataFirstRun = false;
-                Logger.Log.Write("NinMods.Main", "hk_modHandleData_HandleData", "Successfully hooked!", Logger.ELogType.Info, null, true);
-            }
             NinMods.Main.NetBytesReceived += data.Length;
 
             client.clsBuffer clsBuffer2 = new client.clsBuffer(data);
             int num = clsBuffer2.ReadLong();
             client.modEnumerations.ServerPackets packetID = (client.modEnumerations.ServerPackets)num;
             Logger.Log.WriteNetLog("NinMods.Main", "hk_modHandleData_HandleData", $"RECV packet {packetID} (ID: {num})", Logger.ELogType.Info, null, true);
-
-            NinMods.Main.handleDataHook.CallOriginalFunction(typeof(void), data);
-
             // NOTE:
             // special handling for auto-login process.
             // instead of hooking client.modAuth.Auth_HandleServerDetails we'll just check for that packet here
@@ -518,21 +408,14 @@ namespace NinMods
         }
 
         // for logging packets that we send to the server
-        public static void hk_modClientTCP_SendData(byte[] data, bool auth)
+        public static void Main_OnNetSend_Post(byte[] data, bool auth)
         {
-            if (NinMods.Main.sendDataFirstRun == true)
-            {
-                NinMods.Main.sendDataFirstRun = false;
-                Logger.Log.Write("NinMods.Main", "hk_modClientTCP_SendData", "Successfully hooked!", Logger.ELogType.Info, null, true);
-            }
             NinMods.Main.NetBytesSent += data.Length;
 
             client.clsBuffer clsBuffer2 = new client.clsBuffer(data);
             int num = clsBuffer2.ReadLong();
             client.modEnumerations.ClientPackets packetID = (client.modEnumerations.ClientPackets)num;
             Logger.Log.WriteNetLog("NinMods.Main", "hk_modClientTCP_SendData", $"SENT packet {packetID} (ID: {num})", Logger.ELogType.Info, null, true);
-
-            NinMods.Main.sendDataHook.CallOriginalFunction(typeof(void), data, auth);
         }
     }
 }

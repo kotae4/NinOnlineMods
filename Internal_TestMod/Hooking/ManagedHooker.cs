@@ -64,6 +64,10 @@ namespace NinMods.Hooking
 
         static RuntimeMethodHandle GetMethodRuntimeHandle(MethodBase method)
         {
+            // TO-DO:
+            // .NET versions > 3.x don't allow you to access the MethodHandle of a DynamicMethod
+            // Instead, you have to use reflection to access the private '_method' field to get the IntPtr
+            // Seems mono doesn't have this limitation
             RuntimeMethodHandle handle;
             try
             {
@@ -399,40 +403,40 @@ namespace NinMods.Hooking
             return EChainedHookerStatus.New;
         }
 
-        public static HookEntry HookMethod<TDelOpen>(Type targetType, string targetMethod, TDelOpen hookDel, int hookPriority)
-            where TDelOpen : class
+        public static HookEntry HookMethod<TDelOpen>(Type targetType, string targetMethod, Type hookType, string hookMethod, int hookPriority)
         {
             MethodInfo targetMethodInfo;
-            targetMethodInfo = Utility.GetMethodByName(targetType, targetMethod);
-            if (targetMethodInfo == null)
-            {
-                throw new Exception($"Could not get MethodInfo for {targetMethod}");
-            }
-            try
-            {
-                RuntimeHelpers.PrepareMethod(targetMethodInfo.MethodHandle);
-            }
-            catch (BadImageFormatException bife)
-            {
-                // silently log the error, but continue execution after. this doesn't necessarily indicate failure.
-                Logger.Log.Write("ManagedHooker", "HookMethod", $"BadImageFormatException when preparing target method '{targetMethod}' via RuntimeHelpers.", Logger.ELogType.Error);
-            }
-            IntPtr targetMethodAddr = targetMethodInfo.MethodHandle.GetFunctionPointer();
-            Logger.Log.Write("ManagedHooker", "HookMethod", $"Method '{targetMethod}' is at address {targetMethodAddr.ToString("X2")}");
+            IntPtr targetMethodAddr = Utility.GetMethodAddrByName(targetType, targetMethod, out targetMethodInfo);
             if (targetMethodAddr == IntPtr.Zero)
             {
                 // this will never happen, unfortunately. a pre-JIT'd method will still return a valid address, it's just pointing to a thunk rather than a function.
                 // and determining whether it's pre-JIT or post-JIT is quite hard
-                throw new Exception($"Could not get address for method '{targetMethod}'");
+                throw new Exception($"Could not get address for target method '{targetMethod}'");
             }
+            Logger.Log.Write("ManagedHooker", "HookMethod", $"Target method '{targetMethod}' is at address {targetMethodAddr.ToString("X2")}");
+            MethodInfo hookMethodInfo;
+            IntPtr hookMethodAddr = Utility.GetMethodAddrByName(hookType, hookMethod, out hookMethodInfo);
+            if (hookMethodAddr == IntPtr.Zero)
+            {
+                // this will never happen, unfortunately. a pre-JIT'd method will still return a valid address, it's just pointing to a thunk rather than a function.
+                // and determining whether it's pre-JIT or post-JIT is quite hard
+                throw new Exception($"Could not get address for hook method '{targetMethod}'");
+            }
+            Delegate hookDel = hookMethodInfo.CreateDelegate(typeof(TDelOpen));
+            if (hookDel == null)
+            {
+                throw new Exception($"Could not create delegate for hook method '{targetMethod}'");
+            }
+            Logger.Log.Write("ManagedHooker", "HookMethod", $"Hook method '{hookMethod}' is at address {hookMethodAddr.ToString("X2")}, created delegate {hookDel}");
+
             string dynName = $"{targetMethodInfo.Name}_{targetMethod.GetHashCode()}";
             DynamicMethod jmpToTrampDynFunc;
             MinHook.MH_STATUS mhStatus;
 
+            // closed around 'null', effectively an open delegate since parameter list will be used and not the 'target' property.
+            // this allows us to work with both instance and static methods
             Delegate closedDelegate = Delegate.CreateDelegate(typeof(TDelOpen), null, targetMethodInfo);
             Type closedDelegateType = closedDelegate.GetType();
-
-            //TestDLL.UniqueName.addressesLabel = "Target method: " + targetMethodInfo.MethodHandle.GetFunctionPointer().ToString("X2") + "\nHook method: " + hookMethodInfo.MethodHandle.GetFunctionPointer().ToString("X2");
 
             // 1. Get or set up the chained hooker. Most of the magic is in this step.
             HookEntry hookEntry = new HookEntry();
@@ -446,6 +450,9 @@ namespace NinMods.Hooking
             {
                 // 2. If this is the first time the target is being hooked, set up an invokable trampoline
                 // Create dummy dynamic method (this step is copied from MonoMod project on github, credits to github user '0x0ade')
+                // we will then write our jmp bytes to this method's addr and store its invocable delegate for it to later be called from within the hook.
+                // so we must match the signature of the target method (what we're jmp'ing to)
+                // and have a bare minimum compilable body (the actual body won't be executed since we're writing our jmp bytes over it)
                 Logger.Log.Write("ManagedHooker", "HookMethod", "Creating dummy dynMethod for trampoline hack");
                 ParameterInfo[] args = targetMethodInfo.GetParameters();
                 Type[] argTypes;
@@ -470,12 +477,16 @@ namespace NinMods.Hooking
                     false
                     );
                 ILGenerator il = jmpToTrampDynFunc.GetILGenerator();
+                // i don't remember what problem this solved.
+                // maybe just making sure it's long enough for the jmp that we write later?
                 for (int i = 0; i < 10; i++)
                 {
                     il.Emit(OpCodes.Nop);
                 }
+                // this is the bare minimum code needed for a method body in C#.
                 if (jmpToTrampDynFunc.ReturnType != typeof(void))
                 {
+                    // initialize default return type
                     il.DeclareLocal(jmpToTrampDynFunc.ReturnType);
                     il.Emit(OpCodes.Ldloca_S, (sbyte)0);
                     il.Emit(OpCodes.Initobj, jmpToTrampDynFunc.ReturnType);
@@ -493,17 +504,10 @@ namespace NinMods.Hooking
                     Logger.Log.Write("ManagedHooker", "HookMethod", "Error creating hook: " + mhStatus.ToString());
                     return null;
                 }
-                //TestDLL.UniqueName.addressesLabel += "\nChain: " + hookEntry._PRIV_pChainedHooker.ToString("X2") + "\nTrampoline: " + tramp.ToString("X2");
-                // TO-DO:
-                // enable MinHook hook later
 
-                // 4. Get JIT'd address of jmpToTrampDynFunc
+                // 4. Get JIT'd address of jmpToTrampDynFunc (DynamicMethod.CreateDelegate finalizes the dynamicmethod)
                 Logger.Log.Write("ManagedHooker", "HookMethod", "Finalizing dummy dynMethod for trampoline hack by creating delegate");
                 Delegate trampDynFuncDelegate = jmpToTrampDynFunc.CreateDelegate(closedDelegateType);
-                // TO-DO:
-                // .NET versions > 3.x don't allow you to access the MethodHandle of a DynamicMethod
-                // Instead, you have to use reflection to access the private '_method' field to get the IntPtr
-                // Seems mono doesn't have this limitation
                 IntPtr dynJITAddr = GetMethodRuntimeHandle(jmpToTrampDynFunc.GetBaseDefinition()).GetFunctionPointer();
                 // 5. Write jmp to trampoline over JIT'd code of jmpToTrampDynFunc.
                 // don't need to worry about freezing threads or correcting IPs since the code it's writing over isn't called by anything yet
@@ -543,16 +547,15 @@ namespace NinMods.Hooking
                     NativeImport.VirtualProtect(dynJITAddr, (IntPtr)HOOK_SIZE_X86, oldProt, out oldProt);
                 }
 
-                // 6. Store the invokable trampoline in the HookEntry
+                // 6. Store the invokable trampoline in the HookEntry (this is what's invoked in the CallOriginalFunction method from within each hook)
                 hookEntry._PRIV_pTrampoline = trampDynFuncDelegate;
             }
 
-            // we'll finish setting up the hookEntry later
-            // 7. Finish setting up the hookEntry
-            //logger.Log("[ManagedHooker] Creating user hook delegate and adding it to chain");
-            //Delegate hookDel = Delegate.CreateDelegate(typeof(TDelOpen), hookMethodInfo);
-            hookEntry._PRIV_Hooks.Add((hookDel as Delegate));
+            // 7. Finish setting up the hookEntry, adding the hook method and its priority to their respective lists
+            // and, if necessary, re-sorting the lists
+            hookEntry._PRIV_Hooks.Add(hookDel);
             hookEntry._PRIV_HookPriorities.Add(hookPriority);
+            // if we're adding another hook to an already-seen target method, then we need to re-order the lists so that hook priorities are meaningful
             if (chainedHookStatus == EChainedHookerStatus.Existing)
             {
                 // re-sort the hook priorities
@@ -584,7 +587,7 @@ namespace NinMods.Hooking
                 }
             }
 
-            // 8. Enable the MinHook hook
+            // 8. Enable the MinHook hook if this is the first time we've seen this target method
             if (chainedHookStatus == EChainedHookerStatus.New)
             {
                 Logger.Log.Write("ManagedHooker", "HookMethod", "Enabling hook via MinHook");
