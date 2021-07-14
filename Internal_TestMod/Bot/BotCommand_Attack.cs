@@ -21,10 +21,15 @@ namespace NinMods.Bot
 
         float spellCastTimer = 0f;
 
-        public BotCommand_Attack(client.modTypes.MapNpcRec target, int targetIndex)
+        public BotCommand_Attack(client.modTypes.MapNpcRec target, int targetIndex, Stack<Vector2i> targetPath)
         {
             this.target = target;
             this.targetIndex = targetIndex;
+            path = targetPath;
+            if ((targetPath != null) && (targetPath.Count > 0))
+            {
+                isChasingByPath = true;
+            }
         }
 
         public bool IsComplete()
@@ -108,8 +113,10 @@ namespace NinMods.Bot
                 {
                     isChasingByPath = false;
                     path = null;
-                    Logger.Log.Write($"Got permission to perform attack this tick (target[{targetIndex}]: {target.num}, hp: {target.Vital[(int)client.modEnumerations.Vitals.HP]}) " +
+                    /*
+                     Logger.Log.Write($"Got permission to perform attack this tick (target[{targetIndex}]: {target.num}, hp: {target.Vital[(int)client.modEnumerations.Vitals.HP]}) " +
                         $"(npc: {client.modTypes.Npc[target.num].Name.Trim()}, {client.modTypes.Npc[target.num].HP})");
+                    */
 
                     Vector2i tileDirection = targetLocation - botLocation;
                     if (BotUtils.FaceDir(tileDirection) == false)

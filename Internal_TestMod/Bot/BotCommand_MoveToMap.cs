@@ -15,9 +15,12 @@ namespace NinMods.Bot
         int TargetMapID = -1;
         Queue<int> interMapPath = new Queue<int>();
 
-        Stack<Vector2i> intraMapPath = new Stack<Vector2i>();
         int nextMapID = -1;
         int currentMapID = -1;
+        bool isAtWarpTile = false;
+        bool isMovingByPath = false;
+        List<Vector2i> warpTilesToNextMap = new List<Vector2i>();
+        Stack<Vector2i> intraMapPath = new Stack<Vector2i>();
         Vector2i intraMapWarpTile = new Vector2i(-2, -2);
         Vector2i intraMapWarpDirection = new Vector2i(0, 0);
 
@@ -25,6 +28,7 @@ namespace NinMods.Bot
         {
             TargetMapID = targetMapID;
             client.modTypes.PlayerRec bot = BotUtils.GetSelf();
+            Vector2i botLocation = BotUtils.GetSelfLocation();
             IEnumerable<Edge<int>> intermapPathEnumerable = null;
             if (InterMapPathfinding.IntermapPathfinding.GetPathFromTo(bot.Map, targetMapID, out intermapPathEnumerable) == false)
             {
@@ -39,14 +43,12 @@ namespace NinMods.Bot
                 Logger.Log.Write($"Enqueued mapID {edge.Target} (from {edge.Source})");
             }
             Logger.Log.Write($"Finished constructing intermap queue, there are {interMapPath.Count} maps to traverse. Bot is starting on map {bot.Map}.");
-            nextMapID = interMapPath.Dequeue();
-            if (LoadPathToNextMap(nextMapID) == false)
+            if (InitializeForMap() == false)
             {
-                Logger.Log.WriteError($"Could not find a path through map '{bot.Map}' to reach map '{nextMapID}' from botLocation ({bot.X} {bot.Y}). Cannot continue.");
+                Logger.Log.WriteError($"Could not initialize for map {bot.Map}, nextMap: {nextMapID}, botLocation: {botLocation}");
                 hasFailedCatastrophically = true;
                 return;
             }
-            currentMapID = bot.Map;
             Logger.Log.Write($"Finished initializing BotCommand_MoveToMap. Pathing to {nextMapID} via {intraMapPath.Count} tiles then facing direction {intraMapWarpDirection}.");
         }
 
@@ -76,25 +78,18 @@ namespace NinMods.Bot
             // WARNING:
             // this is probably not a good idea.
             // we need some way of notifying this command when a map load occurs and use that to determine when to calculate the next intraMapPath.
-            double distanceToWarp = botLocation.DistanceTo(intraMapWarpTile);
-            if (((intraMapPath.Count == 0) || (currentMapID != bot.Map)) && (client.modGlobals.GettingMap == false) && (distanceToWarp > 2.0d))
+            if ((currentMapID != bot.Map) && (client.modGlobals.GettingMap == false))
             {
-                Logger.Log.Write($"Recalculating intraMapPath (bot: {botLocation}, warpTile: {intraMapWarpTile}, gettingMap: {client.modGlobals.GettingMap}, or-expr: {((intraMapPath.Count == 0) || (currentMapID != bot.Map))}");
-                // we're either just starting or have just loaded into a new map
-                // so we have to find a path from this map to the warp point of the next map
-                nextMapID = interMapPath.Dequeue();
-                Logger.Log.Write($"Saw bot move to new map {bot.Map} from {currentMapID}. Now pathfinding to reach next map {nextMapID}...");
-                currentMapID = bot.Map;
-                if (LoadPathToNextMap(nextMapID) == false)
+                if (InitializeForMap() == false)
                 {
-                    Logger.Log.WriteError($"Could not find a path through map '{bot.Map}' to reach map '{nextMapID}'. Cannot continue.");
+                    Logger.Log.WriteError($"Could not re-initialize for new map {bot.Map} (oldMap: {currentMapID}, nextMap: {nextMapID}, botLocation: {botLocation})");
                     hasFailedCatastrophically = true;
                     return false;
                 }
             }
             if (BotUtils.CanMove())
             {
-                if (intraMapPath.Count > 0)
+                if ((isMovingByPath == true) && (intraMapPath.Count > 0))
                 {
                     //Logger.Log.Write("BotCommand_MoveToMap", "Perform", "Got permission to perform movement this tick");
                     Vector2i nextTile = intraMapPath.Pop();
@@ -108,11 +103,13 @@ namespace NinMods.Bot
                     }
                 }
                 // if it's the last element, make the bot face the warp direction
-                else
+                else if ((isAtWarpTile == true) || ((isMovingByPath == true) && (intraMapPath.Count == 0)))
                 {
                     // WARNING:
                     // there are boulders (or, rather, just blocked tiles) at the edge of map 187 (Valley of the End)...
                     // need to think about how to solve this
+                    if (intraMapWarpDirection == Vector2i.zero)
+                        intraMapWarpDirection = intraMapWarpTile - botLocation;
                     Logger.Log.Write($"Moving bot toward final map transition (botPos: {botLocation}, warpPos: {intraMapWarpTile}, warpDir: {intraMapWarpDirection})");
                     if (BotUtils.MoveDir(intraMapWarpDirection) == false)
                     {
@@ -121,92 +118,60 @@ namespace NinMods.Bot
                         return false;
                     }
                 }
+                else
+                {
+                    Logger.Log.WriteError("Bot has no move target");
+                    hasFailedCatastrophically = true;
+                    return false;
+                }
             }
             return true;
         }
 
-        bool LoadPathToNextMap(int nextMapID)
+        public bool InitializeForMap()
         {
-            intraMapPath.Clear();
             client.modTypes.PlayerRec bot = BotUtils.GetSelf();
             Vector2i botLocation = BotUtils.GetSelfLocation();
-            // too lazy to sync up currentMapID class field
-            // TO-DO:
-            // don't be lazy
-            int actualCurrentMapID = bot.Map;
-            Logger.Log.Write($"Trying to path to next map transition from tile {botLocation}");
-            Logger.Log.Write($"MyIndex: {client.modGlobals.MyIndex}, bot: {client.modTypes.Player[client.modGlobals.MyIndex]}," +
-                $"GettingMap: {client.modGlobals.GettingMap}");
-            client.modTypes.MapRec currentMap = client.modTypes.Map;
-            int tileLengthX = currentMap.Tile.GetLength(0);
-            int tileLengthY = currentMap.Tile.GetLength(1);
-            Stack<Vector2i> shortestPath = new Stack<Vector2i>();
-            Func<Vector2i, bool> tilePredicate;
-            // construct predicate based on where the warp position is within the map
-            if (currentMap.Left == nextMapID)
+
+            Logger.Log.Write($"Reinitializing command for new map (bot: {botLocation}, warpTile: {intraMapWarpTile}, gettingMap: {client.modGlobals.GettingMap}, or-expr: {((intraMapPath.Count == 0) || (currentMapID != bot.Map))}");
+            // we're either just starting or have just loaded into a new map
+            // so we have to find a path from this map to the warp point of the next map
+            nextMapID = interMapPath.Dequeue();
+            Logger.Log.Write($"Saw bot move to new map {bot.Map} from {currentMapID}. Now determining how to reach next map {nextMapID}...");
+            currentMapID = bot.Map;
+            if (BotUtils.GetAllWarpTilesToMap(nextMapID, out warpTilesToNextMap, out intraMapWarpDirection) == false)
             {
-                // find shortest path to X=0,Y=Any
-                Logger.Log.Write("Pathing to left edge of current map, where X=0,Y=Any");
-                tilePredicate = (tilePos) => { return ((tilePos.x == 1) && (Pathfinder.IsValidTile(tilePos.x, tilePos.y)) && (MapData.IsBlacklistedTile(actualCurrentMapID, tilePos) == false)); };
-                intraMapWarpDirection = Vector2i.directions_Eight[(int)Constants.DIR_LEFT];
+                Logger.Log.WriteError($"Could not find any warp tiles leading to map {nextMapID} from {currentMapID}.");
+                return false;
             }
-            else if (currentMap.Up == nextMapID)
+            // check if we're already at a valid warp tile or if we're right next to it (accepting diagonals hence the 1.5f distance comparison)
+            isAtWarpTile = false;
+            foreach (Vector2i warpTile in warpTilesToNextMap)
             {
-                // find shortest path to X=Any,Y=0
-                Logger.Log.Write("Pathing to top edge of current map, where X=Any,Y=0");
-                tilePredicate = (tilePos) => { return ((tilePos.y == 1) && (Pathfinder.IsValidTile(tilePos.x, tilePos.y)) && (MapData.IsBlacklistedTile(actualCurrentMapID, tilePos) == false)); };
-                intraMapWarpDirection = Vector2i.directions_Eight[(int)Constants.DIR_UP];
-            }
-            else if (currentMap.Right == nextMapID)
-            {
-                // find shortest path to X=Map.MaxX,Y=Any
-                Logger.Log.Write("Pathing to right edge of current map, where X=MaxX,Y=Any");
-                tilePredicate = (tilePos) => { return ((tilePos.x == currentMap.MaxX - 1) && (Pathfinder.IsValidTile(tilePos.x, tilePos.y)) && (MapData.IsBlacklistedTile(actualCurrentMapID, tilePos) == false)); };
-                intraMapWarpDirection = Vector2i.directions_Eight[(int)Constants.DIR_RIGHT];
-            }
-            else if (currentMap.Down == nextMapID)
-            {
-                // find shortest path to X=Any,Y=Map.MaxY
-                Logger.Log.Write("Pathing to down edge of current map, where X=Any,Y=MaxY");
-                tilePredicate = (tilePos) => { return ((tilePos.y == currentMap.MaxY - 1) && (Pathfinder.IsValidTile(tilePos.x, tilePos.y)) && (MapData.IsBlacklistedTile(actualCurrentMapID, tilePos) == false)); };
-                intraMapWarpDirection = Vector2i.directions_Eight[(int)Constants.DIR_DOWN];
-            }
-            else
-            {
-                // find shortest path to any valid warp tile
-                Logger.Log.Write("Map transition isn't on any edge, searching warp points now...");
-                tilePredicate = (tilePos) => {
-                    return ((currentMap.Tile[tilePos.x, tilePos.y].Type == (byte)Utilities.GameUtils.ETileType.TILE_TYPE_WARP) 
-                    && (currentMap.Tile[tilePos.x, tilePos.y].Data1 == nextMapID)
-                    && (Pathfinder.IsValidTile(tilePos.x, tilePos.y))
-                    && (MapData.IsBlacklistedTile(actualCurrentMapID, tilePos) == false)); };
-                intraMapWarpDirection = Vector2i.zero;
-            }
-            // now that we have the predicate, get all matching tiles and try pathfinding to each of them
-            List<Vector2i> warpTiles = BotUtils.GetAllTilesMatchingPredicate(tilePredicate);
-            Logger.Log.Write($"Predicate matched {warpTiles.Count} tiles. Pathfinding to each of them now...");
-            foreach (Vector2i warpTile in warpTiles)
-            {
-                if (shortestPath != null)
-                    shortestPath.Clear();
-                shortestPath = Pathfinder.GetPathTo(warpTile.x, warpTile.y);
-                if ((shortestPath != null) && ((shortestPath.Count < intraMapPath.Count) || (intraMapPath.Count == 0)))
+                if ((warpTile == botLocation) || (botLocation.DistanceTo(warpTile) <= 1.5f))
                 {
-                    // should be a deep-copy. expensive but oh well, this shouldn't run very frequently.
-                    Logger.Log.Write($"Got valid path to {warpTile} of length {shortestPath.Count} (prevLength: {intraMapPath.Count})");
-                    intraMapPath = new Stack<Vector2i>(shortestPath.ToArray().Reverse());
-                    intraMapWarpTile = warpTile + intraMapWarpDirection;
-                }
-                else
-                {
-                    if (shortestPath == null)
-                        Logger.Log.Write($"Couldn't path to {warpTile}");
-                    if ((shortestPath != null) && (shortestPath.Count >= intraMapPath.Count))
-                        Logger.Log.Write($"Path to {warpTile} was longer than existing path ({shortestPath.Count} vs {intraMapPath.Count})");
+                    Logger.Log.Write($"Bot is already at valid warp tile {warpTile}, setting that as move target and skipping pathfinding.");
+                    isAtWarpTile = true;
+                    isMovingByPath = false;
+                    intraMapWarpTile = warpTile;
+                    break;
                 }
             }
-            Logger.Log.Write($"Found shortest path to reach map {nextMapID} (length: {intraMapPath.Count}, lastTile: {intraMapPath.DefaultIfEmpty(new Vector2i(-1, -1)).LastOrDefault()})");
-            return ((intraMapPath != null) && (intraMapPath.Count > 0));
+            // if we're NOT at or next to any warp tile, then find the shortest path to any of them
+            isMovingByPath = false;
+            if (isAtWarpTile == false)
+            {
+                intraMapPath.Clear();
+                if (BotUtils.FindShortestPathToAny(warpTilesToNextMap, out intraMapPath, out intraMapWarpTile, true) == false)
+                {
+                    Logger.Log.WriteError($"Could not find a path through map '{bot.Map}' to reach map '{nextMapID}'. Cannot continue.");
+                    return false;
+                }
+                isMovingByPath = true;
+                Logger.Log.Write($"Found shortest path to reach map {nextMapID} (length: {intraMapPath.Count}, lastTile: {intraMapPath.DefaultIfEmpty(new Vector2i(-1, -1)).LastOrDefault()})");
+            }
+            Logger.Log.Write($"Done initializing for map {bot.Map}, target warp tile is at {intraMapWarpTile} in the direction {intraMapWarpDirection}");
+            return true;
         }
     }
 }

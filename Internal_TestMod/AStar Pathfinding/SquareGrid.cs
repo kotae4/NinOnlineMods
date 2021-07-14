@@ -28,6 +28,8 @@ namespace NinMods.Pathfinding
             maxY = map.Down != 0 ? map.MaxY - 1 : map.MaxY;
 
             this.m_GridData = gridData;
+
+            Logger.Log.Write($"Initialized pathfinding grid (minXY: {minX}, {minY} maxXY: {maxX}, {maxY}");
         }
 
         public client.modTypes.TileRec this[int x, int y]
@@ -50,7 +52,8 @@ namespace NinMods.Pathfinding
                 || (cell.Type == client.modConstants.TILE_TYPE_SIT)
                 || (cell.Type == client.modConstants.TILE_TYPE_NPCSPAWN)
                 || (cell.Type == client.modConstants.TILE_TYPE_PLAYERSPAWN)
-                || (cell.Type == client.modConstants.TILE_TYPE_RESOURCE))
+                || (cell.Type == client.modConstants.TILE_TYPE_RESOURCE)
+                || (cell.Type == client.modConstants.TILE_TYPE_WARP))
             {
                 //Logger.Log.Write($"Tile {id} is impassable because it's of type {cell.Type} '{(NinMods.Utilities.GameUtils.ETileType)cell.Type}'");
                 return false;

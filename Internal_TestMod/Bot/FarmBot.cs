@@ -50,6 +50,7 @@ namespace NinMods.Bot
 
         client.modTypes.MapNpcRec targetMonster = null;
         int targetMonsterIndex = 0;
+        Stack<Vector2i> targetMonsterPath = null;
 
         public FarmBot()
         {
@@ -62,7 +63,7 @@ namespace NinMods.Bot
             // TO-DO:
             // change this to get nearest monster *that can be pathed to*.
             // currently it just fails if the nearest monster can't be pathed to, and will keep trying that same monster over and over.
-            if (BotUtils.GetNearestMonster(botLocation, out targetMonster, out targetMonsterIndex))
+            if (BotUtils.GetNearestPathableMonster(botLocation, out targetMonster, out targetMonsterIndex, out targetMonsterPath))
             {
                 Vector2i monsterLocation = new Vector2i(targetMonster.X, targetMonster.Y);
                 double dist = botLocation.DistanceTo(monsterLocation);
@@ -140,7 +141,7 @@ namespace NinMods.Bot
                             // if we have a target, start attacking it
                             // NOTE:
                             // this will also move to the target and chase it if it tries running
-                            currentCommand = new BotCommand_Attack(targetMonster, targetMonsterIndex);
+                            currentCommand = new BotCommand_Attack(targetMonster, targetMonsterIndex, targetMonsterPath);
                             currentState = EBotState.AttackingTarget;
                         }
                         break;
@@ -160,7 +161,7 @@ namespace NinMods.Bot
                             // if we have a target, start attacking it
                             // NOTE:
                             // this will also move to the target and chase it if it tries running
-                            currentCommand = new BotCommand_Attack(targetMonster, targetMonsterIndex);
+                            currentCommand = new BotCommand_Attack(targetMonster, targetMonsterIndex, targetMonsterPath);
                             currentState = EBotState.AttackingTarget;
                         }
                         break;

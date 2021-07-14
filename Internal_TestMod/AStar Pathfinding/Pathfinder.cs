@@ -30,21 +30,40 @@ namespace NinMods
 
         // TO-DO:
         // optimize this. add a GetPathTo_NonAlloc version.
-        public static Stack<Vector2i> GetPathTo(int tileX, int tileY)
+        public static Stack<Vector2i> GetPathTo(int tileX, int tileY, bool allowAdjacentTilesIfNoPathFound = false)
         {
             Vector2i playerLoc = new Vector2i(client.modTypes.Player[client.modGlobals.MyIndex].X, client.modTypes.Player[client.modGlobals.MyIndex].Y);
             Vector2i targetLoc = new Vector2i(tileX, tileY);
-            Logger.Log.Write($"Pathfinding from {playerLoc} to {targetLoc}");
+            Vector2i adjacentLoc = new Vector2i(0, 0);
+            
             AStarSearch pathfinder = new AStarSearch(NinMods.Main.MapPathfindingGrid, playerLoc, targetLoc);
             Vector2i step;
+            bool hasExactPath = true;
+            bool hasAdjacentPath = false;
             if (!pathfinder.cameFrom.TryGetValue(targetLoc, out step))
             {
-                Logger.Log.Write($"Pathfinder could not find path to {targetLoc}");
-                return null;
+                hasExactPath = false;
             }
-            Logger.Log.Write($"Done pathfinding from {playerLoc} to {targetLoc}, constructing pathStack now");
+            if (hasExactPath == false)
+            {
+                foreach(Vector2i dir in Vector2i.directions_Eight)
+                {
+                    adjacentLoc = targetLoc + dir;
+                    if (pathfinder.cameFrom.TryGetValue(adjacentLoc, out step))
+                    {
+                        hasAdjacentPath = true;
+                        Logger.Log.Write($"Pathfinder found path to an adjacent tile {adjacentLoc} from {playerLoc}");
+                        break;
+                    }
+                }
+                if (hasAdjacentPath == false)
+                {
+                    Logger.Log.Write($"Pathfinder could not find path to {targetLoc} or any adjacent tiles from {playerLoc}");
+                    return null;
+                }
+            }
             Stack<Vector2i> pathStack = new Stack<Vector2i>();
-            pathStack.Push(targetLoc);
+            pathStack.Push((hasExactPath ? targetLoc : adjacentLoc));
             while (true)
             {
                 if (step == playerLoc)
@@ -55,11 +74,14 @@ namespace NinMods
                 //Logger.Log.Write("Pathfinder", "GetPathTo", $"Pathfinder stepped from {step}");
                 if (!pathfinder.cameFrom.TryGetValue(step, out step))
                 {
-                    Logger.Log.WriteError($"Pathfinder stopped unexpectedly at {step}");
+                    Logger.Log.WriteError($"Pathfinder stopped unexpectedly at {step} when trying to path from {targetLoc} to {playerLoc}");
                     break;
                 }
             }
-            Logger.Log.Write($"Done constructing path stack from {playerLoc} to {targetLoc}");
+            if (hasAdjacentPath)
+                Logger.Log.Write($"Returning path from {playerLoc} to {targetLoc} via adjacentTile {adjacentLoc}");
+            else
+                Logger.Log.Write($"Returning path from {playerLoc} to {targetLoc}");
             return pathStack;
         }
     }

@@ -346,11 +346,8 @@ namespace NinMods
             }
 
             // call original
-            Logger.Log.Write("Calling pre", Logger.ELogType.Info, null, true);
             NinMods.GameHooks.HandleMapDoneHook.FireEvent(Index, data, StartAddr, ExtraVar, EHookExecutionState.Pre);
-            Logger.Log.Write("Calling original", Logger.ELogType.Info, null, true);
             NinMods.GameHooks.HandleMapDoneHook.Hook.CallOriginalFunction(typeof(void), Index, data, StartAddr, ExtraVar);
-            Logger.Log.Write("Calling post", Logger.ELogType.Info, null, true);
             NinMods.GameHooks.HandleMapDoneHook.FireEvent(Index, data, StartAddr, ExtraVar, EHookExecutionState.Post);
         }
 
@@ -395,11 +392,8 @@ namespace NinMods
                 Logger.Log.Write("Successfully hooked!", Logger.ELogType.Info, null, true);
             }
 
-            Logger.Log.Write("Calling pre", Logger.ELogType.Info, null, true);
             NinMods.GameHooks.DrawGUIHook.FireEvent(EHookExecutionState.Pre);
-            Logger.Log.Write("Calling original", Logger.ELogType.Info, null, true);
             NinMods.GameHooks.DrawGUIHook.Hook.CallOriginalFunction(typeof(void));
-            Logger.Log.Write("Calling post", Logger.ELogType.Info, null, true);
             NinMods.GameHooks.DrawGUIHook.FireEvent(EHookExecutionState.Post);
         }
 
