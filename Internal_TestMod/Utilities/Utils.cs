@@ -162,8 +162,53 @@ namespace NinMods.Utilities
                                     sw.WriteLine($"Revision: {map.Revision}");
                                     sw.WriteLine($"Secret: {map.Secret}");
                                     sw.WriteLine($"Indoor: {map.Indoor}");
+                                    // CurrentEvents field is linked to the MapEvents array
                                     sw.WriteLine($"CurrentEvents: {map.CurrentEvents}");
+                                    for (int mapEventIndex = 1; mapEventIndex <= map.CurrentEvents; mapEventIndex++)
+                                    {
+                                        client.modTypes.MapEventRec mapEvent = map.MapEvents[mapEventIndex];
+                                        if (mapEvent == null)
+                                        {
+                                            sw.WriteLine($"MapEvents[{mapEventIndex}]: <null>");
+                                        }
+                                        else
+                                        {
+                                            sw.WriteLine($"MapEvents[{mapEventIndex}].Name: {mapEvent.Name}");
+                                            sw.WriteLine($"MapEvents[{mapEventIndex}].Trigger: {mapEvent.Trigger}");
+                                            sw.WriteLine($"MapEvents[{mapEventIndex}].WalkThrough: {mapEvent.WalkThrough}");
+                                            sw.WriteLine($"MapEvents[{mapEventIndex}].Step: {mapEvent.Step}");
+                                            sw.WriteLine($"MapEvents[{mapEventIndex}].Dir: {mapEvent.Dir}");
+                                            sw.WriteLine($"MapEvents[{mapEventIndex}].DirFix: {mapEvent.DirFix}");
+                                            sw.WriteLine($"MapEvents[{mapEventIndex}].Position: {mapEvent.Position}");
+                                            sw.WriteLine($"MapEvents[{mapEventIndex}].XY: {mapEvent.X}, {mapEvent.Y}");
+                                            sw.WriteLine($"MapEvents[{mapEventIndex}].offsetXY: {mapEvent.xOffset}, {mapEvent.yOffset}");
+                                            sw.WriteLine($"MapEvents[{mapEventIndex}].GraphicType: {mapEvent.GraphicType}");
+                                            sw.WriteLine($"MapEvents[{mapEventIndex}].GraphicNum: {mapEvent.GraphicNum}");
+                                            sw.WriteLine($"MapEvents[{mapEventIndex}].GraphicXY: {mapEvent.GraphicX}, {mapEvent.GraphicY}");
+                                            sw.WriteLine($"MapEvents[{mapEventIndex}].GrahpicXY2: {mapEvent.GraphicX2}, {mapEvent.GraphicY2}");
+                                            sw.WriteLine($"MapEvents[{mapEventIndex}].Moving: {mapEvent.Moving}");
+                                            sw.WriteLine($"MapEvents[{mapEventIndex}].visible: {mapEvent.visible}");
+                                        }
+                                    }
+                                    // eventcount is linked to the Events array (this is what the map editor uses, too)
                                     sw.WriteLine($"eventcount: {map.eventcount}");
+                                    for (int eventIndex = 1; eventIndex <= map.eventcount; eventIndex++)
+                                    {
+                                        client.modTypes.EventRec mapEvent = map.Events[eventIndex];
+                                        if (mapEvent == null)
+                                        {
+                                            sw.WriteLine($"Events[{eventIndex}]: <null>");
+                                        }
+                                        else
+                                        {
+                                            sw.WriteLine($"Events[{eventIndex}].Name: {mapEvent.Name}");
+                                            sw.WriteLine($"Events[{eventIndex}].Global: {mapEvent.Global}");
+                                            sw.WriteLine($"Events[{eventIndex}].XY: {mapEvent.X}, {mapEvent.Y}");
+                                            sw.WriteLine($"Events[{eventIndex}].pageCount: {mapEvent.pageCount}");
+                                            // TO-DO:
+                                            // dump pages
+                                        }
+                                    }
                                     // map boundary warps (this is responsible for most map transitions)
                                     sw.WriteLine($"LeftWarp: {map.Left}");
                                     sw.WriteLine($"RightWarp: {map.Right}");
@@ -188,6 +233,26 @@ namespace NinMods.Utilities
                                             sw.WriteLine($"Tile[{tileX}, {tileY}].Data2: {tile.Data2}");
                                             sw.WriteLine($"Tile[{tileX}, {tileY}].Data3: {tile.Data3}");
                                             sw.WriteLine($"Tile[{tileX}, {tileY}].Data4: {(string.IsNullOrEmpty(tile.Data4) ? "<null>" : tile.Data4)}");
+                                            sw.WriteLine($"Tile[{tileX}, {tileY}].DirBlock: {tile.DirBlock}");
+                                            sw.WriteLine($"Tile[{tileX}, {tileY}].Autotile.Length: {tile.Autotile.Length}");
+                                            for (int autoTileIndex = 0; autoTileIndex < tile.Autotile.Length; autoTileIndex++)
+                                            {
+                                                sw.WriteLine($"Tile[{tileX}, {tileY}].Autotile[{autoTileIndex}]: {tile.Autotile[autoTileIndex]}");
+                                            }
+                                            sw.WriteLine($"Tile[{tileX}, {tileY}].Layer.Length: {tile.Layer.Length}");
+                                            for (int layerIndex = 0; layerIndex < tile.Layer.Length; layerIndex++)
+                                            {
+                                                client.modTypes.TileDataRec layer = tile.Layer[layerIndex];
+                                                if (layer == null)
+                                                {
+                                                    sw.WriteLine($"Tile[{tileX}, {tileY}].Layer[{layerIndex}] <null>");
+                                                }
+                                                else
+                                                {
+                                                    sw.WriteLine($"Tile[{tileX}, {tileY}].Layer[{layerIndex}].Tileset: {layer.Tileset}");
+                                                    sw.WriteLine($"Tile[{tileX}, {tileY}].Layer[{layerIndex}].XY: {layer.X}, {layer.Y}");
+                                                }
+                                            }
                                         }
                                     }
                                     sw.WriteLine("===== Done =====\n");

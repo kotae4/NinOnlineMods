@@ -91,46 +91,104 @@ namespace NinMods
                 // but for some reason (probably due to their method body encryption) this throws an exception
                 // so we just call the method ourselves to force the JIT compilation.
                 // we also set some state to ensure the method early-exits. we don't actually want the method to do any work.
-                client.modGlobals.InMapEditor = true;
-                client.modInput.HandleKeyPresses(SFML.Window.Keyboard.Key.W);
-                client.modGlobals.InMapEditor = false;
 
-                client.modDatabase.SetPlayerAccess(-1, 1);
+                // the try-catch copypasta is unfortunately necessary.
+                // ensuring JIT compilation is absolutely vital, and some of these method calls will absolutely throw an exception.
+                // an exception is fine, the method is JIT'd whether the call succeeds or not.
+                // and we want to call *every* method here, so we can't just use one big try-catch block. they have to be individually wrapped.
+                try
+                {
+                    client.modGlobals.InMapEditor = true;
+                    client.modInput.HandleKeyPresses(SFML.Window.Keyboard.Key.W);
+                    client.modGlobals.InMapEditor = false;
+                }
+                catch (Exception ex)
+                {
+                    Logger.Log.WriteException(ex);
+                    Logger.Log.Write("The above exception is probably safe!");
+                }
+                try
+                {
+                    client.modDatabase.SetPlayerAccess(-1, 1);
+                }
+                catch (Exception ex)
+                {
+                    Logger.Log.WriteException(ex);
+                    Logger.Log.Write("The above exception is probably safe!");
+                }
+                try
+                {
+                    client.modGraphics.DrawWeather();
+                }
+                catch (Exception ex)
+                {
+                    Logger.Log.WriteException(ex);
+                    Logger.Log.Write("The above exception is probably safe!");
+                }
 
-                client.modGraphics.DrawWeather();
+                try
+                {
+                    client.clsBuffer dummyPacket = new client.clsBuffer();
+                    // packet IDs of 0 are ignored.
+                    dummyPacket.WriteLong(0);
+                    byte[] dummyPacketBuf = dummyPacket.ToArray();
+                    client.modHandleData.HandleData(dummyPacketBuf);
+                }
+                catch (Exception ex)
+                {
+                    Logger.Log.WriteException(ex);
+                    Logger.Log.Write("The above exception is probably safe!");
+                }
 
-                client.clsBuffer dummyPacket = new client.clsBuffer();
-                // packet IDs of 0 are ignored.
-                dummyPacket.WriteLong(0);
-                byte[] dummyPacketBuf = dummyPacket.ToArray();
-                client.modHandleData.HandleData(dummyPacketBuf);
+                try
+                {
+                    System.Reflection.MethodInfo drawGUIMethodInfo = typeof(client.modGraphics).GetMethod("DrawGUI", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
+                    if (drawGUIMethodInfo == null)
+                    {
+                        Logger.Log.WriteError("Could not get DrawGUI methodinfo");
+                    }
+                    else
+                    {
+                        NinMods.GameHooks.dDrawGUI oDrawGUI = (NinMods.GameHooks.dDrawGUI)drawGUIMethodInfo.CreateDelegate(typeof(NinMods.GameHooks.dDrawGUI));
+                        oDrawGUI();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger.Log.WriteException(ex);
+                    Logger.Log.Write("The above exception is probably safe!");
+                }
+
+                try
+                {
+                    System.Reflection.MethodInfo handleMapDoneMethodInfo = typeof(client.modHandleData).GetMethod("HandleMapDone", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
+                    if (handleMapDoneMethodInfo == null)
+                    {
+                        Logger.Log.WriteError("Could not get HandleMapDone methodinfo");
+                    }
+                    else
+                    {
+
+                        NinMods.GameHooks.dHandleMapDone oHandleMapDone = (NinMods.GameHooks.dHandleMapDone)handleMapDoneMethodInfo.CreateDelegate(typeof(NinMods.GameHooks.dHandleMapDone));
+                        oHandleMapDone(0, null, 0, 0);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger.Log.WriteException(ex);
+                    Logger.Log.Write("The above exception is probably safe!");
+                }
 
                 // NOTE:
                 // no way to force an early exit here. hopefully doesn't cause a packet to be missed.
-                client.modGameLogic.GameLoop();
-
-                System.Reflection.MethodInfo drawGUIMethodInfo = typeof(client.modGraphics).GetMethod("DrawGUI", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
-                if (drawGUIMethodInfo == null)
+                try
                 {
-                    Logger.Log.WriteError("Could not get DrawGUI methodinfo");
+                    client.modGameLogic.GameLoop();
                 }
-                else
+                catch (Exception ex)
                 {
-                    NinMods.GameHooks.dDrawGUI oDrawGUI = (NinMods.GameHooks.dDrawGUI)drawGUIMethodInfo.CreateDelegate(typeof(NinMods.GameHooks.dDrawGUI));
-                    oDrawGUI();
-                }
-
-
-                System.Reflection.MethodInfo handleMapDoneMethodInfo = typeof(client.modHandleData).GetMethod("HandleMapDone", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
-                if (handleMapDoneMethodInfo == null)
-                {
-                    Logger.Log.WriteError("Could not get HandleMapDone methodinfo");
-                }
-                else
-                {
-                    
-                    NinMods.GameHooks.dHandleMapDone oHandleMapDone = (NinMods.GameHooks.dHandleMapDone)handleMapDoneMethodInfo.CreateDelegate(typeof(NinMods.GameHooks.dHandleMapDone));
-                    oHandleMapDone(0, null, 0, 0);
+                    Logger.Log.WriteException(ex);
+                    Logger.Log.Write("The above exception is probably safe!");
                 }
 
                 // WARNING:
@@ -337,8 +395,11 @@ namespace NinMods
                 Logger.Log.Write("Successfully hooked!", Logger.ELogType.Info, null, true);
             }
 
+            Logger.Log.Write("Calling pre", Logger.ELogType.Info, null, true);
             NinMods.GameHooks.DrawGUIHook.FireEvent(EHookExecutionState.Pre);
+            Logger.Log.Write("Calling original", Logger.ELogType.Info, null, true);
             NinMods.GameHooks.DrawGUIHook.Hook.CallOriginalFunction(typeof(void));
+            Logger.Log.Write("Calling post", Logger.ELogType.Info, null, true);
             NinMods.GameHooks.DrawGUIHook.FireEvent(EHookExecutionState.Post);
         }
 

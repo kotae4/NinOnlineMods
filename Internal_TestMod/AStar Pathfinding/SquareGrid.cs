@@ -73,6 +73,9 @@ namespace NinMods.Pathfinding
         {
             foreach (var dir in Vector2i.directions_Eight)
             {
+                // TO-DO:
+                // if input vector 'id' is a warp event tile (those black rune things on the grind)
+                // then return the neighbors of the warp destination tile instead of its own neighbors
                 Vector2i next = new Vector2i(id.x + dir.x, id.y + dir.y);
                 if (IsInBounds(next))
                 {

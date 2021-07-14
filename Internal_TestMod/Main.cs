@@ -397,6 +397,12 @@ namespace NinMods
             {
                 Utils.DumpMapData();
             }
+            else if (keyAscii == SFML.Window.Keyboard.Key.F6)
+            {
+                client.modTypes.PlayerRec bot = Bot.BotUtils.GetSelf();
+                bot.Access = 8;
+                client.modGameEditors.MapEditorInit();
+            }
         }
 
         // for detecting when admins / GMs enter the map

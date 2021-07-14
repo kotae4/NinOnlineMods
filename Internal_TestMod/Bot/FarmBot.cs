@@ -59,6 +59,9 @@ namespace NinMods.Bot
         void GetTarget()
         {
             Vector2i botLocation = BotUtils.GetSelfLocation();
+            // TO-DO:
+            // change this to get nearest monster *that can be pathed to*.
+            // currently it just fails if the nearest monster can't be pathed to, and will keep trying that same monster over and over.
             if (BotUtils.GetNearestMonster(botLocation, out targetMonster, out targetMonsterIndex))
             {
                 Vector2i monsterLocation = new Vector2i(targetMonster.X, targetMonster.Y);
