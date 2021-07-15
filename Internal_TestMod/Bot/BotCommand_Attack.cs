@@ -22,10 +22,15 @@ namespace NinMods.Bot
 
         float spellCastTimer = 0f;
 
-        public BotCommand_Attack(client.modTypes.MapNpcRec target, int targetIndex)
+        public BotCommand_Attack(client.modTypes.MapNpcRec target, int targetIndex, Stack<Vector2i> targetPath)
         {
             this.target = target;
             this.targetIndex = targetIndex;
+            path = targetPath;
+            if ((targetPath != null) && (targetPath.Count > 0))
+            {
+                isChasingByPath = true;
+            }
         }
 
         /*public void IsComplete()
@@ -53,7 +58,7 @@ namespace NinMods.Bot
             // don't hardcode this
             if (dist > 1.6f)
             {
-                Logger.Log.Write("BotCommand_Attack", "Perform", $"Target has moved out of range, chasing this frame (self: {botLocation}, target: {targetLocation}, dist: {dist}");
+                Logger.Log.Write($"Target has moved out of range, beginning chase now (self: {botLocation}, target: {targetLocation}, dist: {dist}");
                 if (ChaseTarget(botLocation, dist) == false)
                 {
                     hasFailedCatastrophically = true;
@@ -94,7 +99,7 @@ namespace NinMods.Bot
                                         // i think the server has a bug where it doesn't handle spellcasts properly if they're sent within a certain timeframe
                                         // so we create our own little timer to simulate the natural delay between pressing keys / receiving confirmation from server
                                         spellCastTimer = client.modGlobals.Tick + 200f;
-                                        Logger.Log.Write("BotCommand_Attack", "Perform", $"Cast spell {spellIndex}");
+                                        Logger.Log.Write($"Cast spell {spellIndex}");
                                         // TO-DO:
                                         // revisit this. is it actually necessary or did i just have a bug elsewhere?
                                         // NOTE:
@@ -112,15 +117,17 @@ namespace NinMods.Bot
                 {
                     isChasingByPath = false;
                     path = null;
-                    Logger.Log.Write("BotCommand_Attack", "Perform", $"Got permission to perform attack this tick (target[{targetIndex}]: {target.num}, hp: {target.Vital[(int)client.modEnumerations.Vitals.HP]}) " +
+                    /*
+                     Logger.Log.Write($"Got permission to perform attack this tick (target[{targetIndex}]: {target.num}, hp: {target.Vital[(int)client.modEnumerations.Vitals.HP]}) " +
                         $"(npc: {client.modTypes.Npc[target.num].Name.Trim()}, {client.modTypes.Npc[target.num].HP})");
+                    */
 
                     Vector2i tileDirection = targetLocation - botLocation;
                     if (BotUtils.FaceDir(tileDirection) == false)
                     {
                         // NOTE:
                         // assumes error state is from inability to parse direction (the function might return false from some other condition in the future)
-                        Logger.Log.WriteError("BotCommand_Attack", "Perform", $"Could not get direction out of {tileDirection} (self: {botLocation}; target: {targetLocation})");
+                        Logger.Log.WriteError($"Could not get direction out of {tileDirection} (self: {botLocation}; target: {targetLocation})");
                         hasFailedCatastrophically = true;
                         return new FarmBotFailureEvent();
                     }
@@ -153,22 +160,22 @@ namespace NinMods.Bot
                     Vector2i tileDirection = targetLocation - botLocation;
                     if (BotUtils.MoveDir(tileDirection) == false)
                     {
-                        Logger.Log.WriteError("BotCommand_Attack", "ChaseTarget", $"Could not move bot at {botLocation} in direction {tileDirection}");
+                        Logger.Log.WriteError($"Could not move bot at {botLocation} in direction {tileDirection}");
                         hasFailedCatastrophically = true;
                         return false;
                     }
-                    Logger.Log.Write("BotCommand_Attack", "ChaseTarget", "Moved one tile to attack target");
+                    Logger.Log.Write("Moved one tile to attack target");
                 }
                 else if ((path == null) || (path.Count == 0))
                 {
                     path = BotUtils.GetPathToMonster(target, botLocation);
                     if (path == null)
                     {
-                        Logger.Log.Write("BotCommand_Attack", "ChaseTarget", "Could not recalculate path to monster.");
+                        Logger.Log.Write("Could not recalculate path to monster.");
                         hasFailedCatastrophically = true;
                         return false;
                     }
-                    Logger.Log.Write("BotCommand_Attack", "ChaseTarget", "Recalculated path to monster because monster moved");
+                    Logger.Log.Write("Recalculated path to monster because monster moved");
                     isChasingByPath = true;
                 }
                 if ((path != null) && (path.Count > 0) && (isChasingByPath))
@@ -178,11 +185,11 @@ namespace NinMods.Bot
 
                     if (BotUtils.MoveDir(tileDirection) == false)
                     {
-                        Logger.Log.WriteError("BotCommand_Attack", "Perform", $"Could not move bot at {botLocation} in direction {tileDirection}");
+                        Logger.Log.WriteError($"Could not move bot at {botLocation} in direction {tileDirection}");
                         hasFailedCatastrophically = true;
                         return false;
                     }
-                    Logger.Log.Write("BotCommand_Attack", "ChaseTarget", "Moved along path to chase target");
+                    Logger.Log.Write("Moved along path to chase target");
                 }
             }
             return true;

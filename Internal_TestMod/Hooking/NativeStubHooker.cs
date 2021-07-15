@@ -49,7 +49,7 @@ namespace NinMods.Hooking
                 // figure out why MinHook's FreezeThreads causes the game to freeze despite having a billion checks for CurrentThreadID
                 if (MinHook.DisableHook(TargetAddr, true) != MinHook.MH_STATUS.MH_OK)
                 {
-                    Logger.Log.Write("NinMods.NativeStubHooker", "CallOriginal", "Could not disable hook");
+                    Logger.Log.Write("Could not disable hook");
                     return defaultTResult;
                 }
 #if PROFILING
@@ -71,7 +71,7 @@ namespace NinMods.Hooking
 #endif
                 if (MinHook.EnableHook(TargetAddr, true) != MinHook.MH_STATUS.MH_OK)
                 {
-                    Logger.Log.Write("NinMods.NativeStubHooker", "CallOriginal", "Could not re-enable hook");
+                    Logger.Log.Write("Could not re-enable hook");
                     return defaultTResult;
                 }
 #if PROFILING
@@ -103,7 +103,7 @@ namespace NinMods.Hooking
             {
                 if (!NativeImport.VirtualFree(stubBlock, IntPtr.Zero, (FreeType.Decommit | FreeType.Release)))
                 {
-                    Logger.Log.Write("NinMods.NativeStubHooker", "Uninitialize", "Could not free memory associated with a stub");
+                    Logger.Log.Write("Could not free memory associated with a stub");
                 }
             }
         }
@@ -112,7 +112,7 @@ namespace NinMods.Hooking
         {
             if ((*((long*)stubEntry.Stub_NumHooksPtr.ToPointer()) + 1) > stubEntry.TotalHooksAllocated)
             {
-                Logger.Log.Write("NinMods.NativeStubHooker", "UpdateStub64", "Exceeded 255 hooks for this target. Reallocation is not currently supported\n");
+                Logger.Log.Write("Exceeded 255 hooks for this target. Reallocation is not currently supported\n");
                 return false;
                 // NOTE: 
                 // must freeze threads. minhook freezes and unfreezes threads each operation.
@@ -128,7 +128,7 @@ namespace NinMods.Hooking
             }
             ((long*)stubEntry.Stub_Start_Call_List.ToPointer())[*((long*)stubEntry.Stub_NumHooksPtr.ToPointer())] = hookAddr.ToInt64();
             *((long*)stubEntry.Stub_NumHooksPtr.ToPointer()) = (*((long*)stubEntry.Stub_NumHooksPtr.ToPointer()) + 1);
-            Logger.Log.Write("NinMods.NativeStubHooker", "UpdateStub64", "Updated stub to call an additional hookAddr [" + hookAddr.ToString());
+            Logger.Log.Write($"Updated stub to call an additional hookAddr [{hookAddr.ToString("X")}]");
             return true;
         }
 
@@ -147,16 +147,16 @@ namespace NinMods.Hooking
             IntPtr stubBlock = NativeImport.VirtualAlloc(IntPtr.Zero, (IntPtr)numBytes, (AllocationType.Reserve | AllocationType.Commit), AllocationProtect.PAGE_EXECUTE_READWRITE);
             if ((stubBlock == null) || (stubBlock == IntPtr.Zero))
             {
-                Logger.Log.Write("NinMods.NativeStubHooker", "CreateStubWithHooks64", "Could not allocate memory block for stub");
+                Logger.Log.Write("Could not allocate memory block for stub");
                 return false;
             }
             g_StubHeaps.Add(stubBlock);
 
             IntPtr addrOfDataSection = (stubBlock + StubCodeSize) + TrampCodeSize;
             long addrOfDataSectionAsLong = addrOfDataSection.ToInt64();
-            Logger.Log.Write("NinMods.NativeStubHooker", "CreateStubWithHooks64", "Allocated memory for stub @ " + stubBlock.ToString("X") +
-                "\n--Data section starts @ " + addrOfDataSection.ToString("X") + " and ends at " + (addrOfDataSection + (numBytes - 160)).ToString("X") +
-                "\n--Loop counter should be @ " + (addrOfDataSection + (numBytes - 160 - bytesForHooks)).ToString("X"));
+            Logger.Log.Write($"Allocated memory for stub @ {stubBlock.ToString("X")}" +
+                $"\n--Data section starts @ {addrOfDataSection.ToString("X")} and ends at {(addrOfDataSection + (numBytes - 160)).ToString("X")}" +
+                $"\n--Loop counter should be @ {(addrOfDataSection + (numBytes - 160 - bytesForHooks)).ToString("X")}");
 
             stubBytes.AddRange(new byte[]{ 0x49, 0xba});
             // have to reverse byte order here
@@ -210,7 +210,7 @@ namespace NinMods.Hooking
                 NativeImport.memcpy(stubBlock.ToPointer(), stubBytesPtr, (IntPtr)numBytes);
             }
             NativeImport.FlushInstructionCache(System.Diagnostics.Process.GetCurrentProcess().Handle, stubBlock, (IntPtr)numBytes);
-            Logger.Log.Write("NinMods.NativeStubHooker", "CreateStubWithHooks64", "Filled out stub block with stub bytes, hopefully");
+            Logger.Log.Write("Filled out stub block with stub bytes, hopefully");
 
             stubEntry.StubAddr = stubBlock;
             stubEntry.StubSize = numBytes;
@@ -229,14 +229,14 @@ namespace NinMods.Hooking
             RuntimeMethodHandle runtimeMethodHandle = targetMethod.MethodHandle;
             if (runtimeMethodHandle == null)
             {
-                Logger.Log.Write("NinMods.NativeStubHooker", "HookMethod", "Could not get RuntimeMethodHandle for '" + targetMethod.DeclaringType.FullName + "::" + targetMethod.Name + "'");
+                Logger.Log.Write($"Could not get RuntimeMethodHandle for '{targetMethod.DeclaringType.FullName}::{targetMethod.Name}'");
                 return null;
             }
             IntPtr targetMethodAddr = runtimeMethodHandle.GetFunctionPointer();
             runtimeMethodHandle = hookMethod.MethodHandle;
             if (runtimeMethodHandle == null)
             {
-                Logger.Log.Write("NinMods.NativeStubHooker", "HookMethod", "Could not get RuntimeMethodHandle for '" + hookMethod.DeclaringType.FullName + "::" + hookMethod.Name + "'");
+                Logger.Log.Write($"Could not get RuntimeMethodHandle for '{hookMethod.DeclaringType.FullName}::{hookMethod.Name}'");
                 return null;
             }
             IntPtr hookMethodAddr = runtimeMethodHandle.GetFunctionPointer();
@@ -253,14 +253,14 @@ namespace NinMods.Hooking
                 MinHook.MH_STATUS mhStatus = MinHook.CreateHook(targetMethodAddr, hookMethodAddr, out stub.TrampAddr);
                 if (mhStatus != MinHook.MH_STATUS.MH_OK)
                 {
-                    Logger.Log.Write("NinMods.NativeStubHooker", "HookMethod", "Could not create hook via MinHook (" + mhStatus.ToString() + ")");
+                    Logger.Log.Write($"Could not create hook via MinHook ({mhStatus})");
                     return null;
                 }
                 //*((long*)stub.Stub_TrampAddrPtr.ToPointer()) = stub.TrampAddr.ToInt64();
                 mhStatus = MinHook.EnableHook(targetMethodAddr);
                 if (mhStatus != MinHook.MH_STATUS.MH_OK)
                 {
-                    Logger.Log.Write("NinMods.NativeStubHooker", "HookMethod", "Could not enable hook via MinHook (" + mhStatus.ToString() + ")");
+                    Logger.Log.Write($"Could not enable hook via MinHook ({mhStatus})");
                     return null;
                 }
                 m_StubsByTargetMethod.Add(targetMethod, stub);
@@ -272,14 +272,14 @@ namespace NinMods.Hooking
                     // this target method has already been hooked, so update the stub
                     if (!UpdateStub64(stub, hookMethodAddr))
                     {
-                        Logger.Log.Write("NinMods.NativeStubHooker", "HookMethod", "Could not update stub for hook");
+                        Logger.Log.Write("Could not update stub for hook");
                         return null;
                     }
                     stub.hookAddresses.Add(hookMethodAddr);
                 }
                 else
                 {
-                    Logger.Log.Write("NinMods.NativeStubHooker", "HookMethod", "'" + hookMethod.Name + "' is already registered for '" + targetMethod.Name + "', skipping.");
+                    Logger.Log.Write($"'{hookMethod.Name}' is already registered for '{targetMethod.Name}', skipping.");
                 }
             }
             return stub;

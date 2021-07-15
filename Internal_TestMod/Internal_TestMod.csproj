@@ -54,6 +54,9 @@
     <ErrorReport>prompt</ErrorReport>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="QuikGraph, Version=2.3.0.0, Culture=neutral, PublicKeyToken=46bd58b0789759cb, processorArchitecture=MSIL">
+      <HintPath>..\packages\QuikGraph.2.3.0\lib\net45\QuikGraph.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Drawing" />
@@ -79,14 +82,21 @@
     <Compile Include="Bot\BotCommand_Attack.cs" />
     <Compile Include="Bot\BotCommand_ChargeChakra.cs" />
     <Compile Include="Bot\BotCommand_CollectItem.cs" />
+    <Compile Include="Bot\BotCommand_ExploitMovementToStaticPoint.cs" />
     <Compile Include="Bot\BotCommand_Heal.cs" />
+    <Compile Include="Bot\BotCommand_MoveToMap.cs" />
     <Compile Include="Bot\BotCommand_MoveToStaticPoint.cs" />
     <Compile Include="Bot\BotUtils.cs" />
     <Compile Include="Bot\FarmBot.cs" />
     <Compile Include="Bot\IBotBlocCommand.cs" />
     <Compile Include="Bot\IBotCommand.cs" />
     <Compile Include="Constants.cs" />
-    <Compile Include="Pathfinder.cs" />
+    <Compile Include="GameExploits.cs" />
+    <Compile Include="GameHooks.cs" />
+    <Compile Include="GenericGameHookClass.cs" />
+    <Compile Include="Inter-Map Pathfinding\IntermapPathfinding.cs" />
+    <Compile Include="AStar Pathfinding\Pathfinder.cs" />
+    <Compile Include="MapData.cs" />
     <Compile Include="PlayerStatsForm.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -119,7 +129,9 @@
       <DependentUpon>PlayerStatsForm.cs</DependentUpon>
     </EmbeddedResource>
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <None Include="packages.config" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="find-game-path.targets" />
 </Project>

@@ -71,7 +71,10 @@ namespace NinMods
         public PlayerStatsForm()
         {
             InitializeComponent();
+        }
 
+        private void PlayerStatsForm_Load(object sender, EventArgs e)
+        {
             EnableDoubleBuffering();
 
             InitializeDictionaries();
@@ -79,7 +82,7 @@ namespace NinMods
             System.Reflection.MethodInfo methodInfo = typeof(System.Windows.Forms.ListView).GetMethod("SetItemText", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic, null, new Type[] { typeof(int), typeof(int), typeof(string) }, null);
             if (methodInfo == null)
             {
-                Logger.Log.WriteError("PlayerStatsForm", "PlayerStatsForm::ctor", "Could not get SetItemText methodinfo");
+                Logger.Log.WriteError("Could not get SetItemText methodinfo");
                 return;
             }
 
@@ -98,10 +101,23 @@ namespace NinMods
             this.UpdateStyles();
         }
 
-        public void Reposition_OnDesktop(int x, int y)
+        public void RepositionOnDesktop()
         {
-            Logger.Log.Write("PlayerStatsForm", "Reposition_OnDesktop", $"Repositioning form to {x}, {y}");
-            this.SetDesktopLocation(x, y);
+            if ((client.modGraphics.GameWindowForm == null) || (client.modGraphics.GameWindowForm.Window == null))
+            {
+                return;
+            }
+            // doesn't work: client.modGraphics.GameWindowForm.Root.GlobalPosition;
+            // does work:
+            SFML.System.Vector2i gameWndPosition = client.modGraphics.GameWindowForm.Window.Position;
+            //Logger.Log.Write("PlayerStatsForm", "UpdatePlayerStats", $"Saw gamewindow positioned at {gameWndPosition.X}, {gameWndPosition.Y}");
+            if ((gameWndPosition.X != lastGameWndPosition.X) || (gameWndPosition.Y != lastGameWndPosition.Y))
+            {
+                int x = gameWndPosition.X - this.Width, y = gameWndPosition.Y;
+                lastGameWndPosition = gameWndPosition;
+                Logger.Log.Write($"Repositioning form to {x}, {y}");
+                this.SetDesktopLocation(x, y);
+            }
         }
 
         void PopulateStatValues(client.modTypes.PlayerRec playerRecord, ref Dictionary<ETrackedStats, string> statDict, ref Dictionary<ETargetStats, string> targetDict)
@@ -185,14 +201,9 @@ namespace NinMods
 
         public void UpdateStats(client.modTypes.PlayerRec playerRecord)
         {
-            if ((client.modGraphics.GameWindowForm == null) || (oStatsListView_SetItemText == null) || (oTargetListView_SetItemText == null)) return;
-            // doesn't work: client.modGraphics.GameWindowForm.Root.GlobalPosition;
-            // does work:
-            SFML.System.Vector2i gameWndPosition = client.modGraphics.GameWindowForm.Window.Position;
-            //Logger.Log.Write("PlayerStatsForm", "UpdatePlayerStats", $"Saw gamewindow positioned at {gameWndPosition.X}, {gameWndPosition.Y}");
-            if ((gameWndPosition.X != lastGameWndPosition.X) || (gameWndPosition.Y != lastGameWndPosition.Y))
-                Reposition_OnDesktop(gameWndPosition.X - this.Width, gameWndPosition.Y);
-            lastGameWndPosition = gameWndPosition;
+            if (oListView_SetItemText == null) return;
+
+            RepositionOnDesktop();
 
             //Logger.Log.Write("PlayerStatsForm", "UpdatePlayerStats", "Updating player stats");
             lblPlayerName.Text = $"{playerRecord.Name} ({playerRecord.UUID})";
