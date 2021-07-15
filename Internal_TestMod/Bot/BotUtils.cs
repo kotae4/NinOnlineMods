@@ -25,14 +25,16 @@ namespace NinMods.Bot
             return (ECompassDirection)retVal;
         }
 
-        public static bool GetNearestMonster(Vector2i from, out client.modTypes.MapNpcRec nearestMonster, out int nearestMonsterIndex)
+        public static bool GetNearestPathableMonster(Vector2i from, out client.modTypes.MapNpcRec nearestMonster, out int nearestMonsterIndex, out Stack<Vector2i> shortestPath)
         {
             Vector2i npcLocation = new Vector2i(0, 0);
+			shortestPath = new Stack<Vector2i>();
             double distance = double.MaxValue;
             double closestDistance = double.MaxValue;
             // would probably be better to return the index instead.
             nearestMonster = null;
             nearestMonsterIndex = 0;
+			Stack<Vector2i>[] paths = new Stack<Vector2i>[client.modGlobals.NPC_HighIndex];
             // NOTE:
             // the game starts the index at 1 for some reason, and also NPC_HighIndex is literally the highest index rather than the count, hence the '<=' comparison
             for (int npcIndex = 1; npcIndex <= client.modGlobals.NPC_HighIndex; npcIndex++)
@@ -41,9 +43,13 @@ namespace NinMods.Bot
                 npcLocation.y = client.modTypes.MapNpc[npcIndex].Y;
                 if ((npcLocation.x < 0) || (npcLocation.x > client.modTypes.Map.MaxX) ||
                     (npcLocation.y < 0) || (npcLocation.y > client.modTypes.Map.MaxY) ||
-					(client.modTypes.MapNpc[npcIndex].num <= 0) || (client.modTypes.MapNpc[npcIndex].Vital[(int)client.modEnumerations.Vitals.HP] <= 0))
+					(client.modTypes.MapNpc[npcIndex].num <= 0) || (client.modTypes.MapNpc[npcIndex].num > 255) 
+					|| (client.modTypes.MapNpc[npcIndex].Vital[(int)client.modEnumerations.Vitals.HP] <= 0)
+					|| (client.modTypes.Npc[client.modTypes.MapNpc[npcIndex].num].Village == client.modTypes.Player[client.modGlobals.MyIndex].Village))
                     continue;
 
+				paths[npcIndex-1] = Pathfinder.GetPathTo(npcLocation.x, npcLocation.y);
+				if (paths[npcIndex - 1] == null) continue;
                 distance = from.DistanceTo_Squared(npcLocation);
                 if (distance < closestDistance)
                 {
@@ -52,7 +58,13 @@ namespace NinMods.Bot
                     nearestMonsterIndex = npcIndex;
                 }
             }
-            return nearestMonster != null;
+			if (nearestMonster != null)
+            {
+				// should be a deep-copy. expensive but oh well, this shouldn't run very frequently.
+				shortestPath = new Stack<Vector2i>(paths[nearestMonsterIndex-1].ToArray().Reverse());
+				return true;
+			}
+			return false;
         }
 
         public static Stack<Vector2i> GetPathToMonster(client.modTypes.MapNpcRec monster, Vector2i fromPos)
@@ -63,7 +75,7 @@ namespace NinMods.Bot
             path = Pathfinder.GetPathTo(attackingTile.x, attackingTile.y);
             if (path != null)
             {
-                Logger.Log.Write("BotUtils", "GetPathToMonster", $"Returning early, found ideal attacking tile {attackingTile}");
+                Logger.Log.Write($"Returning early, found ideal attacking tile {attackingTile} from target tile ({monster.X}, {monster.Y})");
                 return path;
             }
 
@@ -73,11 +85,97 @@ namespace NinMods.Bot
                 path = Pathfinder.GetPathTo(attackingTile.x, attackingTile.y);
                 if (path != null)
                 {
-                    Logger.Log.Write("BotUtils", "GetPathToMonster", $"Returning from loop, found attacking tile {attackingTile}");
+                    Logger.Log.Write($"Returning from loop, found attacking tile {attackingTile} from target tile ({monster.X}, {monster.Y})");
                     return path;
                 }
             }
             return path;
+        }
+
+		public static bool FindShortestPathToAny(List<Vector2i> tiles, out Stack<Vector2i> shortestPath, out Vector2i destinationTile, bool allowAdjacentTilesIfNoPathFound = false)
+        {
+			Logger.Log.Write($"Pathfinding to each of the {tiles.Count} tiles now...");
+			Stack<Vector2i> workingPath = new Stack<Vector2i>();
+			shortestPath = new Stack<Vector2i>();
+			destinationTile = new Vector2i(-1, -1);
+			foreach (Vector2i tile in tiles)
+			{
+				if (workingPath != null)
+					workingPath.Clear();
+				workingPath = Pathfinder.GetPathTo(tile.x, tile.y, allowAdjacentTilesIfNoPathFound);
+				if ((workingPath != null) && ((workingPath.Count < shortestPath.Count) || (shortestPath.Count == 0)))
+				{
+					// should be a deep-copy. expensive but oh well, this shouldn't run very frequently.
+					Logger.Log.Write($"Got valid path to {tile} of length {workingPath.Count} (prevLength: {shortestPath.Count})");
+					shortestPath = new Stack<Vector2i>(workingPath.ToArray().Reverse());
+					destinationTile = tile;
+				}
+				else
+				{
+					if (workingPath == null)
+						Logger.Log.Write($"Couldn't path to {tile}");
+					if ((workingPath != null) && (workingPath.Count >= shortestPath.Count))
+						Logger.Log.Write($"Path to {tile} was longer than existing path ({workingPath.Count} vs {shortestPath.Count})");
+				}
+			}
+			return ((shortestPath != null) && (shortestPath.Count > 0));
+		}
+
+		public static bool GetAllWarpTilesToMap(int targetMapID, out List<Vector2i> warpTiles, out Vector2i warpDirection)
+        {
+			warpDirection = new Vector2i();
+			client.modTypes.PlayerRec bot = BotUtils.GetSelf();
+			Vector2i botLocation = BotUtils.GetSelfLocation();
+			int currentMapID = bot.Map;
+			client.modTypes.MapRec currentMap = client.modTypes.Map;
+			int tileLengthX = currentMap.Tile.GetLength(0);
+			int tileLengthY = currentMap.Tile.GetLength(1);
+			Func<Vector2i, bool> tilePredicate;
+			Logger.Log.Write($"Trying to get all tiles leading to map {targetMapID} from {currentMapID}");
+			// construct predicate based on where the warp position is within the map
+			if (currentMap.Left == targetMapID)
+			{
+				// find shortest path to X=0,Y=Any
+				Logger.Log.Write("Getting tiles along left edge of current map, where X=0,Y=Any");
+				tilePredicate = (tilePos) => { return ((tilePos.x == 1) && (Pathfinder.IsValidTile(tilePos.x, tilePos.y)) && (MapData.IsBlacklistedTile(currentMapID, tilePos) == false)); };
+				warpDirection = Vector2i.directions_Eight[(int)Constants.DIR_LEFT];
+			}
+			else if (currentMap.Up == targetMapID)
+			{
+				// find shortest path to X=Any,Y=0
+				Logger.Log.Write("Getting tiles along top edge of current map, where X=Any,Y=0");
+				tilePredicate = (tilePos) => { return ((tilePos.y == 1) && (Pathfinder.IsValidTile(tilePos.x, tilePos.y)) && (MapData.IsBlacklistedTile(currentMapID, tilePos) == false)); };
+				warpDirection = Vector2i.directions_Eight[(int)Constants.DIR_UP];
+			}
+			else if (currentMap.Right == targetMapID)
+			{
+				// find shortest path to X=Map.MaxX,Y=Any
+				Logger.Log.Write("Getting tiles along right edge of current map, where X=MaxX,Y=Any");
+				tilePredicate = (tilePos) => { return ((tilePos.x == currentMap.MaxX - 1) && (Pathfinder.IsValidTile(tilePos.x, tilePos.y)) && (MapData.IsBlacklistedTile(currentMapID, tilePos) == false)); };
+				warpDirection = Vector2i.directions_Eight[(int)Constants.DIR_RIGHT];
+			}
+			else if (currentMap.Down == targetMapID)
+			{
+				// find shortest path to X=Any,Y=Map.MaxY
+				Logger.Log.Write("Getting tiles along down edge of current map, where X=Any,Y=MaxY");
+				tilePredicate = (tilePos) => { return ((tilePos.y == currentMap.MaxY - 1) && (Pathfinder.IsValidTile(tilePos.x, tilePos.y)) && (MapData.IsBlacklistedTile(currentMapID, tilePos) == false)); };
+				warpDirection = Vector2i.directions_Eight[(int)Constants.DIR_DOWN];
+			}
+			else
+			{
+				// find shortest path to any valid warp tile
+				Logger.Log.Write("Map transition isn't on any edge, searching warp points now...");
+				tilePredicate = (tilePos) => {
+					return ((currentMap.Tile[tilePos.x, tilePos.y].Type == (byte)Utilities.GameUtils.ETileType.TILE_TYPE_WARP)
+					&& (currentMap.Tile[tilePos.x, tilePos.y].Data1 == targetMapID)
+					&& (Pathfinder.IsValidTile(tilePos.x, tilePos.y))
+					&& (MapData.IsBlacklistedTile(currentMapID, tilePos) == false));
+				};
+				warpDirection = Vector2i.zero;
+			}
+			warpTiles = BotUtils.GetAllTilesMatchingPredicate(tilePredicate);
+			Logger.Log.Write($"Got {warpTiles.Count} valid warp tiles (warpDirection: {warpDirection})");
+			return ((warpTiles != null) && (warpTiles.Count > 0));
         }
 
 		public static void SetTarget(int targetIndex, int targetType = Constants.TARGET_TYPE_NPC)
@@ -100,10 +198,10 @@ namespace NinMods.Bot
 
             if (gameDir == 255)
             {
-                Logger.Log.WriteError("BotUtils", "MoveDir", $"Could not get direction out of {tileDirection} (self: {botLocation}; nextTile: {nextTile})");
+                Logger.Log.WriteError($"Could not get direction out of {tileDirection} (self: {botLocation}; nextTile: {nextTile})");
                 return false;
             }
-            Logger.Log.Write("BotUtils", "MoveDir", $"Moving bot from {botLocation} to {nextTile} in direction {gameDir} (tileDir: {tileDirection})", Logger.ELogType.Info, null, true);
+            Logger.Log.Write($"Moving bot from {botLocation} to {nextTile} in direction {gameDir} (tileDir: {tileDirection})", Logger.ELogType.Info, null, true);
             // perform next movement
             // set state before sending packet
             client.modTypes.Player[client.modGlobals.MyIndex].Dir = gameDir;
@@ -119,7 +217,7 @@ namespace NinMods.Bot
             client.modTypes.Player[client.modGlobals.MyIndex].yOffset = System.Math.Abs(tileDirection.y * 32f);
             client.modTypes.Player[client.modGlobals.MyIndex].X = (byte)(botLocation.x + tileDirection.x);
             client.modTypes.Player[client.modGlobals.MyIndex].Y = (byte)(botLocation.y + tileDirection.y);
-            Logger.Log.Write("BotUtils", "MoveDir", $"Predicted: ({client.modTypes.Player[client.modGlobals.MyIndex].X}, " +
+            Logger.Log.Write($"Predicted: ({client.modTypes.Player[client.modGlobals.MyIndex].X}, " +
                 $"{client.modTypes.Player[client.modGlobals.MyIndex].Y}) (offset: " +
                 $"{client.modTypes.Player[client.modGlobals.MyIndex].xOffset}, " +
                 $"{client.modTypes.Player[client.modGlobals.MyIndex].yOffset})");
@@ -142,11 +240,11 @@ namespace NinMods.Bot
             }
             if (gameDir == client.modTypes.Player[client.modGlobals.MyIndex].Dir)
             {
-                Logger.Log.Write("BotUtils", "FaceDir", "Bot is already facing target, no need to send dir packet");
+                Logger.Log.Write("Bot is already facing target, no need to send dir packet");
             }
             else
             {
-                Logger.Log.Write("BotUtils", "FaceDir", $"Setting bot to face target (was {client.modTypes.Player[client.modGlobals.MyIndex].Dir} now {gameDir})");
+                Logger.Log.Write($"Setting bot to face target (was {client.modTypes.Player[client.modGlobals.MyIndex].Dir} now {gameDir})");
                 client.modTypes.Player[client.modGlobals.MyIndex].Dir = gameDir;
                 client.clsBuffer clsBuffer2 = new client.clsBuffer();
                 clsBuffer2.WriteLong(18);
@@ -158,6 +256,8 @@ namespace NinMods.Bot
 
         public static void BasicAttack()
         {
+			// TO-DO:
+			// send animation too (to fix the long-standing speedhack... no one's noticed yet, though)
             client.clsBuffer clsBuffer2 = new client.clsBuffer();
             clsBuffer2.WriteLong(20);
             client.modClientTCP.SendData(clsBuffer2.ToArray());
@@ -223,14 +323,14 @@ namespace NinMods.Bot
         {
             if (client.modGlobals.tmr25 >= client.modGlobals.Tick)
             {
-                Logger.Log.Write("BotUtils", "CanMove", $"Skipping frame because tmr25 isn't ready yet ({client.modGlobals.tmr25} > {client.modGlobals.Tick})");
+                //Logger.Log.Write($"Skipping frame because tmr25 isn't ready yet ({client.modGlobals.tmr25} > {client.modGlobals.Tick})");
                 return false;
             }
             // NOTE:
             // taken from client.modGameLogic.CheckMovement()
             if ((client.modTypes.Player[client.modGlobals.MyIndex].Moving > 0) || (client.modTypes.Player[client.modGlobals.MyIndex].DeathTimer > 0))
             {
-                Logger.Log.Write("BotUtils", "CanMove", $"Skipping frame because player is in invalid state ({client.modTypes.Player[client.modGlobals.MyIndex].Moving}, {client.modTypes.Player[client.modGlobals.MyIndex].DeathTimer})");
+                //Logger.Log.Write($"Skipping frame because player is in invalid state ({client.modTypes.Player[client.modGlobals.MyIndex].Moving}, {client.modTypes.Player[client.modGlobals.MyIndex].DeathTimer})");
                 return false;
             }
             return true;
@@ -244,7 +344,7 @@ namespace NinMods.Bot
             int playerAttackSpeed = client.modDatabase.GetPlayerAttackSpeed(client.modGlobals.MyIndex);
             int nextAttackTime = client.modGlobals.TimeSinceAttack + playerAttackSpeed + 30;
             // NOTE:
-            // we ignore some things because we can be reasonably sure the bot won't be in that state
+            // we ignore some things because we can be reasonably sure the bot won't be in that state (like whether certain menus are open, etc)
             // taken from client.modGameLogic.CheckAttack()
             if ((nextAttackTime > client.modGlobals.Tick) || (client.modGlobals.SpellBuffer > 0) || (client.modGameLogic.CanPlayerInteract() == false))
                 return false;
@@ -259,37 +359,30 @@ namespace NinMods.Bot
 			client.modTypes.PlayerRec bot = GetSelf();
 			if (bot.ChargeChakra == true)
             {
-				Logger.Log.Write("BotUtils", "CanChargeChakra", "Cannot charge chakra because we're already charging chakra", Logger.ELogType.Error);
+				//Logger.Log.Write("Cannot charge chakra because we're already charging chakra", Logger.ELogType.Error);
 				return false;
             }
 			if ((bot.Village != 3) && (bot.Village != 13) && (client.modTypes.Map.Tile[bot.X, bot.Y].Type == Constants.TILE_TYPE_WATER))
 			{
-				Logger.Log.Write("BotUtils", "CanChargeChakra", $"Cannot charge chakra in water (botLoc ({bot.X}, {bot.Y}), botVillage {bot.Village}, tileType {client.modTypes.Map.Tile[bot.X, bot.Y].Type})", Logger.ELogType.Error);
+				Logger.Log.Write($"Cannot charge chakra in water (botLoc ({bot.X}, {bot.Y}), botVillage {bot.Village}, tileType {client.modTypes.Map.Tile[bot.X, bot.Y].Type})", Logger.ELogType.Error);
 				return false;
 			}
 			if (((double)(bot.ChargeTimer + 500) - (double)bot.Stat[5] * 0.2 * 5.0) > (double)client.modGlobals.Tick)
             {
-				Logger.Log.Write("BotUtils", "CanChargeChakra", $"Cannot charge chakra while on cooldown (chargeTimer {bot.ChargeTimer}, effectiveTimer {((double)(bot.ChargeTimer + 500) - (double)bot.Stat[5] * 0.2 * 5.0)}, tick {(double)client.modGlobals.Tick})", Logger.ELogType.Error);
+				Logger.Log.Write($"Cannot charge chakra while on cooldown (chargeTimer {bot.ChargeTimer}, effectiveTimer {((double)(bot.ChargeTimer + 500) - (double)bot.Stat[5] * 0.2 * 5.0)}, tick {(double)client.modGlobals.Tick})", Logger.ELogType.Error);
 				return false;
 			}
 			if (client.modGameLogic.CanPlayerInteract(Ignore:true) == false)
             {
-				Logger.Log.Write("BotUtils", "CanChargeChakra", "Cannot charge chakra while in a menu or CC'd", Logger.ELogType.Error);
+				Logger.Log.Write("Cannot charge chakra while in a menu or CC'd", Logger.ELogType.Error);
 				return false;
 			}
 			if (bot.Vital[(int)client.modEnumerations.Vitals.MP] == bot.MaxVital[(int)client.modEnumerations.Vitals.MP])
             {
-				Logger.Log.Write("BotUtils", "CanChargeChakra", $"Cannot charge chakra because it's already full ({bot.Vital[(int)client.modEnumerations.Vitals.MP]} / {bot.MaxVital[(int)client.modEnumerations.Vitals.MP]})", Logger.ELogType.Error);
+				Logger.Log.Write($"Cannot charge chakra because it's already full ({bot.Vital[(int)client.modEnumerations.Vitals.MP]} / {bot.MaxVital[(int)client.modEnumerations.Vitals.MP]})", Logger.ELogType.Error);
 				return false;
 			}
 			return true;
-			/*
-				return ((bot.ChargeChakra == false)
-				&& ((bot.Village == 3) || (bot.Village == 13) || (client.modTypes.Map.Tile[bot.X, bot.Y].Type != Constants.TILE_TYPE_WATER))
-				&& (((double)(bot.ChargeTimer + 500) - (double)bot.Stat[5] * 0.2 * 5.0) <= (double)client.modGlobals.Tick)
-				&& (CanInteract(Ignore: true))
-				&& (bot.Vital[(int)client.modEnumerations.Vitals.MP] != bot.MaxVital[(int)client.modEnumerations.Vitals.MP]));
-			*/
 		}
 
 		// NOTE:
@@ -401,8 +494,7 @@ namespace NinMods.Bot
 			{
 				case 2:
 				case 3:
-					// uhhh... they are checking the BuffTexture for w..........
-					// nah, not even going to question this developer's logic, not ever. not worth the brain power.
+					// uhhh... they are checking the BuffTexture for uhhh... i dunno, but i'll do it too!
 					// NOTE:
 					// pretty sure these shouldn't be &&'s but it's how the game does it, so i'm keeping it
 					if ((client.modGlobals.myTarget == 0) && (client.modGlobals.SelfCastKeyDown == false) && (spell.Buff.BuffTexture == 0))
@@ -415,7 +507,7 @@ namespace NinMods.Bot
 						// optimized away 18 calls and 38 lines of code...
 						bool hasDirectionalTarget = false;
 						Vector2i spellHitPos = botPos + Vector2i.directions_Eight[bot.Dir];
-						// (game only supports 300 players online at once? actually, i bet it's 255 because the dev doesn't know what a byte is)
+						// (game only supports 300 players online at once?)
 						// NOTE:
 						// checks all possible players to see if they're on the tile our spell is targeting... and then sets our myTarget to 1 instead of their playerIndex because of a bug..
 						for (int i = 1; i <= 300; i++)
@@ -505,8 +597,10 @@ namespace NinMods.Bot
 
         public static client.modTypes.PlayerRec GetSelf()
         {
-            // TO-DO:
-            // add sanity checks (checking if we're in-game and our player has fully loaded)
+			// TO-DO:
+			// add sanity checks (checking if we're in-game and our player has fully loaded)
+			if ((client.modTypes.Player == null) || (client.modGlobals.MyIndex <= 0) || (client.modGlobals.MyIndex >= client.modTypes.Player.Length))
+				return null;
             return client.modTypes.Player[client.modGlobals.MyIndex];
         }
 
@@ -516,5 +610,27 @@ namespace NinMods.Bot
             // add sanity checks (checking if we're in-game and our player has fully loaded)
             return new Vector2i(client.modTypes.Player[client.modGlobals.MyIndex].X, client.modTypes.Player[client.modGlobals.MyIndex].Y);
         }
+
+		public static List<Vector2i> GetAllTilesMatchingPredicate(Func<Vector2i, bool> predicate)
+		{
+			List<Vector2i> matchingTiles = new List<Vector2i>();
+			client.modTypes.MapRec currentMap = client.modTypes.Map;
+			int tileLengthX = currentMap.Tile.GetLength(0);
+			int tileLengthY = currentMap.Tile.GetLength(1);
+			Vector2i tilePos = new Vector2i();
+			for (int tileX = 0; tileX < tileLengthX; tileX++)
+			{
+				for (int tileY = 0; tileY < tileLengthY; tileY++)
+				{
+					tilePos.x = tileX;
+					tilePos.y = tileY;
+					if (predicate(tilePos))
+                    {
+						matchingTiles.Add(new Vector2i(tileX, tileY));
+                    }
+				}
+			}
+			return matchingTiles;
+		}
     }
 }

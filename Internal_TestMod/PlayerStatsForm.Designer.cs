@@ -200,6 +200,7 @@ namespace NinMods
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "NinMods";
             this.TopMost = true;
+            this.Load += new System.EventHandler(this.PlayerStatsForm_Load);
             this.ResumeLayout(false);
             this.PerformLayout();
 

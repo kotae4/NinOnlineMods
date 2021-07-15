@@ -65,6 +65,8 @@ namespace Injector
             txtboxRuntimeVer.Text = ActiveProfile.NETRuntimeVersion;
             txtboxTypename.Text = ActiveProfile.Typename_InjectedDLL;
             txtboxEntrypointMethod.Text = ActiveProfile.EntrypointMethod_InjectedDLL;
+            txtboxUsername.Text = ActiveProfile.GameLogin_Username;
+            txtboxPassword.Text = ActiveProfile.GameLogin_Password;
         }
 
         private void GameDirWorker_DoWork(object sender, DoWorkEventArgs e)
@@ -203,6 +205,7 @@ namespace Injector
                         sw.WriteLine(ActiveProfile.InjectDLLFullPath);
                         sw.WriteLine(ActiveProfile.Typename_InjectedDLL);
                         sw.WriteLine(ActiveProfile.EntrypointMethod_InjectedDLL);
+                        sw.WriteLine(ActiveProfile.GameLogin_Username + ";" + ActiveProfile.GameLogin_Password);
                     }
                 }
                 string bootstrapDLLFullPath = Path.GetFullPath(bootstrapDLLPath);
@@ -243,6 +246,24 @@ namespace Injector
             if (txtboxEntrypointMethod.Text != ActiveProfile.EntrypointMethod_InjectedDLL)
             {
                 ActiveProfile.EntrypointMethod_InjectedDLL = txtboxEntrypointMethod.Text;
+                RefreshControlsState();
+            }
+        }
+
+        private void txtboxUsername_Leave(object sender, EventArgs e)
+        {
+            if (txtboxUsername.Text != ActiveProfile.GameLogin_Username)
+            {
+                ActiveProfile.GameLogin_Username = txtboxUsername.Text;
+                RefreshControlsState();
+            }
+        }
+
+        private void txtboxPassword_Leave(object sender, EventArgs e)
+        {
+            if (txtboxPassword.Text != ActiveProfile.GameLogin_Password)
+            {
+                ActiveProfile.GameLogin_Password = txtboxPassword.Text;
                 RefreshControlsState();
             }
         }
