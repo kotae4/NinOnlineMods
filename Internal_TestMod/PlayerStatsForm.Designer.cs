@@ -113,10 +113,17 @@ namespace NinMods
             System.Windows.Forms.ListViewItem listViewItem28 = new System.Windows.Forms.ListViewItem(new string[] {
             "Ki Dst:",
             "0"}, -1);
+            System.Windows.Forms.ListViewItem listViewItem29 = new System.Windows.Forms.ListViewItem(new string[] {
+            "Target:",
+            "0"}, -1);
             this.lblPlayerName = new System.Windows.Forms.Label();
             this.listviewPlayerStats = new System.Windows.Forms.ListView();
             this.columnHeader1 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.columnHeader2 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this.listViewTargetStats = new System.Windows.Forms.ListView();
+            this.columnHeader3 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this.columnHeader4 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this.label1 = new System.Windows.Forms.Label();
             this.SuspendLayout();
             // 
             // lblPlayerName
@@ -128,11 +135,10 @@ namespace NinMods
             this.lblPlayerName.TabIndex = 0;
             this.lblPlayerName.Text = "PlayerName";
             this.lblPlayerName.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
+            this.lblPlayerName.Click += new System.EventHandler(this.lblPlayerName_Click);
             // 
             // listviewPlayerStats
             // 
-            this.listviewPlayerStats.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
             this.listviewPlayerStats.Columns.AddRange(new System.Windows.Forms.ColumnHeader[] {
             this.columnHeader1,
             this.columnHeader2});
@@ -172,10 +178,11 @@ namespace NinMods
             this.listviewPlayerStats.Margin = new System.Windows.Forms.Padding(1, 3, 1, 3);
             this.listviewPlayerStats.MultiSelect = false;
             this.listviewPlayerStats.Name = "listviewPlayerStats";
-            this.listviewPlayerStats.Size = new System.Drawing.Size(189, 724);
+            this.listviewPlayerStats.Size = new System.Drawing.Size(183, 724);
             this.listviewPlayerStats.TabIndex = 2;
             this.listviewPlayerStats.UseCompatibleStateImageBehavior = false;
             this.listviewPlayerStats.View = System.Windows.Forms.View.Details;
+            this.listviewPlayerStats.SelectedIndexChanged += new System.EventHandler(this.listviewPlayerStats_SelectedIndexChanged);
             // 
             // columnHeader1
             // 
@@ -188,11 +195,54 @@ namespace NinMods
             this.columnHeader2.TextAlign = System.Windows.Forms.HorizontalAlignment.Right;
             this.columnHeader2.Width = 110;
             // 
+            // listViewTargetStats
+            // 
+            this.listViewTargetStats.Columns.AddRange(new System.Windows.Forms.ColumnHeader[] {
+            this.columnHeader3,
+            this.columnHeader4});
+            this.listViewTargetStats.GridLines = true;
+            this.listViewTargetStats.HeaderStyle = System.Windows.Forms.ColumnHeaderStyle.None;
+            this.listViewTargetStats.HideSelection = false;
+            this.listViewTargetStats.Items.AddRange(new System.Windows.Forms.ListViewItem[] {
+            listViewItem29});
+            this.listViewTargetStats.Location = new System.Drawing.Point(185, 25);
+            this.listViewTargetStats.Margin = new System.Windows.Forms.Padding(1, 3, 1, 3);
+            this.listViewTargetStats.MultiSelect = false;
+            this.listViewTargetStats.Name = "listViewTargetStats";
+            this.listViewTargetStats.Size = new System.Drawing.Size(181, 724);
+            this.listViewTargetStats.TabIndex = 3;
+            this.listViewTargetStats.UseCompatibleStateImageBehavior = false;
+            this.listViewTargetStats.View = System.Windows.Forms.View.Details;
+            this.listViewTargetStats.SelectedIndexChanged += new System.EventHandler(this.listViewTargetStats_SelectedIndexChanged);
+            // 
+            // columnHeader3
+            // 
+            this.columnHeader3.Text = "Name";
+            this.columnHeader3.Width = 70;
+            // 
+            // columnHeader4
+            // 
+            this.columnHeader4.Text = "Value";
+            this.columnHeader4.TextAlign = System.Windows.Forms.HorizontalAlignment.Right;
+            this.columnHeader4.Width = 110;
+            // 
+            // label1
+            // 
+            this.label1.AutoSize = true;
+            this.label1.Location = new System.Drawing.Point(244, 9);
+            this.label1.Name = "label1";
+            this.label1.Size = new System.Drawing.Size(38, 13);
+            this.label1.TabIndex = 4;
+            this.label1.Text = "Target";
+            this.label1.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
+            // 
             // PlayerStatsForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(192, 761);
+            this.ClientSize = new System.Drawing.Size(371, 761);
+            this.Controls.Add(this.label1);
+            this.Controls.Add(this.listViewTargetStats);
             this.Controls.Add(this.listviewPlayerStats);
             this.Controls.Add(this.lblPlayerName);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedToolWindow;
@@ -212,5 +262,9 @@ namespace NinMods
         private System.Windows.Forms.ListView listviewPlayerStats;
         private System.Windows.Forms.ColumnHeader columnHeader1;
         private System.Windows.Forms.ColumnHeader columnHeader2;
+        private System.Windows.Forms.ListView listViewTargetStats;
+        private System.Windows.Forms.ColumnHeader columnHeader3;
+        private System.Windows.Forms.ColumnHeader columnHeader4;
+        private System.Windows.Forms.Label label1;
     }
 }

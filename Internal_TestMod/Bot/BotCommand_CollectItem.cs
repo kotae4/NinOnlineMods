@@ -3,10 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using NinMods.Application.FarmBotBloc;
 
 namespace NinMods.Bot
 {
-    public class BotCommand_CollectItem : IBotCommand
+    public class BotCommand_CollectItem : IBotBlocCommand<FarmBotEvent>
     {
         bool hasFailedCatastrophically = false;
         bool hasCollectedItem = false;
@@ -17,19 +18,17 @@ namespace NinMods.Bot
         public BotCommand_CollectItem(Vector2i location)
         {
             path = Pathfinder.GetPathTo(location.x, location.y);
+            targetLocation = location;
         }
 
-        public bool IsComplete()
-        {
-            return hasCollectedItem;
-        }
-
-        public bool Perform()
+        public FarmBotEvent Perform()
         {
             if (path == null) hasFailedCatastrophically = true;
-            if (hasFailedCatastrophically) return false;
+            if (hasFailedCatastrophically) return new FarmBotFailureEvent();
 
-            if (path.Count == 0)
+            Vector2i botLocation = BotUtils.GetSelfLocation();
+
+            if ((path.Count == 0) || (botLocation == targetLocation))
             {
                 // we've arrived at the item, now collect it
                 //BotUtils.CollectItem();
@@ -37,13 +36,11 @@ namespace NinMods.Bot
                 GameExploits.CollectItem();
                 // TO-DO:
                 // wait until verification from server. maybe keep retrying if necessary (probably not a good idea, though).
-                hasCollectedItem = true;
-                return true;
+                return new CollectedItemEvent();
             }
             else if (BotUtils.CanMove())
             {
                 //Logger.Log.Write("BotCommand_MoveToStaticPoint", "Perform", "Got permission to perform movement this tick");
-                Vector2i botLocation = BotUtils.GetSelfLocation();
                 Vector2i nextTile = path.Pop();
                 Vector2i tileDirection = nextTile - botLocation;
 
@@ -51,10 +48,10 @@ namespace NinMods.Bot
                 {
                     Logger.Log.WriteError($"Could not move bot at {botLocation} in direction {tileDirection}");
                     hasFailedCatastrophically = true;
-                    return false;
+                    return new FarmBotFailureEvent();
                 }
             }
-            return true;
+            return new CollectingItemEvent(targetLocation);
         }
     }
 }

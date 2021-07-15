@@ -3,33 +3,39 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using NinMods.Application.FarmBotBloc;
 
 namespace NinMods.Bot
 {
-    public class BotCommand_ChargeChakra : IBotCommand
+    public class BotCommand_ChargeChakra : IBotBlocCommand<FarmBotEvent>
     {
+        // WARNING:
+        // due to instantiating BotCommand_ChargeChakra each frame, realBotMap will always be -1 (and thus bot.Map will always be 0 - invalid).
+        // this breaks the game.
         int realBotMap = -1;
-
         // for pathing to nearest non-water tile
         Stack<Vector2i> path = null;
 
-        public bool IsComplete()
+        public BotCommand_ChargeChakra(int _realBotMap)
+        {
+            Logger.Log.Write("BotCommand_ChargeChakra", "ctor", $"Storing realBotMap as {_realBotMap}, this needs to stick!");
+            realBotMap = _realBotMap;
+        }
+
+        public FarmBotEvent Perform()
         {
             client.modTypes.PlayerRec bot = BotUtils.GetSelf();
+            Vector2i botLocation = new Vector2i(bot.X, bot.Y);
+
             if (bot.Vital[(int)client.modEnumerations.Vitals.MP] == bot.MaxVital[(int)client.modEnumerations.Vitals.MP])
             {
                 // NOTE:
                 // see other note in Perform() below.
+                Logger.Log.Write("BotCommand_ChargeChakra", "Perform", $"Finished charging chakra, reset bot.Map to {realBotMap}");
                 bot.Map = realBotMap;
-                return true;
+                return new MpRestoredEvent();
             }
-            return false;
-        }
-
-        public bool Perform()
-        {
-            client.modTypes.PlayerRec bot = BotUtils.GetSelf();
-            Vector2i botLocation = new Vector2i(bot.X, bot.Y);
+            
             // NOTE:
             // we set bot.Map here to prevent modGameLogic.CheckCharge() from running and canceling our charge because we aren't holding the key down
             if (realBotMap == -1)
@@ -50,8 +56,13 @@ namespace NinMods.Bot
             {
                 Logger.Log.Write($"Sending ChargeChakra packet (bot.chargeChakra: {bot.ChargeChakra})");
                 BotUtils.ChargeChakra();
+                return new MpRestoringEvent(realBotMap);
             }
-            return true;
+            else if (bot.ChargeChakra)
+            {
+                return new MpRestoringEvent(realBotMap);
+            }
+            return new FarmBotFailureEvent();
         }
 
         bool PathToClosestNonWaterTile(client.modTypes.PlayerRec bot, Vector2i botLocation)
