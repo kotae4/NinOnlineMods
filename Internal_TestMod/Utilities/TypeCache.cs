@@ -15,24 +15,24 @@ namespace NinMods.Utilities
             try
             {
                 m_AllTypes.Clear();
-                Logger.Log.Write("Re-populating cached types...");
+                Logger.Log.Write("NinMods.TypeCache", "CacheAllTypesFromLoadedModules", "Re-populating cached types...");
                 foreach (Assembly loadedAssembly in AppDomain.CurrentDomain.GetAssemblies())
                 {
-                    Logger.Log.Write("Saw loaded assembly '" + loadedAssembly.FullName + "'");
+                    Logger.Log.Write("NinMods.TypeCache", "CacheAllTypesFromLoadedModules", "Saw loaded assembly '" + loadedAssembly.FullName + "'");
                     foreach (Module loadedModule in loadedAssembly.GetLoadedModules())
                     {
-                        Logger.Log.Write("Saw loaded module '" + loadedModule.FullyQualifiedName + "'");
+                        Logger.Log.Write("NinMods.TypeCache", "CacheAllTypesFromLoadedModules", "Saw loaded module '" + loadedModule.FullyQualifiedName + "'");
                         int prevCount = m_AllTypes.Count;
                         m_AllTypes.AddRange(loadedModule.GetTypes());
-                        Logger.Log.Write("Cached " + (m_AllTypes.Count - prevCount).ToString() + " new types from module");
+                        Logger.Log.Write("NinMods.TypeCache", "CacheAllTypesFromLoadedModules", "Cached " + (m_AllTypes.Count - prevCount).ToString() + " new types from module");
                     }
                 }
             }
             catch(Exception ex)
             {
-                Logger.Log.WriteException(ex);
+                Logger.Log.WriteException("NinMods.TypeCache", "CacheAllTypesFromLoadedModules", ex);
             }
-            Logger.Log.Write("Done caching types (total: " + m_AllTypes.Count.ToString() + ")");
+            Logger.Log.Write("NinMods.TypeCache", "CacheAllTypesFromLoadedModules", "Done caching types (total: " + m_AllTypes.Count.ToString() + ")");
         }
 
         /// <summary>
@@ -68,13 +68,13 @@ namespace NinMods.Utilities
             Type targetType = NinMods.Utilities.TypeCache.GetTypeByName(typeName);
             if (targetType == null)
             {
-                Logger.Log.Write("Could not find type '" + typeName + "'");
+                Logger.Log.Write("NinMods.TypeCache", "CacheAllTypesFromLoadedModules", "Could not find type '" + typeName + "'");
                 return matchingMethodsOnType;
             }
             MethodInfo[] typeMethods = targetType.GetMethods(BindingFlags.Static | BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
             foreach (MethodInfo method in typeMethods)
             {
-                Logger.Log.Write("Saw method '" + method.Name + "' on " + targetType.FullName);
+                Logger.Log.Write("NinMods.TypeCache", "CacheAllTypesFromLoadedModules", "Saw method '" + method.Name + "' on " + targetType.FullName);
                 if (method.Name == methodName)
                     matchingMethodsOnType.Add(method);
             }
@@ -88,13 +88,13 @@ namespace NinMods.Utilities
             Type targetType = NinMods.Utilities.TypeCache.GetTypeByName(typeName);
             if (targetType == null)
             {
-                Logger.Log.Write("Could not find type '" + typeName + "'");
+                Logger.Log.Write("NinMods.TypeCache", "CacheAllTypesFromLoadedModules", "Could not find type '" + typeName + "'");
                 return matchingMembersOnType;
             }
             MemberInfo[] typeMembers = targetType.GetMembers(BindingFlags.Static | BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
             foreach (MemberInfo member in typeMembers)
             {
-                Logger.Log.Write("Saw " + member.MemberType.ToString() + " '" + member.Name + "' on " + targetType.FullName);
+                Logger.Log.Write("NinMods.TypeCache", "CacheAllTypesFromLoadedModules", "Saw " + member.MemberType.ToString() + " '" + member.Name + "' on " + targetType.FullName);
                 if (member.Name == memberName)
                     matchingMembersOnType.Add((TMemberType)member);
             }

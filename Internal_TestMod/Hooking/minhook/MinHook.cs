@@ -88,7 +88,7 @@ namespace NinMods.Hooking.LowLevel
 
         public static void NotifyThreadChange(int threadID, bool attached)
         {
-            Logger.Log.Write($"Saw thread#{threadID} {(attached ? " attach" : " detach")}");
+            Logger.Log.Write("Minhook", "NotifyThreadChange", "Saw thread#" + threadID.ToString() + (attached ? " attach" : " detach"));
             lock (g_ThreadIDLock)
             {
                 if (threadID == AppDomain.GetCurrentThreadId())
@@ -653,7 +653,7 @@ namespace NinMods.Hooking.LowLevel
         {
             MH_STATUS status = MH_STATUS.MH_OK;
             tramp = IntPtr.Zero;
-            Logger.Log.Write($"Creating hook {targetAddr.ToString("X2")} -> {hookAddr.ToString("X2")}");
+            Logger.Log.Write("MinHook", "CreateHook", $"Creating hook {targetAddr.ToString("X2")} -> {hookAddr.ToString("X2")}");
             // C#'s lock is the same as MinHook's spin lock right?
             // should work regardless, but might cause a temporary freeze in rare cases
             lock (g_Lock)
@@ -854,7 +854,7 @@ namespace NinMods.Hooking.LowLevel
                 }
                 catch (Exception ex)
                 {
-                    Logger.Log.WriteException(ex);
+                    Logger.Log.WriteException("Minhook", "_EnableHook", ex);
                     return MH_STATUS.MH_UNKNOWN;
                 }
             }

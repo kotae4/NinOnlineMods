@@ -169,7 +169,7 @@ VOID Inject()
 	HRESULT hr;
 
 	BOOL configParseSuccess = TRUE;
-	std::wstring runtime_version, dll_path, injectTypename, injectEntrypointMethod, injectEntrypointStringArg;
+	std::wstring runtime_version, dll_path, injectTypename, injectEntrypointMethod;
 	BOOL convResult = Utf8ToUtf16(config.at(0), runtime_version);
 	if (convResult == FALSE)
 	{
@@ -205,15 +205,6 @@ VOID Inject()
 	}
 	else
 		printf("config.injectEntrypointMethod: %S\n", injectEntrypointMethod.c_str());
-
-	convResult = Utf8ToUtf16(config.at(4), injectEntrypointStringArg);
-	if (convResult == FALSE)
-	{
-		printf("Could not convert injectEntrypointStringArg from config\n");
-		configParseSuccess = FALSE;
-	}
-	else
-		printf("config.injectEntrypointStringArg: %S\n", injectEntrypointStringArg.c_str());
 
 	if (configParseSuccess == FALSE)
 	{
@@ -253,7 +244,7 @@ VOID Inject()
 
 	printf("[Bootstrapper] Prepared the CLR, executing managed DLL now\n");
 
-	hr = pRuntimeHost->ExecuteInDefaultAppDomain(dll_path.c_str(), injectTypename.c_str(), injectEntrypointMethod.c_str(), injectEntrypointStringArg.c_str(), &InjectedLibraryResult);
+	hr = pRuntimeHost->ExecuteInDefaultAppDomain(dll_path.c_str(), injectTypename.c_str(), injectEntrypointMethod.c_str(), InjectedLibraryPassedStringArgument, &InjectedLibraryResult);
 	printf("[Bootstrapper] executed\n");
 	if (hr != S_OK)
 	{

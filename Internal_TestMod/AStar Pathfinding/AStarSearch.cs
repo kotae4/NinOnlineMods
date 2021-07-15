@@ -20,8 +20,6 @@ namespace NinMods.Pathfinding
 
         public AStarSearch(IWeightedGraph<Vector2i> graph, Vector2i start, Vector2i goal)
         {
-            int numTilesSeen = 0;
-
             var frontier = new PriorityQueue<Vector2i>();
             frontier.Enqueue(start, 0);
 
@@ -39,7 +37,6 @@ namespace NinMods.Pathfinding
 
                 foreach (var next in graph.Neighbors(current))
                 {
-                    numTilesSeen++;
                     double newCost = costSoFar[current]
                         + graph.GetCost(current, next);
                     if (!costSoFar.ContainsKey(next)
@@ -52,7 +49,6 @@ namespace NinMods.Pathfinding
                     }
                 }
             }
-            Logger.Log.Write($"Saw {numTilesSeen} valid tiles on pathfinding grid");
         }
     }
 }

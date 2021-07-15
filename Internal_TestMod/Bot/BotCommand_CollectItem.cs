@@ -31,9 +31,7 @@ namespace NinMods.Bot
             if ((path.Count == 0) || (botLocation == targetLocation))
             {
                 // we've arrived at the item, now collect it
-                //BotUtils.CollectItem();
-                // exploit testing:
-                GameExploits.CollectItem();
+                BotUtils.CollectItem();
                 // TO-DO:
                 // wait until verification from server. maybe keep retrying if necessary (probably not a good idea, though).
                 return new CollectedItemEvent();
@@ -46,7 +44,7 @@ namespace NinMods.Bot
 
                 if (BotUtils.MoveDir(tileDirection) == false)
                 {
-                    Logger.Log.WriteError($"Could not move bot at {botLocation} in direction {tileDirection}");
+                    Logger.Log.WriteError("BotCommand_MoveToStaticPoint", "Perform", $"Could not move bot at {botLocation} in direction {tileDirection}");
                     hasFailedCatastrophically = true;
                     return new FarmBotFailureEvent();
                 }

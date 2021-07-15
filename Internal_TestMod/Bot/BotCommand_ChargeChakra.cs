@@ -48,13 +48,13 @@ namespace NinMods.Bot
                 // path to a non-water tile first
                 if (PathToClosestNonWaterTile(bot, botLocation) == false)
                 {
-                    Logger.Log.Write("Cannot path to non-water tile. Cannot continue.");
-                    return false;
+                    Logger.Log.Write("BotCommand_ChargeChakra", "Perform", "Cannot path to non-water tile. Cannot continue.");
+                    return new FarmBotFailureEvent();
                 }
             }
             if (BotUtils.CanChargeChakra())
             {
-                Logger.Log.Write($"Sending ChargeChakra packet (bot.chargeChakra: {bot.ChargeChakra})");
+                Logger.Log.Write("BotCommand_ChargeChakra", "Perform", $"Sending ChargeChakra packet (bot.chargeChakra: {bot.ChargeChakra})");
                 BotUtils.ChargeChakra();
                 return new MpRestoringEvent(realBotMap);
             }
@@ -74,7 +74,7 @@ namespace NinMods.Bot
                     Vector2i closestTile;
                     if (TryGetClosestNonWaterTile(bot, out closestTile) == false)
                     {
-                        Logger.Log.WriteError("Could not find any non-water tiles on the map.");
+                        Logger.Log.WriteError("BotCommand_ChargeChakra", "PathToClosestNonWaterTile", "Could not find any non-water tiles on the map.");
                         return false;
                     }
                     path = Pathfinder.GetPathTo(closestTile.x, closestTile.y);
@@ -86,10 +86,10 @@ namespace NinMods.Bot
 
                     if (BotUtils.MoveDir(tileDirection) == false)
                     {
-                        Logger.Log.WriteError($"Could not move bot at {botLocation} in direction {tileDirection}");
+                        Logger.Log.WriteError("BotCommand_ChargeChakra", "PathToClosestNonWaterTile", $"Could not move bot at {botLocation} in direction {tileDirection}");
                         return false;
                     }
-                    Logger.Log.Write("Moved along path to non-water tile");
+                    Logger.Log.Write("BotCommand_ChargeChakra", "PathToClosestNonWaterTile", "Moved along path to non-water tile");
                 }
             }
             return true;

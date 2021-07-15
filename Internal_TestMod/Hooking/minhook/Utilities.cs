@@ -22,29 +22,5 @@ namespace NinMods.Hooking.Utilities
             }
             return null;
         }
-
-        public static IntPtr GetMethodAddrByName(Type type, string name, out MethodInfo methodInfo)
-        {
-            MethodInfo[] typeMethods = type.GetMethods(BindingFlags.Static | BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-            foreach (MethodInfo method in typeMethods)
-            {
-                if (method.Name == name)
-                {
-                    methodInfo = method;
-                    try
-                    {
-                        RuntimeHelpers.PrepareMethod(methodInfo.MethodHandle);
-                    }
-                    catch (BadImageFormatException bife)
-                    {
-                        // silently log the error, but continue execution after. this doesn't necessarily indicate failure.
-                        Logger.Log.Write($"BadImageFormatException when preparing target method '{name}' via RuntimeHelpers.", Logger.ELogType.Error);
-                    }
-                    return methodInfo.MethodHandle.GetFunctionPointer();
-                }
-            }
-            methodInfo = null;
-            return IntPtr.Zero;
-        }
     }
 }

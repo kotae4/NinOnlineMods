@@ -47,10 +47,6 @@ namespace Injector
             this.txtboxInjectDLLPath = new System.Windows.Forms.TextBox();
             this.label4 = new System.Windows.Forms.Label();
             this.openFileDialog1 = new System.Windows.Forms.OpenFileDialog();
-            this.txtboxUsername = new System.Windows.Forms.TextBox();
-            this.txtboxPassword = new System.Windows.Forms.TextBox();
-            this.label5 = new System.Windows.Forms.Label();
-            this.label6 = new System.Windows.Forms.Label();
             this.menuStrip1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBoxProcessIcon)).BeginInit();
             this.SuspendLayout();
@@ -155,7 +151,7 @@ namespace Injector
             this.btnInject.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.btnInject.Enabled = false;
-            this.btnInject.Location = new System.Drawing.Point(12, 214);
+            this.btnInject.Location = new System.Drawing.Point(12, 153);
             this.btnInject.Name = "btnInject";
             this.btnInject.Size = new System.Drawing.Size(342, 37);
             this.btnInject.TabIndex = 11;
@@ -204,49 +200,11 @@ namespace Injector
             this.openFileDialog1.Filter = "DLL files|*.dll";
             this.openFileDialog1.Title = "Select Inject DLL ...";
             // 
-            // txtboxUsername
-            // 
-            this.txtboxUsername.Location = new System.Drawing.Point(127, 153);
-            this.txtboxUsername.Name = "txtboxUsername";
-            this.txtboxUsername.Size = new System.Drawing.Size(124, 20);
-            this.txtboxUsername.TabIndex = 14;
-            this.txtboxUsername.Leave += new System.EventHandler(this.txtboxUsername_Leave);
-            // 
-            // txtboxPassword
-            // 
-            this.txtboxPassword.Location = new System.Drawing.Point(127, 179);
-            this.txtboxPassword.Name = "txtboxPassword";
-            this.txtboxPassword.Size = new System.Drawing.Size(124, 20);
-            this.txtboxPassword.TabIndex = 15;
-            this.txtboxPassword.Leave += new System.EventHandler(this.txtboxPassword_Leave);
-            // 
-            // label5
-            // 
-            this.label5.AutoSize = true;
-            this.label5.Location = new System.Drawing.Point(12, 156);
-            this.label5.Name = "label5";
-            this.label5.Size = new System.Drawing.Size(58, 13);
-            this.label5.TabIndex = 16;
-            this.label5.Text = "Username:";
-            // 
-            // label6
-            // 
-            this.label6.AutoSize = true;
-            this.label6.Location = new System.Drawing.Point(12, 182);
-            this.label6.Name = "label6";
-            this.label6.Size = new System.Drawing.Size(56, 13);
-            this.label6.TabIndex = 17;
-            this.label6.Text = "Password:";
-            // 
             // Main
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(366, 263);
-            this.Controls.Add(this.label6);
-            this.Controls.Add(this.label5);
-            this.Controls.Add(this.txtboxPassword);
-            this.Controls.Add(this.txtboxUsername);
+            this.ClientSize = new System.Drawing.Size(366, 202);
             this.Controls.Add(this.label4);
             this.Controls.Add(this.txtboxInjectDLLPath);
             this.Controls.Add(this.btnInject);
@@ -293,10 +251,6 @@ namespace Injector
         private System.Windows.Forms.TextBox txtboxInjectDLLPath;
         private System.Windows.Forms.Label label4;
         private System.Windows.Forms.OpenFileDialog openFileDialog1;
-        private System.Windows.Forms.TextBox txtboxUsername;
-        private System.Windows.Forms.TextBox txtboxPassword;
-        private System.Windows.Forms.Label label5;
-        private System.Windows.Forms.Label label6;
     }
 }
 

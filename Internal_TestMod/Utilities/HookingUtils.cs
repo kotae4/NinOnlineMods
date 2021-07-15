@@ -19,12 +19,12 @@ namespace NinMods
                 List<MethodInfo> targetMethodInfos = TypeCache.GetMethodInfoMatchingName(qualifiedTypeName, methodName);
                 if ((targetMethodInfos == null) || (targetMethodInfos.Count == 0))
                 {
-                    Logger.Log.Write("Could not find '" + qualifiedTypeName + "'");
+                    Logger.Log.Write("NinMods.HookingUtils", "GetMethodInfo", "Could not find '" + qualifiedTypeName + "'");
                     return null;
                 }
                 if (targetMethodInfos.Count > 1)
                 {
-                    Logger.Log.Write("Found multiple matches for '" + qualifiedTypeName + "::" + methodName + "', defaulting to first one");
+                    Logger.Log.Write("NinMods.HookingUtils", "GetMethodInfo", "Found multiple matches for '" + qualifiedTypeName + "::" + methodName + "', defaulting to first one");
                 }
                 targetMethodInfo = targetMethodInfos[0];
             }
@@ -33,13 +33,13 @@ namespace NinMods
                 Type targetType = Type.GetType(qualifiedTypeName);
                 if (targetType == null)
                 {
-                    Logger.Log.Write("Could not find '" + qualifiedTypeName + "'");
+                    Logger.Log.Write("NinMods.HookingUtils", "GetMethodInfo", "Could not find '" + qualifiedTypeName + "'");
                     return null;
                 }
                 targetMethodInfo = targetType.GetMethod(methodName, BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.Instance | BindingFlags.Public);
                 if (targetMethodInfo == null)
                 {
-                    Logger.Log.Write("Could not find '" + qualifiedTypeName + "::" + methodName + "'");
+                    Logger.Log.Write("NinMods.HookingUtils", "GetMethodInfo", "Could not find '" + qualifiedTypeName + "::" + methodName + "'");
                 }
             }
             return targetMethodInfo;
@@ -56,9 +56,9 @@ namespace NinMods
             try
             {
                 RuntimeHelpers.PrepareMethod(hookMethod.MethodHandle);
-                Logger.Log.Write($"Prepared hook method '{hookMethodName}");
+                Logger.Log.Write("HookingUtils", "InstallHook_Managed", $"Prepared hook method '{hookMethodName}");
                 RuntimeHelpers.PrepareMethod(targetMethod.MethodHandle);
-                Logger.Log.Write($"Prepared target method '{targetMethodName}");
+                Logger.Log.Write("HookingUtils", "InstallHook_Managed", $"Prepared target method '{targetMethodName}");
             }
             catch(BadImageFormatException bife)
             {

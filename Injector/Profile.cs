@@ -14,8 +14,6 @@ namespace Injector
         public string InjectDLLFullPath = "";
         public string Typename_InjectedDLL = "";
         public string EntrypointMethod_InjectedDLL = "";
-        public string GameLogin_Username = "";
-        public string GameLogin_Password = "";
 
         public Profile() { }
 
@@ -44,8 +42,6 @@ namespace Injector
                 writer.Write(InjectDLLFullPath);
                 writer.Write(Typename_InjectedDLL);
                 writer.Write(EntrypointMethod_InjectedDLL);
-                writer.Write(GameLogin_Username);
-                writer.Write(GameLogin_Password);
             }
             catch (Exception ex)
             {
@@ -64,8 +60,6 @@ namespace Injector
                 InjectDLLFullPath = reader.ReadString();
                 Typename_InjectedDLL = reader.ReadString();
                 EntrypointMethod_InjectedDLL = reader.ReadString();
-                GameLogin_Username = reader.ReadString();
-                GameLogin_Password = reader.ReadString();
             }
             catch (Exception ex)
             {

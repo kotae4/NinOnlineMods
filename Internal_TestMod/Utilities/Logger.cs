@@ -4,8 +4,6 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.IO;
-// for automatic caller name & filepath (CallerMemberNameAttribute & CallerFilePathAttribute)
-using System.Runtime.CompilerServices;
 
 namespace NinMods
 {
@@ -50,6 +48,14 @@ namespace NinMods
             }
         }
 
+        // NOTE:
+        // this is actually pretty bad. C# destructors should only be used to clean up unmanaged resources under unexpected conditions.
+        // but i guess the underlying file handle counts as an unmanaged resource, right?
+        ~Logger()
+        {
+            Close();
+        }
+
         public void Close()
         {
             if (logWriter != null)
@@ -66,12 +72,9 @@ namespace NinMods
             }
         }
 
-        public void Write(string logString, ELogType type = ELogType.Info, System.Windows.Forms.RichTextBox rtxtLog = null, bool shouldForceFlush = false, [CallerFilePath] string sourceFile = "<none>", [CallerMemberName] string sourceMethodName = "<none>")
+        public void Write(string typeSource, string methodSource, string logString, ELogType type = ELogType.Info, System.Windows.Forms.RichTextBox rtxtLog = null, bool shouldForceFlush = false)
         {
-            string typeSource = sourceFile;
-            if (typeSource != "<error>")
-                typeSource = Path.GetFileName(typeSource);
-            logString = $"[{DateTime.Now.ToString("G", DateTimeCultureInfo_German)}][{typeSource ?? sourceFile}::{sourceMethodName}]: {logString}\n";
+            logString = $"[{DateTime.Now.ToString("G", DateTimeCultureInfo_German)}][{typeSource}::{methodSource}]: {logString}\n";
             if (logWriter != null)
             {
                 if (logWriter.BaseStream.CanWrite)
@@ -88,28 +91,25 @@ namespace NinMods
             }
         }
 
-        public void WriteError(string logString, System.Windows.Forms.RichTextBox rtxtLog = null, bool shouldForceFlush = false, [CallerFilePath] string sourceFile = "<none>", [CallerMemberName] string sourceMethodName = "<none>")
+        public void WriteError(string typeSource, string methodSource, string logString, System.Windows.Forms.RichTextBox rtxtLog = null, bool shouldForceFlush = false)
         {
-            Write(logString, ELogType.Error, rtxtLog, shouldForceFlush, sourceFile, sourceMethodName);
+            Write(typeSource, methodSource, logString, ELogType.Error, rtxtLog, shouldForceFlush);
         }
 
-        public void WriteException(Exception ex, System.Windows.Forms.RichTextBox rtxtLog = null, bool shouldForceFlush = true, [CallerFilePath] string sourceFile = "<none>", [CallerMemberName] string sourceMethodName = "<none>")
+        public void WriteException(string typeSource, string methodSource, Exception ex, System.Windows.Forms.RichTextBox rtxtLog = null, bool shouldForceFlush = true)
         {
-            Write("Exception occurred: " + ex.Message + "\n\n" + ex.StackTrace, ELogType.Exception, rtxtLog, shouldForceFlush, sourceFile, sourceMethodName);
+            Write(typeSource, methodSource, "Exception occurred: " + ex.Message + "\n\n" + ex.StackTrace, ELogType.Exception, rtxtLog, shouldForceFlush);
         }
 
-        public void Alert(string logString, string caption, System.Windows.Forms.MessageBoxButtons buttons = System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon icon = System.Windows.Forms.MessageBoxIcon.Error, ELogType type = ELogType.Info, System.Windows.Forms.RichTextBox rtxtLog = null, bool shouldForceFlush = false, [CallerFilePath] string sourceFile = "<none>", [CallerMemberName] string sourceMethodName = "<none>")
+        public void Alert(string typeSource, string methodSource, string logString, string caption, System.Windows.Forms.MessageBoxButtons buttons = System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon icon = System.Windows.Forms.MessageBoxIcon.Error, ELogType type = ELogType.Info, System.Windows.Forms.RichTextBox rtxtLog = null, bool shouldForceFlush = false)
         {
             System.Windows.Forms.MessageBox.Show(logString, caption, buttons, icon);
-            Write(logString, type, rtxtLog, shouldForceFlush, sourceFile, sourceMethodName);
+            Write(typeSource, methodSource, logString, type, rtxtLog, shouldForceFlush);
         }
 
-        public void WriteNetLog(string logString, ELogType type = ELogType.Info, System.Windows.Forms.RichTextBox rtxtLog = null, bool shouldForceFlush = false, [CallerFilePath] string sourceFile = "<none>", [CallerMemberName] string sourceMethodName = "<none>")
+        public void WriteNetLog(string typeSource, string methodSource, string logString, ELogType type = ELogType.Info, System.Windows.Forms.RichTextBox rtxtLog = null, bool shouldForceFlush = false)
         {
-            string typeSource = sourceFile;
-            if (typeSource != "<error>")
-                typeSource = Path.GetFileName(typeSource);
-            logString = $"[{DateTime.Now.ToString("G", DateTimeCultureInfo_German)}][{typeSource ?? sourceFile}::{sourceMethodName}]: {logString}\n";
+            logString = $"[{DateTime.Now.ToString("G", DateTimeCultureInfo_German)}][{typeSource}::{methodSource}]: {logString}\n";
             if (netlogWriter != null)
             {
                 if (netlogWriter.BaseStream.CanWrite)
