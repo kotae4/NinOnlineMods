@@ -66,11 +66,6 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Application\bloc\IBlocInterface.cs" />
-    <Compile Include="Application\bloc\BaseBlocMachine.cs" />
-    <Compile Include="Application\FarmBotBloc\FarmBotBlocMachine.cs" />
-    <Compile Include="Application\FarmBotBloc\FarmBotEvent.cs" />
-    <Compile Include="Application\FarmBotBloc\FarmBotState.cs" />
     <Compile Include="AStar Pathfinding\AStarSearch.cs" />
     <Compile Include="AStar Pathfinding\IWeightedGraph.cs" />
     <Compile Include="AStar Pathfinding\Vector2i.cs" />
@@ -83,7 +78,6 @@
     <Compile Include="Bot\BotCommand_MoveToStaticPoint.cs" />
     <Compile Include="Bot\BotUtils.cs" />
     <Compile Include="Bot\FarmBot.cs" />
-    <Compile Include="Bot\IBotBlocCommand.cs" />
     <Compile Include="Bot\IBotCommand.cs" />
     <Compile Include="Constants.cs" />
     <Compile Include="Pathfinder.cs" />

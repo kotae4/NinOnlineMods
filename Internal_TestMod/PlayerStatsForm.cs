@@ -46,35 +46,27 @@ namespace NinMods
             MAX
         }
 
-        enum ETargetStats
-        {
-            myTarget,
-            MAX
-        }
-
         SFML.System.Vector2i lastGameWndPosition = SFML.System.Vector2i.Zero;
 
         delegate void dListView_SetItemText(int itemIndex, int subItemIndex, string text);
-        dListView_SetItemText oStatsListView_SetItemText = null;
-        dListView_SetItemText oTargetListView_SetItemText = null;
-
+        dListView_SetItemText oListView_SetItemText = null;
 
         //bool IsUpdating = false;
 
-        // Player Values
         Dictionary<ETrackedStats, string> curStatValues = new Dictionary<ETrackedStats, string>((int)ETrackedStats.MAX);
         Dictionary<ETrackedStats, string> prevStatValues = new Dictionary<ETrackedStats, string>((int)ETrackedStats.MAX);
 
-        // Target Values
-        Dictionary<ETargetStats, string> curTargetStatValues = new Dictionary<ETargetStats, string>((int)ETargetStats.MAX);
-        Dictionary<ETargetStats, string> prevTargetStatValues = new Dictionary<ETargetStats, string>((int)ETargetStats.MAX);
         public PlayerStatsForm()
         {
             InitializeComponent();
 
             EnableDoubleBuffering();
 
-            InitializeDictionaries();
+            for (int statIndex = 0; statIndex < (int)ETrackedStats.MAX; statIndex++)
+            {
+                curStatValues.Add((ETrackedStats)statIndex, string.Empty);
+                prevStatValues.Add((ETrackedStats)statIndex, string.Empty);
+            }
 
             System.Reflection.MethodInfo methodInfo = typeof(System.Windows.Forms.ListView).GetMethod("SetItemText", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic, null, new Type[] { typeof(int), typeof(int), typeof(string) }, null);
             if (methodInfo == null)
@@ -82,10 +74,7 @@ namespace NinMods
                 Logger.Log.WriteError("PlayerStatsForm", "PlayerStatsForm::ctor", "Could not get SetItemText methodinfo");
                 return;
             }
-
-         
-            oStatsListView_SetItemText = (dListView_SetItemText)methodInfo.CreateDelegate(typeof(dListView_SetItemText), listviewPlayerStats);
-            oTargetListView_SetItemText = (dListView_SetItemText)methodInfo.CreateDelegate(typeof(dListView_SetItemText), listViewTargetStats);
+            oListView_SetItemText = (dListView_SetItemText)methodInfo.CreateDelegate(typeof(dListView_SetItemText), listviewPlayerStats);
         }
 
         public void EnableDoubleBuffering()
@@ -104,9 +93,8 @@ namespace NinMods
             this.SetDesktopLocation(x, y);
         }
 
-        void PopulateStatValues(client.modTypes.PlayerRec playerRecord, ref Dictionary<ETrackedStats, string> statDict, ref Dictionary<ETargetStats, string> targetDict)
+        void PopulateStatValues(client.modTypes.PlayerRec playerRecord, ref Dictionary<ETrackedStats, string> statDict)
         {
-            // Player
             statDict[ETrackedStats.Level] = playerRecord.Level.ToString();
             statDict[ETrackedStats.Experience] = playerRecord.Exp.ToString();
             statDict[ETrackedStats.Ryo] = playerRecord.Ryo.ToString();
@@ -135,24 +123,6 @@ namespace NinMods
             statDict[ETrackedStats.ProjectileTimer] = playerRecord.ProjectileTimer.ToString();
             statDict[ETrackedStats.KickbackDirection] = playerRecord.KickbackDir.ToString();
             statDict[ETrackedStats.KickDistance] = playerRecord.KickDistance.ToString();
-
-            // Target
-            targetDict[ETargetStats.myTarget] = client.modGlobals.myTarget.ToString();
-        }
-
-        void InitializeDictionaries()
-        {
-            for (int statIndex = 0; statIndex < (int)ETrackedStats.MAX; statIndex++)
-            {
-                curStatValues.Add((ETrackedStats)statIndex, string.Empty);
-                prevStatValues.Add((ETrackedStats)statIndex, string.Empty);
-            }
-
-            for (int targetStatIndex = 0; targetStatIndex < (int)ETargetStats.MAX; targetStatIndex++)
-            {
-                curTargetStatValues.Add((ETargetStats)targetStatIndex, string.Empty);
-                prevTargetStatValues.Add((ETargetStats)targetStatIndex, string.Empty);
-            }
         }
 
         void UpdateItemLabelsIfNew()
@@ -171,19 +141,9 @@ namespace NinMods
                     listviewPlayerStats.Items[index].SubItems[1].Text = curStatValues[(ETrackedStats)index];
                 }
             }
-
-            for (int index = 0; index < (int)ETargetStats.MAX; index++)
-            {
-                if (prevTargetStatValues[(ETargetStats)index] != curTargetStatValues[(ETargetStats)index])
-                {
-                    Logger.Log.Write("PlayerStatsForm", "UpdateItemLabelsIfNew", $"Updating target stat label '{(ETargetStats)index}': {curTargetStatValues[(ETargetStats)index]}");
-
-                    listViewTargetStats.Items[index].SubItems[1].Text = curTargetStatValues[(ETargetStats)index];
-                }
-            }
         }
 
-        public void UpdateStats(client.modTypes.PlayerRec playerRecord)
+        public void UpdatePlayerStats(client.modTypes.PlayerRec playerRecord)
         {
             if ((client.modGraphics.GameWindowForm == null) || (oStatsListView_SetItemText == null) || (oTargetListView_SetItemText == null)) return;
             // doesn't work: client.modGraphics.GameWindowForm.Root.GlobalPosition;
@@ -198,34 +158,14 @@ namespace NinMods
             lblPlayerName.Text = $"{playerRecord.Name} ({playerRecord.UUID})";
             // i hate this
             //listviewPlayerStats.Visible = false;
-            PopulateStatValues(playerRecord, ref curStatValues, ref curTargetStatValues);
+            PopulateStatValues(playerRecord, ref curStatValues);
             //IsUpdating = true;
             //listviewPlayerStats.BeginUpdate();
             UpdateItemLabelsIfNew();
             //listviewPlayerStats.EndUpdate();
             //listviewPlayerStats.Visible = true;
 
-            PopulateStatValues(playerRecord, ref prevStatValues, ref prevTargetStatValues);
-        }
-
-        private void listviewPlayerStats_SelectedIndexChanged(object sender, EventArgs e)
-        {
-
-        }
-
-        private void lblPlayerName_Click(object sender, EventArgs e)
-        {
-
-        }
-
-        private void label1_Click(object sender, EventArgs e)
-        {
-
-        }
-
-        private void listViewTargetStats_SelectedIndexChanged(object sender, EventArgs e)
-        {
-
+            PopulateStatValues(playerRecord, ref prevStatValues);
         }
 
         /*

@@ -74,8 +74,7 @@ namespace NinMods
 
         // farmbot
         public static bool IsBotEnabled = false;
-        //public static Bot.FarmBot farmBot = new Bot.FarmBot();
-        public static FarmBotBlocMachine farmBotBloc = new FarmBotBlocMachine();
+        public static Bot.FarmBot farmBot = new Bot.FarmBot();
         // for F3 keybind 'move to cursor' logic
         public static Bot.IBotCommand moveToCursorCmd;
 
@@ -95,7 +94,6 @@ namespace NinMods
 
         public static void Initialize()
         {
-            NetTimeStarted = DateTime.Now.Ticks;
             // initialize map items
             for (int itemIndex = 0; itemIndex <= 255; itemIndex++)
             {
@@ -165,9 +163,7 @@ namespace NinMods
             }
             foreach (Vector2i newItemLocation in newItemLocations)
             {
-                Logger.Log.Write("NinMods.Main", "CheckNewItemDrops", "Sending new item to bot for handling");
-                //farmBot.InjectEvent(Bot.FarmBot.EBotEvent.ItemDrop, (object)newItemLocation);
-                farmBotBloc.handleEvent(new ItemDroppedEvent(newItemLocation));
+                farmBot.InjectEvent(Bot.FarmBot.EBotEvent.ItemDrop, (object)newItemLocation);
             }
         }
 
@@ -196,10 +192,8 @@ namespace NinMods
                     $"(index: {client.modGlobals.MyIndex})");
                 */
                 if (IsBotEnabled)
-                {
-                    farmBotBloc.Run(new StartBotEvent());
-                    //farmBot.Update();
-                }
+                    farmBot.Update();
+
                 if ((moveToCursorCmd != null) && (moveToCursorCmd.IsComplete() == false))
                 {
                     if (moveToCursorCmd.Perform() == false)
@@ -379,8 +373,6 @@ namespace NinMods
                 Logger.Log.Write("NinMods.Main", "hk_modHandleData_HandleData", "Successfully hooked!", Logger.ELogType.Info, null, true);
             }
 
-            NinMods.Main.NetBytesReceived += data.Length;
-
             client.clsBuffer clsBuffer2 = new client.clsBuffer(data);
             int num = clsBuffer2.ReadLong();
             client.modEnumerations.ServerPackets packetID = (client.modEnumerations.ServerPackets)num;
@@ -397,8 +389,6 @@ namespace NinMods
                 NinMods.Main.sendDataFirstRun = false;
                 Logger.Log.Write("NinMods.Main", "hk_modClientTCP_SendData", "Successfully hooked!", Logger.ELogType.Info, null, true);
             }
-
-            NinMods.Main.NetBytesSent += data.Length;
 
             client.clsBuffer clsBuffer2 = new client.clsBuffer(data);
             int num = clsBuffer2.ReadLong();

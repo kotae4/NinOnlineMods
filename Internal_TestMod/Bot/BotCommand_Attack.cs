@@ -1,5 +1,4 @@
-using NinMods.Application.FarmBotBloc;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -7,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace NinMods.Bot
 {
-    public class BotCommand_Attack : IBotBlocCommand<FarmBotEvent>
+    public class BotCommand_Attack : IBotCommand
     {
         bool hasFailedCatastrophically = false;
         bool hasKilledTarget = false;
@@ -28,23 +27,20 @@ namespace NinMods.Bot
             this.targetIndex = targetIndex;
         }
 
-        /*public void IsComplete()
+        public bool IsComplete()
         {
             return (hasKilledTarget) && (hasFailedCatastrophically == false);
-        }*/
+        }
 
-        public FarmBotEvent Perform()
+        public bool Perform()
         {
-            if (hasFailedCatastrophically) return new FarmBotFailureEvent();
+            if (hasFailedCatastrophically) return false;
 
-            // Not safe for the future chasing mobs, Alex wrote this
             if ((target == null) || (client.modTypes.MapNpc[targetIndex] != target) || (target.Vital[(int)client.modEnumerations.Vitals.HP] <= 0))
             {
                 hasKilledTarget = true;
-                Logger.Log.Write("BotCommand_Attack", "Perform", $"Target has died or is now invalid (target: {target}, targetAtIndex: {client.modTypes.MapNpc[targetIndex]}, targetHP: {(target != null ? target.Vital[(int)client.modEnumerations.Vitals.HP].ToString() : "<null>")})");
-                return new KilledMobSuccesfullyEvent();
+                return true;
             }
-
             Vector2i botLocation = BotUtils.GetSelfLocation();
             targetLocation.x = target.X;
             targetLocation.y = target.Y;
@@ -57,7 +53,7 @@ namespace NinMods.Bot
                 if (ChaseTarget(botLocation, dist) == false)
                 {
                     hasFailedCatastrophically = true;
-                    return new FarmBotFailureEvent();
+                    return false;
                 }
             }
             else
@@ -99,7 +95,7 @@ namespace NinMods.Bot
                                         // revisit this. is it actually necessary or did i just have a bug elsewhere?
                                         // NOTE:
                                         // return immediately otherwise we get in a weird loop where we're constantly trying to cast the same spell. need to let it finish!
-                                        return new AttackingMobEvent(target, targetIndex);
+                                        return true;
                                     }
                                 }
                             }
@@ -122,12 +118,12 @@ namespace NinMods.Bot
                         // assumes error state is from inability to parse direction (the function might return false from some other condition in the future)
                         Logger.Log.WriteError("BotCommand_Attack", "Perform", $"Could not get direction out of {tileDirection} (self: {botLocation}; target: {targetLocation})");
                         hasFailedCatastrophically = true;
-                        return new FarmBotFailureEvent();
+                        return false;
                     }
                     BotUtils.BasicAttack();
                 }
             }
-            return new AttackingMobEvent(target, targetIndex);
+            return true;
         }
 
         void CheckTargetChanged()
