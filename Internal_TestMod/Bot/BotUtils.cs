@@ -25,6 +25,28 @@ namespace NinMods.Bot
             return (ECompassDirection)retVal;
         }
 
+		public static bool isTileWalkable(int i, int j)
+		{
+			if (client.modTypes.Map.Tile[i, j].Type == Constants.TILE_TYPE_BLOCKED ||
+			client.modTypes.Map.Tile[i, j].Type == Constants.TILE_TYPE_WARP ||
+			client.modTypes.Map.Tile[i, j].Type == Constants.TILE_TYPE_NPCAVOID ||
+			client.modTypes.Map.Tile[i, j].Type == Constants.TILE_TYPE_CHECKPOINT ||			
+			client.modTypes.Map.Tile[i, j].Type == Constants.TILE_TYPE_RESOURCE ||
+			client.modTypes.Map.Tile[i, j].Type == Constants.TILE_TYPE_NPCSPAWN ||
+			client.modTypes.Map.Tile[i, j].Type == Constants.TILE_TYPE_SHOP ||
+			client.modTypes.Map.Tile[i, j].Type == Constants.TILE_TYPE_HOUSE ||						
+			client.modTypes.Map.Tile[i, j].Type == Constants.TILE_TYPE_TRAP ||						
+			client.modTypes.Map.Tile[i, j].Type == Constants.TILE_TYPE_FIRE ||
+			client.modTypes.Map.Tile[i, j].Type == Constants.TILE_TYPE_NOTRAP)
+            {
+				return false;
+            } else
+            {
+				return true;
+            }
+			
+		}
+
         public static bool GetNearestPathableMonster(Vector2i from, out client.modTypes.MapNpcRec nearestMonster, out int nearestMonsterIndex, out Stack<Vector2i> shortestPath)
         {
             Vector2i npcLocation = new Vector2i(0, 0);

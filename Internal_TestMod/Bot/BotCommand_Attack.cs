@@ -18,6 +18,8 @@ namespace NinMods.Bot
         bool isChasingByPath = false;
         // for stopping chase if kiting
         bool isKiting = false;
+        bool kitingError = false;
+        int kitedTiles = 0;
         // cache optimization
         Vector2i targetLocation = new Vector2i();
 
@@ -131,21 +133,23 @@ namespace NinMods.Bot
                         return false;
                     }
                     BotUtils.BasicAttack();
-                   
+                    kitedTiles = 0;     
                 }
                 // Kiting
-                switch (Kite())
-                {
-                    case "kited":
-                        isKiting = false;
-                        break;
-                    case "kiting":
-                        isKiting = true;
-                        break;
-                    case "error":
-                        isKiting = false;
-                        break;
-                }
+                if(!kitingError || kitedTiles > 1)
+                    switch (Kite())
+                    {
+                        case "kited":
+                            isKiting = false;
+                            break;
+                        case "kiting":
+                            isKiting = true;
+                            break;
+                        case "error":
+                            isKiting = false;
+                            kitingError = true;
+                            break;
+                    }
             }
             return true;
         }
@@ -154,32 +158,130 @@ namespace NinMods.Bot
         String Kite()
         {
             Vector2i botLocation = BotUtils.GetSelfLocation();
+            ECompassDirection compassDirToMob = BotUtils.GetCompassDirectionFromTo(botLocation, targetLocation);
+            Vector2i dirToMob = Vector2i.directions_Eight[(int)compassDirToMob];
+            Vector2i idealDir = new Vector2i(-dirToMob.x, -dirToMob.y);
+            Vector2i idealKitingTile = botLocation + idealDir;
+            // for the bug, doesn't work
+            if(compassDirToMob == ECompassDirection.Center)
+            {
+
+                for (int index = 0; index < Vector2i.directions_Eight.Length; index++)
+                {
+                    Vector2i dir = Vector2i.directions_Eight[index];
+
+                    if (BotUtils.isTileWalkable(botLocation.x + dir.x, botLocation.y + dir.y))
+                    {
+                        if (BotUtils.CanMove())
+                        {
+                            if (BotUtils.MoveDir(dir))
+                            {
+                                kitedTiles++;
+                                return "kited";
+                            }
+                            else
+                            {
+                                return "error";
+                            }
+                        }
+                        else
+                        {
+                            return "kiting";
+                        }
+                    }
+                    else
+                    {
+                        continue;
+                    }
+                }
+
+            }
+            if (BotUtils.isTileWalkable(idealKitingTile.x, idealKitingTile.y))
+            {
+                if (BotUtils.CanMove()) {
+                    if (BotUtils.MoveDir(idealDir))
+                    {
+                        kitedTiles++;
+                        return "kited";
+                    } else
+                    {
+                        return "error";
+                    }
+                } else
+                {
+                    return "kiting";
+                }
+            } else
+            {
+                for (int index = 0; index < Vector2i.directions_Eight.Length; index++)
+                {
+                    Vector2i kiteDir = Vector2i.directions_Eight[index];
+                    if(kiteDir == dirToMob)
+                    {
+                        continue;
+                    }
+                    if (BotUtils.isTileWalkable(idealKitingTile.x, idealKitingTile.y))
+                    {
+                        if (BotUtils.CanMove())
+                        {
+                            if (BotUtils.MoveDir(kiteDir))
+                            {
+                                kitedTiles++;
+                                return "kited";
+                            }
+                            else
+                            {
+                                return "error";
+                            }
+                        }
+                        else
+                        {
+                            return "kiting";
+                        }
+                    }
+                }
+
+            }
+
+            return "error";
+
+
+            /*
             for (int index = 0; index < Vector2i.directions_Four.Length; index++)
             {
                 Vector2i kiteTile = botLocation + new Vector2i(Vector2i.directions_Four[index].x * 2, Vector2i.directions_Four[index].y * 2);
-                if (kiteTile != targetLocation) 
-                    if (client.modTypes.Map.Tile[kiteTile.x, kiteTile.y].Type != Constants.TILE_TYPE_BLOCKED)
+                if (kiteTile != targetLocation)
+                    if (BotUtils.isTileWalkable(kiteTile.x, kiteTile.y)) 
                     {
                         if (BotUtils.CanMove())
                         {
                             path = Pathfinder.GetPathTo(kiteTile.x, kiteTile.y);
-
-                            if (BotUtils.MoveToTileByPath(path) == true)
+                            if (path.Count < 3)
                             {
-                                return "kited";
-                                Logger.Log.Write("Moved one away from attack target");
+                                if (BotUtils.MoveToTileByPath(path) == true)
+                                {
+                                    return "kited";
+                                    Logger.Log.Write("Moved one away from attack target");
+                                }
                             } else
                             {
-                                return "error";
+                                Logger.Log.Write("Path is too long, something blocks");
+
                             }
                         } else
                         {
                             return "kiting";
+                            Logger.Log.Write("Currently doing the kiting move");
+
                         }
 
+                    } else
+                    {
+                        continue;
                     }
             }
             return "error";
+            */
 
         }
 
