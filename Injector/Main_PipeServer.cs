@@ -46,18 +46,74 @@ namespace Launcher
         private void Pipe_OnClientConnected(object sender, ClientConnectedEventArgs eventArgs)
         {
             isPipeInitialized = true;
-            Logger.Log.Write($"Pipe client#{eventArgs.UUID} connected", Logger.ELogType.Info, rtxtLog);
+            Logger.Log.Write($"Pipe client#{eventArgs.UUID} connected", Logger.ELogType.Trace, rtxtLog);
         }
 
         private void Pipe_OnClientDisconnected(object sender, ClientDisconnectedEventArgs eventArgs)
         {
             isPipeInitialized = false;
-            Logger.Log.Write($"Pipe client#{eventArgs.UUID} disconnected", Logger.ELogType.Info, rtxtLog);
+            Logger.Log.Write($"Pipe client#{eventArgs.UUID} disconnected", Logger.ELogType.Trace, rtxtLog);
         }
 
         private void Pipe_OnMessageReceived(object sender, MessageReceivedEventArgs eventArgs)
         {
-            string logString = $"[{DateTime.Now.ToString("G", DateTimeCultureInfo_German)}][Pipe#{eventArgs.UUID}]: {eventArgs.Message}";
+            int indexOfDelimiter = eventArgs.Message.IndexOf('^');
+            if (indexOfDelimiter == -1)
+            {
+                Logger.Log.WriteError($"Could not decode pipe message '{eventArgs.Message}'", rtxtLog);
+                return;
+            }
+            string encodedLogLevel = eventArgs.Message.Substring(0, indexOfDelimiter);
+            string encodedMessage = eventArgs.Message.Substring(indexOfDelimiter + 1);
+            Logger.ELogType logLevel;
+            if (Enum.TryParse<Logger.ELogType>(encodedLogLevel, out logLevel) == false)
+            {
+                Logger.Log.WriteError($"Could not parse logLevel from pipe message '{eventArgs.Message}'", rtxtLog);
+                return;
+            }
+
+            string logString = $"[Pipe#{eventArgs.UUID}]: {encodedMessage}\n";
+            // TO-DO:
+            // move this to a utility function
+            System.Drawing.Color msgColor = System.Drawing.Color.Black;
+            bool shouldBold = false;
+            switch (logLevel)
+            {
+                case Logger.ELogType.Trace:
+                    {
+                        msgColor = System.Drawing.Color.Silver;
+                        break;
+                    }
+                case Logger.ELogType.Warning:
+                    {
+                        msgColor = System.Drawing.Color.Orange;
+                        break;
+                    }
+                case Logger.ELogType.Error:
+                    {
+                        msgColor = System.Drawing.Color.Red;
+                        break;
+                    }
+                case Logger.ELogType.Exception:
+                    {
+                        msgColor = System.Drawing.Color.Red;
+                        shouldBold = true;
+                        break;
+                    }
+                case Logger.ELogType.Notification:
+                    {
+                        msgColor = System.Drawing.Color.DarkTurquoise;
+                        break;
+                    }
+            }
+            int selectionStart = rtxtLog.TextLength;
+            int selectionLength = logString.Length;
+            rtxtLog.Select(selectionStart, selectionLength);
+            rtxtLog.SelectionColor = msgColor;
+            if (shouldBold)
+            {
+                rtxtLog.SelectionFont = new System.Drawing.Font(rtxtLog.Font, System.Drawing.FontStyle.Bold);
+            }
             rtxtLog.AppendText(logString);
             // don't want to add to the injector's log file
             //Logger.Log.Write($"Received '{eventArgs.Message}' from pipe server", Logger.ELogType.Info, rtxtLog);
@@ -70,7 +126,7 @@ namespace Launcher
 
         private void Pipe_OnInternalMessage(object sender, Logging.InternalMessageEventArgs eventArgs)
         {
-            Logger.Log.Write(eventArgs.Message, Logger.ELogType.Info, rtxtLog);
+            Logger.Log.Write(eventArgs.Message, Logger.ELogType.Trace, rtxtLog);
         }
     }
 }

@@ -21,9 +21,11 @@ namespace NinMods.Logging
         // mostly used for coloring messages
         public enum ELogType
         {
+            Trace,
             Info,
-            Notification,
+            Warning,
             Error,
+            Notification,
             Exception
         }
 
@@ -102,7 +104,7 @@ namespace NinMods.Logging
             }
         }
 
-        public void Write(string logString, ELogType type = ELogType.Info, bool usePipe = false, System.Windows.Forms.RichTextBox rtxtLog = null, bool shouldForceFlush = false, [CallerFilePath] string sourceFile = "<none>", [CallerMemberName] string sourceMethodName = "<none>")
+        public void Write(string logString, ELogType type = ELogType.Info, System.Windows.Forms.RichTextBox rtxtLog = null, bool shouldForceFlush = false, [CallerFilePath] string sourceFile = "<none>", [CallerMemberName] string sourceMethodName = "<none>")
         {
             string typeSource = sourceFile;
             if (typeSource != "<error>")
@@ -118,39 +120,41 @@ namespace NinMods.Logging
                     logWriter.Flush();
             }
 
-            if ((usePipe == true) && (pipe != null) && (isPipeInitialized))
-            {
-                pipe.SendMessage(logString);
-            }
-
             if (rtxtLog != null)
             {
-                WinformControl_WriteTextSafe(rtxtLog, logString);
+                WinformControl_WriteTextSafe(rtxtLog, logString, type);
             }
         }
 
-        public void WriteError(string logString, bool usePipe = false, System.Windows.Forms.RichTextBox rtxtLog = null, bool shouldForceFlush = false, [CallerFilePath] string sourceFile = "<none>", [CallerMemberName] string sourceMethodName = "<none>")
+        public void WriteError(string logString, System.Windows.Forms.RichTextBox rtxtLog = null, bool shouldForceFlush = false, [CallerFilePath] string sourceFile = "<none>", [CallerMemberName] string sourceMethodName = "<none>")
         {
-            Write(logString, ELogType.Error, usePipe, rtxtLog, shouldForceFlush, sourceFile, sourceMethodName);
+            Write(logString, ELogType.Error, rtxtLog, shouldForceFlush, sourceFile, sourceMethodName);
         }
 
-        public void WriteException(Exception ex, bool usePipe = false, System.Windows.Forms.RichTextBox rtxtLog = null, bool shouldForceFlush = true, [CallerFilePath] string sourceFile = "<none>", [CallerMemberName] string sourceMethodName = "<none>")
+        public void WriteException(Exception ex, System.Windows.Forms.RichTextBox rtxtLog = null, bool shouldForceFlush = true, [CallerFilePath] string sourceFile = "<none>", [CallerMemberName] string sourceMethodName = "<none>")
         {
-            Write("Exception occurred: " + ex.Message + "\n\n" + ex.StackTrace, ELogType.Exception, usePipe, rtxtLog, shouldForceFlush, sourceFile, sourceMethodName);
+            Write("Exception occurred: " + ex.Message + "\n\n" + ex.StackTrace, ELogType.Exception, rtxtLog, shouldForceFlush, sourceFile, sourceMethodName);
         }
 
-        public void Alert(string logString, string caption, System.Windows.Forms.MessageBoxButtons buttons = System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon icon = System.Windows.Forms.MessageBoxIcon.Error, ELogType type = ELogType.Info, bool usePipe = false, System.Windows.Forms.RichTextBox rtxtLog = null, bool shouldForceFlush = false, [CallerFilePath] string sourceFile = "<none>", [CallerMemberName] string sourceMethodName = "<none>")
+        public void Alert(string logString, string caption, System.Windows.Forms.MessageBoxButtons buttons = System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon icon = System.Windows.Forms.MessageBoxIcon.Error, ELogType type = ELogType.Info, System.Windows.Forms.RichTextBox rtxtLog = null, bool shouldForceFlush = false, [CallerFilePath] string sourceFile = "<none>", [CallerMemberName] string sourceMethodName = "<none>")
         {
             System.Windows.Forms.MessageBox.Show(logString, caption, buttons, icon);
-            Write(logString, type, usePipe, rtxtLog, shouldForceFlush, sourceFile, sourceMethodName);
+            Write(logString, type, rtxtLog, shouldForceFlush, sourceFile, sourceMethodName);
         }
 
         public void WritePipe(string logString, ELogType type = ELogType.Info, System.Windows.Forms.RichTextBox rtxtLog = null, bool shouldForceFlush = false, [CallerFilePath] string sourceFile = "<none>", [CallerMemberName] string sourceMethodName = "<none>")
         {
-            Write(logString, type, true, rtxtLog, shouldForceFlush, sourceFile, sourceMethodName);
+            Write(logString, type, rtxtLog, shouldForceFlush, sourceFile, sourceMethodName);
+            if ((pipe != null) && (isPipeInitialized))
+            {
+                // special formatting:
+                // ELogType as string + delimiter character (^) + the actual log message
+                string pipeMsg = $"{type}^{logString}";
+                pipe.SendMessage(pipeMsg);
+            }
         }
 
-        public void WriteNetLog(string logString, ELogType type = ELogType.Info, bool usePipe = false, System.Windows.Forms.RichTextBox rtxtLog = null, bool shouldForceFlush = false, [CallerFilePath] string sourceFile = "<none>", [CallerMemberName] string sourceMethodName = "<none>")
+        public void WriteNetLog(string logString, ELogType type = ELogType.Info, System.Windows.Forms.RichTextBox rtxtLog = null, bool shouldForceFlush = false, [CallerFilePath] string sourceFile = "<none>", [CallerMemberName] string sourceMethodName = "<none>")
         {
             string typeSource = sourceFile;
             if (typeSource != "<error>")
@@ -168,20 +172,15 @@ namespace NinMods.Logging
 
             if (rtxtLog != null)
             {
-                WinformControl_WriteTextSafe(rtxtLog, logString);
-            }
-
-            if ((usePipe == true) && (pipe != null) && (isPipeInitialized))
-            {
-                pipe.SendMessage(logString);
+                WinformControl_WriteTextSafe(rtxtLog, logString, type);
             }
         }
 
-        public void WriteThreaded(string logString, ELogType type = ELogType.Info, bool usePipe = false, System.Windows.Forms.RichTextBox rtxtLog = null, bool shouldForceFlush = false, [CallerFilePath] string sourceFile = "<none>", [CallerMemberName] string sourceMethodName = "<none>")
+        public void WriteThreaded(string logString, ELogType type = ELogType.Info, System.Windows.Forms.RichTextBox rtxtLog = null, bool shouldForceFlush = false, [CallerFilePath] string sourceFile = "<none>", [CallerMemberName] string sourceMethodName = "<none>")
         {
             lock(threadLock)
             {
-                Write(logString, type, usePipe, rtxtLog, shouldForceFlush, sourceFile, sourceMethodName);
+                Write(logString, type, rtxtLog, shouldForceFlush, sourceFile, sourceMethodName);
             }
         }
 
@@ -202,16 +201,58 @@ namespace NinMods.Logging
             Write($"Received '{eventArgs.Message}' from pipe server");
         }
 
-        private delegate void SafeCallDelegate(System.Windows.Forms.RichTextBox richtextControl, string text);
-        private void WinformControl_WriteTextSafe(System.Windows.Forms.RichTextBox richtextControl, string text)
+        private delegate void SafeCallDelegate(System.Windows.Forms.RichTextBox richtextControl, string text, ELogType logLevel);
+        private void WinformControl_WriteTextSafe(System.Windows.Forms.RichTextBox richtextControl, string text, ELogType logLevel)
         {
             if (richtextControl.InvokeRequired)
             {
                 var d = new SafeCallDelegate(WinformControl_WriteTextSafe);
-                richtextControl.Invoke(d, new object[] { richtextControl, text });
+                richtextControl.Invoke(d, new object[] { richtextControl, text, logLevel });
             }
             else
             {
+                // TO-DO:
+                // move this to a utility function
+                System.Drawing.Color msgColor = System.Drawing.Color.Black;
+                bool shouldBold = false;
+                switch (logLevel)
+                {
+                    case ELogType.Trace:
+                        {
+                            msgColor = System.Drawing.Color.Silver;
+                            break;
+                        }
+                    case ELogType.Warning:
+                        {
+                            msgColor = System.Drawing.Color.Orange;
+                            break;
+                        }
+                    case ELogType.Error:
+                        {
+                            msgColor = System.Drawing.Color.Red;
+                            break;
+                        }
+                    case ELogType.Exception:
+                        {
+                            msgColor = System.Drawing.Color.Red;
+                            shouldBold = true;
+                            break;
+                        }
+                    case ELogType.Notification:
+                        {
+                            msgColor = System.Drawing.Color.DarkTurquoise;
+                            break;
+                        }
+                }
+                int selectionStart = richtextControl.TextLength;
+                int selectionLength = text.Length;
+                richtextControl.Select(selectionStart, selectionLength);
+                richtextControl.SelectionColor = msgColor;
+                if (shouldBold)
+                {
+                    richtextControl.SelectionFont = new System.Drawing.Font(richtextControl.Font, System.Drawing.FontStyle.Bold);
+                }
+
                 richtextControl.AppendText(text);
             }
         }

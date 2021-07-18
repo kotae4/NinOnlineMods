@@ -74,11 +74,11 @@ namespace NinMods
             }
             oRenderText = (dRenderText)methodInfo.CreateDelegate(typeof(dRenderText));
 
-            Logger.Log.Write("Installing hooks...", Logger.ELogType.Info, false, null, false);
+            Logger.Log.Write("Installing hooks...");
             try
             {
                 RegisterEventHandlers();
-                Logger.Log.Write("Done installing hooks!", Logger.ELogType.Info, false, null, true);
+                Logger.Log.Write("Done installing hooks!", Logger.ELogType.Info, null, true);
             }
             catch (Exception ex)
             {
@@ -278,7 +278,7 @@ namespace NinMods
                 {
                     if (NinMods.Main.frmPlayerStats == null)
                     {
-                        Logger.Log.Write("Initializing player stats form", Logger.ELogType.Info, false, null, false);
+                        Logger.Log.Write("Initializing player stats form");
                         NinMods.Main.frmPlayerStats = new PlayerStatsForm();
                         NinMods.Main.frmPlayerStats.Show();
                     }
@@ -430,7 +430,7 @@ namespace NinMods
             client.clsBuffer clsBuffer2 = new client.clsBuffer(data);
             int num = clsBuffer2.ReadLong();
             client.modEnumerations.ServerPackets packetID = (client.modEnumerations.ServerPackets)num;
-            Logger.Log.WriteNetLog($"RECV packet {packetID} (ID: {num})", Logger.ELogType.Info, false, null, true);
+            Logger.Log.WriteNetLog($"RECV packet {packetID} (ID: {num})");
             // NOTE:
             // special handling for auto-login process.
             // instead of hooking client.modAuth.Auth_HandleServerDetails we'll just check for that packet here
@@ -450,7 +450,7 @@ namespace NinMods
             client.clsBuffer clsBuffer2 = new client.clsBuffer(data);
             int num = clsBuffer2.ReadLong();
             client.modEnumerations.ClientPackets packetID = (client.modEnumerations.ClientPackets)num;
-            Logger.Log.WriteNetLog($"SENT packet {packetID} (ID: {num})", Logger.ELogType.Info, false, null, true);
+            Logger.Log.WriteNetLog($"SENT packet {packetID} (ID: {num})");
         }
     }
 }

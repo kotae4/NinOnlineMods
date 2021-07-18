@@ -21,9 +21,11 @@ namespace Launcher.Logging
         // mostly used for coloring messages
         public enum ELogType
         {
+            Trace,
             Info,
-            Notification,
+            Warning,
             Error,
+            Notification,
             Exception
         }
 
@@ -89,7 +91,7 @@ namespace Launcher.Logging
 
             if (rtxtLog != null)
             {
-                WinformControl_WriteTextSafe(rtxtLog, logString);
+                WinformControl_WriteTextSafe(rtxtLog, logString, type);
             }
         }
 
@@ -127,7 +129,7 @@ namespace Launcher.Logging
 
             if (rtxtLog != null)
             {
-                WinformControl_WriteTextSafe(rtxtLog, logString);
+                WinformControl_WriteTextSafe(rtxtLog, logString, type);
             }
         }
 
@@ -139,16 +141,58 @@ namespace Launcher.Logging
             }
         }
 
-        private delegate void SafeCallDelegate(System.Windows.Forms.RichTextBox richtextControl, string text);
-        private void WinformControl_WriteTextSafe(System.Windows.Forms.RichTextBox richtextControl, string text)
+        private delegate void SafeCallDelegate(System.Windows.Forms.RichTextBox richtextControl, string text, ELogType logLevel);
+        private void WinformControl_WriteTextSafe(System.Windows.Forms.RichTextBox richtextControl, string text, ELogType logLevel)
         {
             if (richtextControl.InvokeRequired)
             {
                 var d = new SafeCallDelegate(WinformControl_WriteTextSafe);
-                richtextControl.Invoke(d, new object[] { richtextControl, text });
+                richtextControl.Invoke(d, new object[] { richtextControl, text, logLevel });
             }
             else
             {
+                // TO-DO:
+                // move this to a utility function
+                System.Drawing.Color msgColor = System.Drawing.Color.Black;
+                bool shouldBold = false;
+                switch (logLevel)
+                {
+                    case ELogType.Trace:
+                        {
+                            msgColor = System.Drawing.Color.Silver;
+                            break;
+                        }
+                    case ELogType.Warning:
+                        {
+                            msgColor = System.Drawing.Color.Orange;
+                            break;
+                        }
+                    case ELogType.Error:
+                        {
+                            msgColor = System.Drawing.Color.Red;
+                            break;
+                        }
+                    case ELogType.Exception:
+                        {
+                            msgColor = System.Drawing.Color.Red;
+                            shouldBold = true;
+                            break;
+                        }
+                    case ELogType.Notification:
+                        {
+                            msgColor = System.Drawing.Color.DarkTurquoise;
+                            break;
+                        }
+                }
+                int selectionStart = richtextControl.TextLength;
+                int selectionLength = text.Length;
+                richtextControl.Select(selectionStart, selectionLength);
+                richtextControl.SelectionColor = msgColor;
+                if (shouldBold)
+                {
+                    richtextControl.SelectionFont = new System.Drawing.Font(richtextControl.Font, System.Drawing.FontStyle.Bold);
+                }
+
                 richtextControl.AppendText(text);
             }
         }

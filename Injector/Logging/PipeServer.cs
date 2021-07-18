@@ -46,6 +46,8 @@ namespace Launcher.Logging
         const int READ_BUFFER_SIZE = 8192;
         const int SEND_BUFFER_SIZE = 8192;
 
+        static int TotalConnectionsSeen = 0;
+
         class NamedPipeServerObject
         {
             public NamedPipeServerStream connection;
@@ -88,7 +90,7 @@ namespace Launcher.Logging
 
         public bool Start()
         {
-            NamedPipeServerObject firstPipe = new NamedPipeServerObject(PIPE_NAME, Guid.NewGuid().ToString());
+            NamedPipeServerObject firstPipe = new NamedPipeServerObject(PIPE_NAME, (TotalConnectionsSeen++).ToString());
             OnInternalMessage($"Instantiated first pipe w/ ID#{firstPipe.ID}");
             _servers = new ConcurrentDictionary<string, NamedPipeServerObject>();
             _servers[firstPipe.ID] = firstPipe;
@@ -166,7 +168,7 @@ namespace Launcher.Logging
                     }
                 }
             }
-            NamedPipeServerObject newPipe = new NamedPipeServerObject(PIPE_NAME, Guid.NewGuid().ToString());
+            NamedPipeServerObject newPipe = new NamedPipeServerObject(PIPE_NAME, (TotalConnectionsSeen++).ToString());
             _servers[newPipe.ID] = newPipe;
             newPipe.connection.BeginWaitForConnection(OnPipe_ClientConnected, newPipe);
         }

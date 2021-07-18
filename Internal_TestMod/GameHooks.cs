@@ -215,18 +215,18 @@ namespace NinMods
                 }
                 catch (Exception ex)
                 {
-                    Logger.Log.Alert($"exception '{ex.GetType().Name}' occurred: {ex.Message}\n\n{ex.StackTrace}", NinMods.Main.MAIN_CAPTION, System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error, Logger.ELogType.Error, false, null, true);
+                    Logger.Log.Alert($"exception '{ex.GetType().Name}' occurred: {ex.Message}\n\n{ex.StackTrace}", NinMods.Main.MAIN_CAPTION, System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error, Logger.ELogType.Error, null, true);
                     return;
                 }
             }
 
             if ((NinMods.GameHooks.HandleKeyPressesHook.IsHooked() == false) || (NinMods.GameHooks.SetPlayerAccessHook.IsHooked() == false) || (NinMods.GameHooks.MenuLoopHook.IsHooked() == false) || (NinMods.GameHooks.GameLoopHook.IsHooked() == false) || (NinMods.GameHooks.DrawWeatherHook.IsHooked() == false))
             {
-                Logger.Log.Alert("Could not install hooks for unknown reason", NinMods.Main.MAIN_CAPTION, System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error, Logger.ELogType.Info, false, null, true);
+                Logger.Log.Alert("Could not install hooks for unknown reason", NinMods.Main.MAIN_CAPTION, System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error, Logger.ELogType.Info, null, true);
             }
             else
             {
-                Logger.Log.Write("Success!", Logger.ELogType.Info, false, null, true);
+                Logger.Log.Write("Success!", Logger.ELogType.Info, null, true);
             }
         }
 
@@ -302,7 +302,7 @@ namespace NinMods
             if (NinMods.GameHooks.MenuLoopHook.FirstRun == true)
             {
                 NinMods.GameHooks.MenuLoopHook.FirstRun = false;
-                Logger.Log.Write("Successfully hooked!", Logger.ELogType.Info, false, null, true);
+                Logger.Log.Write("Successfully hooked!", Logger.ELogType.Info, null, true);
             }
 
             NinMods.GameHooks.MenuLoopHook.FireEvent(EHookExecutionState.Pre);
@@ -316,7 +316,7 @@ namespace NinMods
             if (NinMods.GameHooks.GameLoopHook.FirstRun == true)
             {
                 NinMods.GameHooks.GameLoopHook.FirstRun = false;
-                Logger.Log.Write("Successfully hooked!", Logger.ELogType.Info, false, null, true);
+                Logger.Log.Write("Successfully hooked!", Logger.ELogType.Info, null, true);
             }
             // this is the only hook that has logic within the hook itself, everything else should be done on event handlers.
             if (NinMods.Main.HasInitialized == false)
@@ -343,7 +343,7 @@ namespace NinMods
             if (NinMods.GameHooks.HandleMapDoneHook.FirstRun == true)
             {
                 NinMods.GameHooks.HandleMapDoneHook.FirstRun = false;
-                Logger.Log.Write("Successfully hooked!", Logger.ELogType.Info, false, null, true);
+                Logger.Log.Write("Successfully hooked!", Logger.ELogType.Info, null, true);
             }
 
             // call original
@@ -358,7 +358,7 @@ namespace NinMods
             if (NinMods.GameHooks.HandleCombatMsgHook.FirstRun == true)
             {
                 NinMods.GameHooks.HandleCombatMsgHook.FirstRun = false;
-                Logger.Log.Write("Successfully hooked!", Logger.ELogType.Info, false, null, true);
+                Logger.Log.Write("Successfully hooked!", Logger.ELogType.Info, null, true);
             }
 
             NinMods.GameHooks.HandleCombatMsgHook.FireEvent(Index, data, StartAddr, ExtraVar, EHookExecutionState.Pre);
@@ -374,7 +374,7 @@ namespace NinMods
             if (NinMods.GameHooks.DrawWeatherHook.FirstRun == true)
             {
                 NinMods.GameHooks.DrawWeatherHook.FirstRun = false;
-                Logger.Log.Write("Successfully hooked!", Logger.ELogType.Info, false, null, true);
+                Logger.Log.Write("Successfully hooked!", Logger.ELogType.Info, null, true);
             }
 
             NinMods.GameHooks.DrawWeatherHook.FireEvent(EHookExecutionState.Pre);
@@ -390,7 +390,7 @@ namespace NinMods
             if (NinMods.GameHooks.DrawGUIHook.FirstRun == true)
             {
                 NinMods.GameHooks.DrawGUIHook.FirstRun = false;
-                Logger.Log.Write("Successfully hooked!", Logger.ELogType.Info, false, null, true);
+                Logger.Log.Write("Successfully hooked!", Logger.ELogType.Info, null, true);
             }
 
             NinMods.GameHooks.DrawGUIHook.FireEvent(EHookExecutionState.Pre);
@@ -404,7 +404,7 @@ namespace NinMods
             if (NinMods.GameHooks.HandleKeyPressesHook.FirstRun == true)
             {
                 NinMods.GameHooks.HandleKeyPressesHook.FirstRun = false;
-                Logger.Log.Write("Successfully hooked!", Logger.ELogType.Info, false, null, true);
+                Logger.Log.Write("Successfully hooked!", Logger.ELogType.Info, null, true);
             }
 
             NinMods.GameHooks.HandleKeyPressesHook.FireEvent(keyAscii, EHookExecutionState.Pre);
@@ -418,7 +418,7 @@ namespace NinMods
             if (NinMods.GameHooks.SetPlayerAccessHook.FirstRun == true)
             {
                 NinMods.GameHooks.SetPlayerAccessHook.FirstRun = false;
-                Logger.Log.Write("Successfully hooked!", Logger.ELogType.Info, false, null, true);
+                Logger.Log.Write("Successfully hooked!", Logger.ELogType.Info, null, true);
             }
 
             NinMods.GameHooks.SetPlayerAccessHook.FireEvent(index, access, EHookExecutionState.Pre);
@@ -432,7 +432,7 @@ namespace NinMods
             if (NinMods.GameHooks.HandleDataHook.FirstRun == true)
             {
                 NinMods.GameHooks.HandleDataHook.FirstRun = false;
-                Logger.Log.Write("Successfully hooked!", Logger.ELogType.Info, false, null, true);
+                Logger.Log.Write("Successfully hooked!", Logger.ELogType.Info, null, true);
             }
 
             NinMods.GameHooks.HandleDataHook.FireEvent(data, EHookExecutionState.Pre);
@@ -446,7 +446,7 @@ namespace NinMods
             if (NinMods.GameHooks.SendDataHook.FirstRun == true)
             {
                 NinMods.GameHooks.SendDataHook.FirstRun = false;
-                Logger.Log.Write("Successfully hooked!", Logger.ELogType.Info, false, null, true);
+                Logger.Log.Write("Successfully hooked!", Logger.ELogType.Info, null, true);
             }
 
             NinMods.GameHooks.SendDataHook.FireEvent(data, auth, EHookExecutionState.Pre);

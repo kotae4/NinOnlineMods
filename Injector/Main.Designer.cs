@@ -252,8 +252,11 @@ namespace Launcher
             // 
             // rtxtLog
             // 
+            this.rtxtLog.ForeColor = System.Drawing.SystemColors.WindowText;
+            this.rtxtLog.HideSelection = false;
             this.rtxtLog.Location = new System.Drawing.Point(12, 274);
             this.rtxtLog.Name = "rtxtLog";
+            this.rtxtLog.ReadOnly = true;
             this.rtxtLog.Size = new System.Drawing.Size(342, 149);
             this.rtxtLog.TabIndex = 19;
             this.rtxtLog.Text = "";
