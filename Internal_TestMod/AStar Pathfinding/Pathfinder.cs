@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using NinMods.Pathfinding;
+using NinMods.Logging;
 
 namespace NinMods
 {

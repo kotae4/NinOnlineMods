@@ -1,6 +1,7 @@
 ﻿using System;
 using NinMods.Hooking.NativeImports;
 using System.Runtime.InteropServices;
+using NinMods.Logging;
 
 namespace NinMods.Hooking.LowLevel
 {

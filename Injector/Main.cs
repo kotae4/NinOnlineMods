@@ -8,10 +8,11 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.IO;
+using Launcher.Logging;
 // for registry keys
 using Microsoft.Win32;
 
-namespace Injector
+namespace Launcher
 {
     public partial class Main : Form
     {
@@ -33,6 +34,13 @@ namespace Injector
         // so we have to write ActiveProfile.GameDirPath + BOOTSTRAPPER_CONFIG_FILENAME.
         public const string BOOTSTRAPPER_CONFIG_FILENAME = "net_bootstrapper_config.txt";
 
+        // 382, 312
+        public const int FORM_MAIN_SHRUNK_HEIGHT = 312;
+        // 382, 474
+        public const int FORM_MAIN_EXPANDED_HEIGHT = 474;
+
+        private bool IsShrunk = false;
+
         private Profile m_ActiveProfile = new Profile();
         private Profile ActiveProfile
         {
@@ -48,12 +56,18 @@ namespace Injector
         private void Main_Load(object sender, EventArgs e)
         {
             InitializeProfileSystem();
+            if (StartPipeServer() == false)
+            {
+                Logger.Log.Alert("Could not start pipe server", MESSAGEBOX_CAPTION);
+                return;
+            }
             GameDirWorker.RunWorkerAsync(ActiveProfile);
         }
 
         private void Main_FormClosing(object sender, FormClosingEventArgs e)
         {
             SaveProfileSystem();
+            ShutdownPipeServer();
         }
 
         private void RefreshControlsState()
@@ -74,11 +88,11 @@ namespace Injector
             Profile activeProf = e.Argument as Profile;
             if ((activeProf != null) && (!string.IsNullOrEmpty(activeProf.GameDirPath)))
             {
-                Logger.Log.Write("Main", "GameDirWorker_DoWork", "Profile's GameDirPath: " + activeProf.GameDirPath, Logger.ELogType.Info);
+                Logger.Log.Write("Profile's GameDirPath: " + activeProf.GameDirPath, Logger.ELogType.Info);
                 if (Directory.Exists(activeProf.GameDirPath))
                 {
                     e.Result = activeProf.GameDirPath;
-                    Logger.Log.Write("Main", "GameDirWorker_DoWork", "GameDirWorker returning path from ActiveProfile", Logger.ELogType.Info);
+                    Logger.Log.Write("GameDirWorker returning path from ActiveProfile", Logger.ELogType.Info);
                     return;
                 }
             }
@@ -88,7 +102,7 @@ namespace Injector
                 if (File.Exists(GAME_EXE_NAME))
                 {
                     e.Result = Path.GetDirectoryName(Path.GetFullPath(GAME_EXE_NAME)) + "\\";
-                    Logger.Log.Write("Main", "GameDirWorker_DoWork", "GameDirWorker returning path from local directory", Logger.ELogType.Info);
+                    Logger.Log.Write("GameDirWorker returning path from local directory", Logger.ELogType.Info);
                     return;
                 }
                 // 2. if not, check for uninstall registry key
@@ -105,10 +119,10 @@ namespace Injector
                             using (RegistryKey gameKey = uninstallKey.OpenSubKey(subkey))
                             {
                                 string installLocation = gameKey.GetValue("InstallLocation").ToString();
-                                Logger.Log.Write("Main", "GameDirWorker_DoWork", "GameDirWorker saw registry key with value '" + installLocation + "'", Logger.ELogType.Info);
+                                Logger.Log.Write("GameDirWorker saw registry key with value '" + installLocation + "'", Logger.ELogType.Info);
                                 if (!File.Exists(installLocation + GAME_EXE_PATH_FROM_ROOT))
                                 {
-                                    Logger.Log.WriteError("Main", "GameDirWorker_DoWork", "GameDirWorker couldn't find game exe from registry key");
+                                    Logger.Log.WriteError("GameDirWorker couldn't find game exe from registry key");
                                     e.Result = string.Empty;
                                     return;
                                 }
@@ -121,7 +135,7 @@ namespace Injector
             }
             catch(Exception ex)
             {
-                Logger.Log.Alert("Main", "GameDirWorker_DoWork", "Exception occurred locating game install directory:\n" + ex.Message + "\n\n" + ex.StackTrace, MESSAGEBOX_CAPTION, MessageBoxButtons.OK, MessageBoxIcon.Error, Logger.ELogType.Exception);
+                Logger.Log.Alert("Exception occurred locating game install directory:\n" + ex.Message + "\n\n" + ex.StackTrace, MESSAGEBOX_CAPTION, MessageBoxButtons.OK, MessageBoxIcon.Error, Logger.ELogType.Exception);
                 e.Result = string.Empty;
                 return;
             }
@@ -137,20 +151,20 @@ namespace Injector
                     if (File.Exists(folderBrowserDialog1.SelectedPath + "\\" + GAME_EXE_NAME))
                     {
                         ActiveProfile.GameDirPath = folderBrowserDialog1.SelectedPath + "\\";
-                        Logger.Log.Write("Main", "GameDirWorker_RunWorkerCompleted", "Got GameDir from user: " + ActiveProfile.GameDirPath, Logger.ELogType.Notification);
+                        Logger.Log.Write("Got GameDir from user: " + ActiveProfile.GameDirPath, Logger.ELogType.Notification);
                         // start up the ProcessWatcher
                         SetWatchedProcess(ActiveProfile.GameDirPath + GAME_EXE_NAME);
                         return;
                     }
-                    Logger.Log.Write("Main", "GameDirWorker_RunWorkerCompleted", "User selected wrong game directory when prompted (" + folderBrowserDialog1.SelectedPath + ")", Logger.ELogType.Info);
+                    Logger.Log.Write("User selected wrong game directory when prompted (" + folderBrowserDialog1.SelectedPath + ")", Logger.ELogType.Info);
                 }
-                Logger.Log.WriteError("Main", "GameDirWorker_RunWorkerCompleted", "Could not locate Among Us directory", null, true);
+                Logger.Log.WriteError("Could not locate Among Us directory", null, true);
                 Application.Exit();
             }
             else
             {
                 ActiveProfile.GameDirPath = e.Result as string;
-                Logger.Log.Write("Main", "GameDirWorker_RunWorkerCompleted", "Got GameDir automatically: " + ActiveProfile.GameDirPath, Logger.ELogType.Notification);
+                Logger.Log.Write("Got GameDir automatically: " + ActiveProfile.GameDirPath, Logger.ELogType.Notification);
                 // start up the ProcessWatcher
                 SetWatchedProcess(ActiveProfile.GameDirPath + GAME_EXE_NAME);
             }
@@ -167,7 +181,7 @@ namespace Injector
                 }
                 else
                 {
-                    Logger.Log.WriteError("Main", "txtboxInjectDLLPath_Click", "Path to inject DLL is not valid '" + injectDLLPath + "'");
+                    Logger.Log.WriteError("Path to inject DLL is not valid '" + injectDLLPath + "'");
                     ActiveProfile.InjectDLLFullPath = string.Empty;
                 }
             }
@@ -178,17 +192,17 @@ namespace Injector
         {
             if ((SelectedProcess == null) || (SelectedProcess.ActiveProcess == null) || (SelectedProcess.ActiveProcess.HasExited) || (string.IsNullOrEmpty(ActiveProfile.InjectDLLFullPath)))
             {
-                Logger.Log.Write("Main", "btnInject_Click", "Could not inject because the game is not running", Logger.ELogType.Notification);
+                Logger.Log.Write("Could not inject because the game is not running", Logger.ELogType.Notification);
                 return;
             }
             string bootstrapDLLPath = SelectedProcess.Is64Bit ? BOOTSTRAPPER_X64_NAME : BOOTSTRAPPER_X86_NAME;
             if (!File.Exists(bootstrapDLLPath))
             {
-                Logger.Log.WriteError("Main", "btnInject_Click", "Could not find bootstrapper DLL in injector's directory (" + bootstrapDLLPath + ")");
+                Logger.Log.WriteError("Could not find bootstrapper DLL in injector's directory (" + bootstrapDLLPath + ")");
                 return;
             }
             string bootstrapConfigPath = ActiveProfile.GameDirPath + BOOTSTRAPPER_CONFIG_FILENAME;
-            Logger.Log.Write("Main", "btnInject_Click", "Creating config file for bootstrapper at " + bootstrapConfigPath);
+            Logger.Log.Write("Creating config file for bootstrapper at " + bootstrapConfigPath);
             try
             {
                 using (FileStream fs = File.Open(bootstrapConfigPath, FileMode.Create, FileAccess.Write))
@@ -209,12 +223,12 @@ namespace Injector
                     }
                 }
                 string bootstrapDLLFullPath = Path.GetFullPath(bootstrapDLLPath);
-                Logger.Log.Write("Main", "btnInject_Click", "Injecting bootstrapper (" + bootstrapDLLFullPath + ")");
+                Logger.Log.Write("Injecting bootstrapper (" + bootstrapDLLFullPath + ")");
                 btnInject.Enabled = !Injector.Inject(SelectedProcess.ActiveProcess, bootstrapDLLFullPath);
             }
             catch (Exception ex)
             {
-                Logger.Log.WriteException("Main", "btnInject_Click", ex);
+                Logger.Log.WriteException(ex);
             }
         }
 
@@ -266,6 +280,12 @@ namespace Injector
                 ActiveProfile.GameLogin_Password = txtboxPassword.Text;
                 RefreshControlsState();
             }
+        }
+
+        private void btnToggleLogDisplay_Click(object sender, EventArgs e)
+        {
+            Size = new Size(Size.Width, (IsShrunk ? FORM_MAIN_EXPANDED_HEIGHT : FORM_MAIN_SHRUNK_HEIGHT));
+            IsShrunk = !IsShrunk;
         }
     }
 }

@@ -8,6 +8,7 @@ using System.Diagnostics;
 
 using NinMods.Hooking.NativeImports;
 using NinMods.Hooking.Utilities;
+using NinMods.Logging;
 
 namespace NinMods.Hooking.LowLevel
 {

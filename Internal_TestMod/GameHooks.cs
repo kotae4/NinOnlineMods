@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using NinMods.Hooking;
 using NinMods.Utilities;
 using System.Reflection;
+using NinMods.Logging;
 
 namespace NinMods
 {

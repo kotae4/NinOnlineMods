@@ -7,6 +7,7 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using NinMods.Hooking.LowLevel;
 using NinMods.Hooking.NativeImports;
+using NinMods.Logging;
 
 namespace NinMods.Hooking
 {

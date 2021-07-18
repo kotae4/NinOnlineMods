@@ -4,8 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.IO;
+using Launcher.Logging;
 
-namespace Injector
+namespace Launcher
 {
     public partial class Main
     {
@@ -16,7 +17,7 @@ namespace Injector
             Profile defaultProfile = new Profile();
             if (Directory.Exists(MOD_FOLDER_NAME))
             {
-                Logger.Log.Write("Main_SaveAndLoad", "InitializeProfileSystem", MOD_FOLDER_NAME + " already exists", Logger.ELogType.Info);
+                Logger.Log.Write($"{MOD_FOLDER_NAME} already exists", Logger.ELogType.Info);
                 foreach (string filename in Directory.EnumerateFiles(MOD_FOLDER_NAME, "*?" + PROFILE_FILE_EXT, SearchOption.TopDirectoryOnly))
                 {
                     using (FileStream fs = new FileStream(filename, FileMode.Open, FileAccess.Read, FileShare.Read))
@@ -26,11 +27,11 @@ namespace Injector
                             Profile profile = new Profile();
                             if (!profile.Deserialize(reader))
                             {
-                                Logger.Log.WriteError("Main_SaveAndLoad", "InitializeProfileSystem", "Error loading profile '" + filename + "'");
+                                Logger.Log.WriteError($"Error loading profile '{filename}'");
                             }
                             // load GUI controls state
                             ActiveProfile = profile;
-                            Logger.Log.Write("Main_SaveAndLoad", "InitializeProfileSystem", "Loaded profile from '" + filename + "'", Logger.ELogType.Info);
+                            Logger.Log.Write($"Loaded profile from '{filename}'", Logger.ELogType.Info);
                             return;
                         }
                     }
@@ -41,10 +42,10 @@ namespace Injector
                 // NOTE:
                 // first run of program
                 Directory.CreateDirectory(MOD_FOLDER_NAME);
-                Logger.Log.Write("Main_SaveAndLoad", "InitializeProfileSystem", MOD_FOLDER_NAME + " did not exist, created it for subsequent launches", Logger.ELogType.Info);
+                Logger.Log.Write($"{MOD_FOLDER_NAME} did not exist, created it for subsequent launches", Logger.ELogType.Info);
             }
             ActiveProfile = defaultProfile;
-            Logger.Log.Write("Main_SaveAndLoad", "InitializeProfileSystem", "Loaded default profile", Logger.ELogType.Info);
+            Logger.Log.Write("Loaded default profile", Logger.ELogType.Info);
         }
 
         private void SaveProfileSystem()
@@ -57,12 +58,12 @@ namespace Injector
                 {
                     if (!ActiveProfile.Serialize(writer))
                     {
-                        Logger.Log.WriteError("Main_SaveAndLoad", "InitializeProfileSystem", "Error saving profile to '" + filePath + "'", null, true);
+                        Logger.Log.WriteError($"Error saving profile to '{filePath}'", null, true);
                         return;
                     }
                 }
             }
-            Logger.Log.Write("Main_SaveAndLoad", "InitializeProfileSystem", "Successfully saved profile to '" + filePath + "'", Logger.ELogType.Info, null, true);
+            Logger.Log.Write($"Successfully saved profile to '{filePath}'", Logger.ELogType.Info, null, true);
         }
     }
 }

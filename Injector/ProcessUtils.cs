@@ -5,8 +5,9 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Runtime.InteropServices;
 using System.IO;
+using Launcher.Logging;
 
-namespace Injector
+namespace Launcher
 {
     public static class ProcessUtils
     {
@@ -15,14 +16,14 @@ namespace Injector
             int capacity = 260;
             StringBuilder sb = new StringBuilder(capacity);
             bool success = WinAPI.QueryFullProcessImageName(procHandle, 0, sb, ref capacity);
-            Logger.Log.Write("ProcessUtils", "GetProcessBase", "QueryFullProcessImageName returned: " + success.ToString(), Logger.ELogType.Info);
+            Logger.Log.Write($"QueryFullProcessImageName returned: {success}", Logger.ELogType.Info);
             if (success == false)
             {
-                Logger.Log.WriteError("ProcessUtils", "GetProcessBase", "QueryFullProcessImageName failed, cannot continue.");
+                Logger.Log.WriteError("QueryFullProcessImageName failed, cannot continue.");
                 return IntPtr.Zero;
             }
             string fullPath = sb.ToString(0, capacity);
-            Logger.Log.Write("ProcessUtils", "GetProcessBase", "QueryFullProcessImageName got '" + fullPath + "' from process", Logger.ELogType.Info);
+            Logger.Log.Write($"QueryFullProcessImageName got '{fullPath}' from process", Logger.ELogType.Info);
 
             // QueryFullProcessImageName returns the full dos path, but we only want the filename part, so strip out the rest
             string moduleName = Path.GetFileName(fullPath);
@@ -46,15 +47,15 @@ namespace Injector
             uint cbNeeded = 0;
 
             bool enumProcessResult = WinAPI.EnumProcessModulesEx(procHandle, pModules, uiSize, out cbNeeded, (uint)(WinAPI.EnumProcessModulesFilterFlag.LIST_MODULES_ALL));
-            Logger.Log.Write("ProcessUtils", "GetModuleBase", "EnumProcessModulesEx returned: " + enumProcessResult.ToString(), Logger.ELogType.Info);
+            Logger.Log.Write($"EnumProcessModulesEx returned: {enumProcessResult}", Logger.ELogType.Info);
             if (enumProcessResult == false)
             {
-                Logger.Log.WriteError("ProcessUtils", "GetModuleBase", "EnumProcessModulesEx failed, cannot continue");
+                Logger.Log.WriteError("EnumProcessModulesEx failed, cannot continue");
                 return IntPtr.Zero;
             }
 
             Int32 uiTotalNumberofModules = (Int32)(cbNeeded / (Marshal.SizeOf(typeof(IntPtr))));
-            Logger.Log.Write("ProcessUtils", "GetModuleBase", "Number of Modules: " + uiTotalNumberofModules, Logger.ELogType.Info);
+            Logger.Log.Write($"Number of Modules: {uiTotalNumberofModules}", Logger.ELogType.Info);
 
             for (int i = 0; i < (int)uiTotalNumberofModules; i++)
             {
@@ -63,20 +64,20 @@ namespace Injector
                 uint size = WinAPI.GetModuleFileNameEx(procHandle, hMods[i], strbld, (uint)(strbld.Capacity));
                 if (size == 0)
                 {
-                    Logger.Log.WriteError("ProcessUtils", "GetModuleBase", "GetModuleFileNameEx failed, cannot continue");
+                    Logger.Log.WriteError("GetModuleFileNameEx failed, cannot continue");
                     gch.Free();
                     return IntPtr.Zero;
                 }
                 string curModuleFilePath = strbld.ToString();
-                Logger.Log.Write("ProcessUtils", "GetModuleBase", "File Path: " + curModuleFilePath, Logger.ELogType.Info);
-                Logger.Log.Write("ProcessUtils", "GetModuleBase", "Base Addr: " + hMods[i].ToString("X2"), Logger.ELogType.Info);
+                Logger.Log.Write($"File Path: {curModuleFilePath}", Logger.ELogType.Info);
+                Logger.Log.Write($"Base Addr: {hMods[i].ToString("X2")}", Logger.ELogType.Info);
 
                 // GetModuleFileNameEx returns the full dos path, we're just interested in the filename part though, so strip all the other stuff out...
                 string curModuleFileName = Path.GetFileName(curModuleFilePath).ToLower();
                 if (curModuleFileName == targetModuleName)
                 {
                     baseAddr = hMods[i];
-                    Logger.Log.Write("ProcessUtils", "GetModuleBase", "Found match! Base address of process should be " + hMods[i].ToString("X2"), Logger.ELogType.Info);
+                    Logger.Log.Write($"Found match! Base address of process should be {hMods[i].ToString("X2")}", Logger.ELogType.Info);
                     break;
                 }
             }

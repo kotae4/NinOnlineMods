@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using QuikGraph;
 using QuikGraph.Algorithms;
 using QuikGraph.Algorithms.ShortestPath;
+using NinMods.Logging;
 
 namespace NinMods.InterMapPathfinding
 {

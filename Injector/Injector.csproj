@@ -6,7 +6,7 @@
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProjectGuid>{67E77FD8-0E7D-40CE-8F4C-4D754CA0A0BF}</ProjectGuid>
     <OutputType>WinExe</OutputType>
-    <RootNamespace>Injector</RootNamespace>
+    <RootNamespace>Launcher</RootNamespace>
     <AssemblyName>Injector</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
@@ -49,12 +49,17 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Injector.cs" />
-    <Compile Include="Logger.cs" />
+    <Compile Include="Logging\EventHandlerExtensions.cs" />
+    <Compile Include="Logging\Logger.cs" />
+    <Compile Include="Logging\PipeServer.cs" />
     <Compile Include="Main.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Main.Designer.cs">
       <DependentUpon>Main.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Main_PipeServer.cs">
+      <SubType>Form</SubType>
     </Compile>
     <Compile Include="Main_ProcessWatcher.cs">
       <SubType>Form</SubType>
@@ -79,6 +84,7 @@
     <Compile Include="Properties\Resources.Designer.cs">
       <AutoGen>True</AutoGen>
       <DependentUpon>Resources.resx</DependentUpon>
+      <DesignTime>True</DesignTime>
     </Compile>
     <None Include="app.manifest" />
     <None Include="Properties\Settings.settings">

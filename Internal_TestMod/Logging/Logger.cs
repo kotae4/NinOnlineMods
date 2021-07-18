@@ -7,12 +7,13 @@ using System.IO;
 // for automatic caller name & filepath (CallerMemberNameAttribute & CallerFilePathAttribute)
 using System.Runtime.CompilerServices;
 
-namespace NinMods
+namespace NinMods.Logging
 {
     public class Logger
     {
         const string LOG_FILENAME = Main.MAIN_NAME + "_log.txt";
         const string NETLOG_FILENAME = Main.MAIN_NAME + "_netlog.txt";
+        const string PIPELOG_NAME = "ninbot";
 
         public static readonly Logger Log = new Logger();
         static readonly System.Globalization.CultureInfo DateTimeCultureInfo_German = System.Globalization.CultureInfo.CreateSpecificCulture("de-DE");
@@ -20,16 +21,28 @@ namespace NinMods
         // mostly used for coloring messages
         public enum ELogType
         {
+            Trace,
             Info,
-            Notification,
+            Warning,
             Error,
+            Notification,
             Exception
         }
+
+        public bool NeedsInit = true;
 
         // TO-DO:
         // * Is StreamWriter thread-safe?
         StreamWriter logWriter;
         StreamWriter netlogWriter;
+
+        // for pipe logging
+        PipeClient pipe;
+        bool isPipeInitialized = false;
+
+        // for thread-safety
+        object threadLock = 0;
+
 
         Logger()
         {
@@ -50,8 +63,33 @@ namespace NinMods
             }
         }
 
+        public void InitPipe()
+        {
+            pipe = new PipeClient(PIPELOG_NAME);
+            pipe.ClientConnectedEvent += Pipe_OnClientConnected;
+            pipe.ClientDisconnectedEvent += Pipe_OnClientDisconnected;
+            pipe.MessageReceivedEvent += Pipe_OnMessageReceived;
+            if (pipe.Start() == false)
+            {
+                WriteError("Could not start pipe client");
+                isPipeInitialized = false;
+            }
+            NeedsInit = false;
+        }
+
+        public void DestroyPipe()
+        {
+            isPipeInitialized = false;
+            pipe.ClientConnectedEvent -= Pipe_OnClientConnected;
+            pipe.ClientDisconnectedEvent -= Pipe_OnClientDisconnected;
+            pipe.MessageReceivedEvent -= Pipe_OnMessageReceived;
+            pipe.Shutdown();
+            pipe = null;
+        }
+
         public void Close()
         {
+            DestroyPipe();
             if (logWriter != null)
             {
                 if ((logWriter.BaseStream != null) && (logWriter.BaseStream.CanRead))
@@ -84,7 +122,7 @@ namespace NinMods
 
             if (rtxtLog != null)
             {
-                WinformControl_WriteTextSafe(rtxtLog, logString);
+                WinformControl_WriteTextSafe(rtxtLog, logString, type);
             }
         }
 
@@ -102,6 +140,18 @@ namespace NinMods
         {
             System.Windows.Forms.MessageBox.Show(logString, caption, buttons, icon);
             Write(logString, type, rtxtLog, shouldForceFlush, sourceFile, sourceMethodName);
+        }
+
+        public void WritePipe(string logString, ELogType type = ELogType.Info, System.Windows.Forms.RichTextBox rtxtLog = null, bool shouldForceFlush = false, [CallerFilePath] string sourceFile = "<none>", [CallerMemberName] string sourceMethodName = "<none>")
+        {
+            Write(logString, type, rtxtLog, shouldForceFlush, sourceFile, sourceMethodName);
+            if ((pipe != null) && (isPipeInitialized))
+            {
+                // special formatting:
+                // ELogType as string + delimiter character (^) + the actual log message
+                string pipeMsg = $"{type}^{logString}";
+                pipe.SendMessage(pipeMsg);
+            }
         }
 
         public void WriteNetLog(string logString, ELogType type = ELogType.Info, System.Windows.Forms.RichTextBox rtxtLog = null, bool shouldForceFlush = false, [CallerFilePath] string sourceFile = "<none>", [CallerMemberName] string sourceMethodName = "<none>")
@@ -122,20 +172,87 @@ namespace NinMods
 
             if (rtxtLog != null)
             {
-                WinformControl_WriteTextSafe(rtxtLog, logString);
+                WinformControl_WriteTextSafe(rtxtLog, logString, type);
             }
         }
 
-        private delegate void SafeCallDelegate(System.Windows.Forms.RichTextBox richtextControl, string text);
-        private void WinformControl_WriteTextSafe(System.Windows.Forms.RichTextBox richtextControl, string text)
+        public void WriteThreaded(string logString, ELogType type = ELogType.Info, System.Windows.Forms.RichTextBox rtxtLog = null, bool shouldForceFlush = false, [CallerFilePath] string sourceFile = "<none>", [CallerMemberName] string sourceMethodName = "<none>")
+        {
+            lock(threadLock)
+            {
+                Write(logString, type, rtxtLog, shouldForceFlush, sourceFile, sourceMethodName);
+            }
+        }
+
+        private void Pipe_OnClientConnected(object sender, ClientConnectedEventArgs eventArgs)
+        {
+            isPipeInitialized = true;
+            Write("Pipe client connected");
+        }
+
+        private void Pipe_OnClientDisconnected(object sender, ClientDisconnectedEventArgs eventArgs)
+        {
+            isPipeInitialized = false;
+            Write("Pipe client disconnected");
+        }
+
+        private void Pipe_OnMessageReceived(object sender, MessageReceivedEventArgs eventArgs)
+        {
+            Write($"Received '{eventArgs.Message}' from pipe server");
+        }
+
+        private delegate void SafeCallDelegate(System.Windows.Forms.RichTextBox richtextControl, string text, ELogType logLevel);
+        private void WinformControl_WriteTextSafe(System.Windows.Forms.RichTextBox richtextControl, string text, ELogType logLevel)
         {
             if (richtextControl.InvokeRequired)
             {
                 var d = new SafeCallDelegate(WinformControl_WriteTextSafe);
-                richtextControl.Invoke(d, new object[] { richtextControl, text });
+                richtextControl.Invoke(d, new object[] { richtextControl, text, logLevel });
             }
             else
             {
+                // TO-DO:
+                // move this to a utility function
+                System.Drawing.Color msgColor = System.Drawing.Color.Black;
+                bool shouldBold = false;
+                switch (logLevel)
+                {
+                    case ELogType.Trace:
+                        {
+                            msgColor = System.Drawing.Color.Silver;
+                            break;
+                        }
+                    case ELogType.Warning:
+                        {
+                            msgColor = System.Drawing.Color.Orange;
+                            break;
+                        }
+                    case ELogType.Error:
+                        {
+                            msgColor = System.Drawing.Color.Red;
+                            break;
+                        }
+                    case ELogType.Exception:
+                        {
+                            msgColor = System.Drawing.Color.Red;
+                            shouldBold = true;
+                            break;
+                        }
+                    case ELogType.Notification:
+                        {
+                            msgColor = System.Drawing.Color.DarkTurquoise;
+                            break;
+                        }
+                }
+                int selectionStart = richtextControl.TextLength;
+                int selectionLength = text.Length;
+                richtextControl.Select(selectionStart, selectionLength);
+                richtextControl.SelectionColor = msgColor;
+                if (shouldBold)
+                {
+                    richtextControl.SelectionFont = new System.Drawing.Font(richtextControl.Font, System.Drawing.FontStyle.Bold);
+                }
+
                 richtextControl.AppendText(text);
             }
         }
