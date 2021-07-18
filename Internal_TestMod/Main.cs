@@ -8,6 +8,7 @@ using NinOnline;
 using System.Reflection;
 using NinMods.Pathfinding;
 using NinMods.Utilities;
+using NinMods.Logging;
 
 namespace NinMods
 {
@@ -73,11 +74,11 @@ namespace NinMods
             }
             oRenderText = (dRenderText)methodInfo.CreateDelegate(typeof(dRenderText));
 
-            Logger.Log.Write("Installing hooks...", Logger.ELogType.Info, null, false);
+            Logger.Log.Write("Installing hooks...", Logger.ELogType.Info, false, null, false);
             try
             {
                 RegisterEventHandlers();
-                Logger.Log.Write("Done installing hooks!", Logger.ELogType.Info, null, true);
+                Logger.Log.Write("Done installing hooks!", Logger.ELogType.Info, false, null, true);
             }
             catch (Exception ex)
             {
@@ -150,11 +151,13 @@ namespace NinMods
             if (client.modInterface.IsWinEntityVisible("winMsgBox") == true)
             {
                 client.modGameLogic.ResetMsgBox();
-                Logger.Log.Write("Suppressed message box");
+                // NOTE:
+                // should be warning, change when logging levels are actually implemented
+                Logger.Log.WritePipe("Suppressed message box", Logger.ELogType.Error);
             }
             if (client.modGlobals.IsLoggingIn == false)
             {
-                Logger.Log.Write($"Trying to auto-login now with username '{NinMods.Main.AutoLogin_Username}' and password '{NinMods.Main.AutoLogin_Password}'");
+                Logger.Log.WritePipe($"Trying to auto-login now with username '{NinMods.Main.AutoLogin_Username}' and password '{NinMods.Main.AutoLogin_Password}'");
                 client.modGlobals.LoginUsernameText = NinMods.Main.AutoLogin_Username;
                 client.modGlobals.LoginPasswordText = NinMods.Main.AutoLogin_Password;
                 client.modGeneral.MenuState(2);
@@ -187,18 +190,25 @@ namespace NinMods
             // the status of the server is checked first. it must not be 0 or 2.
             if ((client.modAuth.ServerDetails != null) && (client.modAuth.ServerDetails[1].Status != 0) && (client.modAuth.ServerDetails[1].Status != 2))
             {
-                Logger.Log.Write("Selecting first server to finish login process...");
+                Logger.Log.WritePipe("Selecting first server to finish login process...");
                 client.modAuth.ServerSelect(1);
             }
             else
             {
-                Logger.Log.WriteError("Cannot select server because ServerDetails are invalid");
+                Logger.Log.WritePipe("Cannot select server because ServerDetails are invalid", Logger.ELogType.Error);
             }
         }
 
         // for auto-login
         public static void Main_OnMenuLoop_Pre()
         {
+            // NOTE:
+            // this *must* be called on game thread, hence this is the earliest we can possibly call it.
+            // log messages generated before this point can't be sent through the pipe.
+            if (Logger.Log.NeedsInit)
+            {
+                Logger.Log.InitPipe();
+            }
             if (client.modGlobals.InGame == false)
             {
                 // WARNING:
@@ -232,7 +242,7 @@ namespace NinMods
                 if (isNew)
                 {
                     newItemLocations.Add(new Vector2i(mapItem.X, mapItem.Y));
-                    Logger.Log.Write($"Saw new item " +
+                    Logger.Log.WritePipe($"Saw new item " +
                             $"(idx {itemIndex}, itemNum {mapItem.num})" +
                             $"\n\t-itemLoc ({mapItem.X}, {mapItem.Y})" +
                             $"\n\t-itemPlayer {mapItem.PlayerName.Trim()}" +
@@ -268,7 +278,7 @@ namespace NinMods
                 {
                     if (NinMods.Main.frmPlayerStats == null)
                     {
-                        Logger.Log.Write("Initializing player stats form", Logger.ELogType.Info, null, false);
+                        Logger.Log.Write("Initializing player stats form", Logger.ELogType.Info, false, null, false);
                         NinMods.Main.frmPlayerStats = new PlayerStatsForm();
                         NinMods.Main.frmPlayerStats.Show();
                     }
@@ -290,7 +300,7 @@ namespace NinMods
                 {
                     if (moveToCursorCmd.Perform() == false)
                     {
-                        Logger.Log.Write("Catastrophic error occurred performing MoveToCursor command");
+                        Logger.Log.WritePipe("Catastrophic error occurred performing MoveToCursor command");
                         moveToCursorCmd = null;
                     }
                 }
@@ -313,14 +323,14 @@ namespace NinMods
         public static void Main_OnMapLoaded_Post(int Index, byte[] data, int StartAddr, int ExtraVar)
         {
             client.modTypes.PlayerRec bot = Bot.BotUtils.GetSelf();
-            Logger.Log.Write($"Loaded new map {bot.Map}", Logger.ELogType.Info, null, true);
+            Logger.Log.WritePipe($"Loaded new map {bot.Map}", Logger.ELogType.Info, null, true);
             if ((client.modTypes.Map != null) && (string.IsNullOrEmpty(client.modTypes.Map.Name) == false))
             {
                 MapPathfindingGrid = new SquareGrid(client.modTypes.Map, client.modTypes.Map.Tile);
             }
             else
             {
-                Logger.Log.WriteError($"Not loading map into pathfinding grid because it's invalid (map: {client.modTypes.Map}, name: {(client.modTypes.Map == null ? "<invalid>" : client.modTypes.Map.Name)})");
+                Logger.Log.WritePipe($"Not loading map into pathfinding grid because it's invalid (map: {client.modTypes.Map}, name: {(client.modTypes.Map == null ? "<invalid>" : client.modTypes.Map.Name)})", Logger.ELogType.Error);
                 return;
             }
             if (IsBotEnabled)
@@ -335,7 +345,7 @@ namespace NinMods
             client.clsBuffer clsBuffer2 = new client.clsBuffer(data);
             string text = clsBuffer2.ReadString();
             byte tColor = clsBuffer2.ReadByte();
-            Logger.Log.Write($"Saw combat msg {text} with color {tColor}");
+            Logger.Log.WritePipe($"Saw combat msg {text} with color {tColor}");
         }
 
         // for drawing tile overlays
@@ -420,7 +430,7 @@ namespace NinMods
             client.clsBuffer clsBuffer2 = new client.clsBuffer(data);
             int num = clsBuffer2.ReadLong();
             client.modEnumerations.ServerPackets packetID = (client.modEnumerations.ServerPackets)num;
-            Logger.Log.WriteNetLog($"RECV packet {packetID} (ID: {num})", Logger.ELogType.Info, null, true);
+            Logger.Log.WriteNetLog($"RECV packet {packetID} (ID: {num})", Logger.ELogType.Info, false, null, true);
             // NOTE:
             // special handling for auto-login process.
             // instead of hooking client.modAuth.Auth_HandleServerDetails we'll just check for that packet here
@@ -440,7 +450,7 @@ namespace NinMods
             client.clsBuffer clsBuffer2 = new client.clsBuffer(data);
             int num = clsBuffer2.ReadLong();
             client.modEnumerations.ClientPackets packetID = (client.modEnumerations.ClientPackets)num;
-            Logger.Log.WriteNetLog($"SENT packet {packetID} (ID: {num})", Logger.ELogType.Info, null, true);
+            Logger.Log.WriteNetLog($"SENT packet {packetID} (ID: {num})", Logger.ELogType.Info, false, null, true);
         }
     }
 }

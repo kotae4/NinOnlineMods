@@ -7,12 +7,13 @@ using System.IO;
 // for automatic caller name & filepath (CallerMemberNameAttribute & CallerFilePathAttribute)
 using System.Runtime.CompilerServices;
 
-namespace NinMods
+namespace Launcher.Logging
 {
     public class Logger
     {
         const string LOG_FILENAME = Main.MAIN_NAME + "_log.txt";
         const string NETLOG_FILENAME = Main.MAIN_NAME + "_netlog.txt";
+        const string PIPELOG_NAME = "ninbot";
 
         public static readonly Logger Log = new Logger();
         static readonly System.Globalization.CultureInfo DateTimeCultureInfo_German = System.Globalization.CultureInfo.CreateSpecificCulture("de-DE");
@@ -30,6 +31,10 @@ namespace NinMods
         // * Is StreamWriter thread-safe?
         StreamWriter logWriter;
         StreamWriter netlogWriter;
+
+        // for thread-safety
+        object threadLock = 0;
+
 
         Logger()
         {
@@ -123,6 +128,14 @@ namespace NinMods
             if (rtxtLog != null)
             {
                 WinformControl_WriteTextSafe(rtxtLog, logString);
+            }
+        }
+
+        public void WriteThreaded(string logString, ELogType type = ELogType.Info, System.Windows.Forms.RichTextBox rtxtLog = null, bool shouldForceFlush = false, [CallerFilePath] string sourceFile = "<none>", [CallerMemberName] string sourceMethodName = "<none>")
+        {
+            lock (threadLock)
+            {
+                Write(logString, type, rtxtLog, shouldForceFlush, sourceFile, sourceMethodName);
             }
         }
 

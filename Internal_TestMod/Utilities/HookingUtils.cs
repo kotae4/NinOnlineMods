@@ -6,6 +6,7 @@ using System.Reflection;
 using NinMods.Utilities;
 using NinMods.Hooking;
 using System.Runtime.CompilerServices;
+using NinMods.Logging;
 
 namespace NinMods
 {

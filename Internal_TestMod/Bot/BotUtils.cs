@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using NinMods.Logging;
 
 namespace NinMods.Bot
 {
@@ -201,7 +202,7 @@ namespace NinMods.Bot
                 Logger.Log.WriteError($"Could not get direction out of {tileDirection} (self: {botLocation}; nextTile: {nextTile})");
                 return false;
             }
-            Logger.Log.Write($"Moving bot from {botLocation} to {nextTile} in direction {gameDir} (tileDir: {tileDirection})", Logger.ELogType.Info, null, true);
+            Logger.Log.Write($"Moving bot from {botLocation} to {nextTile} in direction {gameDir} (tileDir: {tileDirection})", Logger.ELogType.Info, false, null, true);
             // perform next movement
             // set state before sending packet
             client.modTypes.Player[client.modGlobals.MyIndex].Dir = gameDir;

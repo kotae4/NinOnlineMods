@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using NinMods.Logging;
 
 namespace NinMods.Bot
 {
@@ -115,7 +116,7 @@ namespace NinMods.Bot
                         {
                             currentCommand = new BotCommand_CollectItem((Vector2i)injectedEvent.eventData);
                             currentState = EBotState.CollectingItem;
-                            Logger.Log.Write($"Moved to injected state {currentState} from {oldState}");
+                            Logger.Log.WritePipe($"Moved to injected state {currentState} from {oldState}");
                             return;
                         }
                 }
@@ -167,7 +168,7 @@ namespace NinMods.Bot
                         break;
                     }
             }
-            Logger.Log.Write($"Moved to state {currentState} from {oldState}");
+            Logger.Log.WritePipe($"Moved to state {currentState} from {oldState}");
         }
 
         public void InjectEvent(EBotEvent eventType, object eventData)
@@ -188,18 +189,18 @@ namespace NinMods.Bot
                             // just ignore items while we're moving to our grind maps.
                             // TO-DO:
                             // don't ignore items while moving to grind map
-                            Logger.Log.Write($"Ignoring {eventType} event because we are moving to a new map");
+                            Logger.Log.WritePipe($"Ignoring {eventType} event because we are moving to a new map");
                             return;
                         }
                         else if (currentState == EBotState.AttackingTarget)
                         {
-                            Logger.Log.Write($"Enqueuing {eventType} event because we are in an uninterruptible state");
+                            Logger.Log.WritePipe($"Enqueuing {eventType} event because we are in an uninterruptible state");
                             injectedEventQueue.Enqueue(new InjectedEventData(eventType, eventData));
                             return;
                         }
                         else
                         {
-                            Logger.Log.Write($"Interrupting current state to handle {eventType} event");
+                            Logger.Log.WritePipe($"Interrupting current state to handle {eventType} event");
                             currentCommand = new BotCommand_CollectItem((Vector2i)eventData);
                             currentState = EBotState.CollectingItem;
                         }
@@ -212,7 +213,7 @@ namespace NinMods.Bot
                             Logger.Log.Write($"Ignoring injected event {eventType} because we are already at or moving to target map ID {(int)eventData}");
                             return;
                         }
-                        Logger.Log.Write($"Interrupting current state to handle {eventType} event");
+                        Logger.Log.WritePipe($"Interrupting current state to handle {eventType} event");
                         currentCommand = new BotCommand_MoveToMap((int)eventData);
                         currentState = EBotState.MovingToMap;
                         break;
@@ -224,7 +225,7 @@ namespace NinMods.Bot
         {
             if (HasFailedCatastrophically)
             {
-                Logger.Log.WriteError("Bot failed catastrophically, cannot do anything.");
+                Logger.Log.WritePipe("Bot failed catastrophically, cannot do anything.", Logger.ELogType.Error);
                 return;
             }
 
@@ -235,7 +236,7 @@ namespace NinMods.Bot
                     // if the current command fails for some reason then switch to idle and hope we don't face the same issue repeatedly
                     // this is definitely bad, but i want to get my character leveled as quickly as possible so i can develop the bot further
                     // so i'll risk getting stuck in a nasty loop over not having the chance to recover at all
-                    Logger.Log.Write("Command failed to perform, moving to Idle and then finding next state");
+                    Logger.Log.WritePipe("Command failed to perform, moving to Idle and then finding next state");
                     currentState = EBotState.Idle;
                     currentCommand = null;
                     NextState();
@@ -244,7 +245,7 @@ namespace NinMods.Bot
                 if (currentCommand.IsComplete())
                 {
                     currentCommand = null;
-                    Logger.Log.Write("Completed command!");
+                    Logger.Log.WritePipe("Completed command!");
                 }
             }
 

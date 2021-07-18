@@ -90,6 +90,8 @@
     <Compile Include="GenericGameHookClass.cs" />
     <Compile Include="Inter-Map Pathfinding\IntermapPathfinding.cs" />
     <Compile Include="AStar Pathfinding\Pathfinder.cs" />
+    <Compile Include="Logging\EventHandlerExtensions.cs" />
+    <Compile Include="Logging\PipeClient.cs" />
     <Compile Include="MapData.cs" />
     <Compile Include="PlayerStatsForm.cs">
       <SubType>Form</SubType>
@@ -110,7 +112,7 @@
     <Compile Include="Hooking\minhook\Utilities.cs" />
     <Compile Include="Hooking\NativeStubHooker.cs" />
     <Compile Include="Utilities\GameUtils.cs" />
-    <Compile Include="Utilities\Logger.cs" />
+    <Compile Include="Logging\Logger.cs" />
     <Compile Include="Main.cs" />
     <Compile Include="InjectedClass.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

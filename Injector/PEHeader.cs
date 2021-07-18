@@ -5,8 +5,9 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Runtime.InteropServices;
 using System.Diagnostics;
+using Launcher.Logging;
 
-namespace Injector
+namespace Launcher
 {
     #region Defines
 
@@ -494,7 +495,7 @@ namespace Injector
             {
                 if (ReadEAT(procHandle) == false)
                 {
-                    Logger.Log.WriteError("PEHeader", "GetAddressOfExportedFunction", "Could not read EAT. Cannot find any exported functions.");
+                    Logger.Log.WriteError("Could not read EAT. Cannot find any exported functions.");
                     WinAPI.CloseHandle(procHandle);
                     return IntPtr.Zero;
                 }
@@ -508,12 +509,12 @@ namespace Injector
                     uint indexIntoFuncArray = EAT_Ordinals[nameEntry.Key];
                     uint funcRVA = EAT_SymbolRVAs[indexIntoFuncArray];
                     IntPtr funcAddress = baseAddress + (int)funcRVA;
-                    Logger.Log.Write("PEHeader", "GetAddressOfExportedFunction", "Found function address @ " + funcAddress.ToString("X2") + " for '" + funcName + "'", Logger.ELogType.Info);
+                    Logger.Log.Write($"Found function address @ {funcAddress.ToString("X2")} for '{funcName}'", Logger.ELogType.Info);
                     WinAPI.CloseHandle(procHandle);
                     return funcAddress;
                 }
             }
-            Logger.Log.WriteError("PEHeader", "GetAddressOfExportedFunction", "Could not find exported function '" + funcName + "' from PEHeader at " + baseAddress.ToString("X2"));
+            Logger.Log.WriteError($"Could not find exported function '{funcName}' from PEHeader at {baseAddress.ToString("X2")}");
             WinAPI.CloseHandle(procHandle);
             return IntPtr.Zero;
         }
@@ -537,7 +538,7 @@ namespace Injector
             EAT = WinAPI.Rpm<IMAGE_EXPORT_DIRECTORY>(procHandle, eatAddr, out numBytesRead);
             if (numBytesRead == 0)
             {
-                Logger.Log.WriteError("PEHeader", "ReadEAT", "Could not read EAT from " + eatAddr.ToString("X2"));
+                Logger.Log.WriteError($"Could not read EAT from {eatAddr.ToString("X2")}");
                 hasEAT = false;
                 return false;
             }
@@ -547,19 +548,19 @@ namespace Injector
             // the heap may contain forward export names too, so we want to allocate a little more to account for them
             EAT_ProcessedNames = new Dictionary<uint, string>((int)EAT.NumberOfNames);
 
-            Logger.Log.Write("PEHeader", "ReadEAT", "Read EAT at " + eatAddr.ToString("X2") + "\nnumBytesRead: " + numBytesRead.ToString(), Logger.ELogType.Info);
+            Logger.Log.Write($"Read EAT at {eatAddr.ToString("X2")}\nnumBytesRead: {numBytesRead}", Logger.ELogType.Info);
 
             // begin reading...
             // note: pointer sizes vary based on target bitness! complicates things a bit
             // 1. AddressOfFunctions, an array of int32 RVAs that when added to image base lead to the exported symbol. some entries may be forwarder rvas that lead to a string.
             WinAPI.ReadProcessMemory(procHandle, (IntPtr)(baseAddress + (int)EAT.AddressOfFunctions), EAT_SymbolRVAs, (IntPtr)(EAT.NumberOfFunctions * 4), out numBytesReadAsIntPtr);
-            Logger.Log.Write("PEHeader", "ReadEAT", "Read " + EAT.NumberOfFunctions + " function RVAs starting at " + ((IntPtr)(baseAddress + (int)EAT.AddressOfFunctions)).ToString() + " and ending at " + ((IntPtr)(baseAddress + (int)EAT.AddressOfFunctions) + (int)(EAT.NumberOfFunctions * 4)).ToString(), Logger.ELogType.Info);
+            Logger.Log.Write($"Read {EAT.NumberOfFunctions} function RVAs starting at {((IntPtr)(baseAddress + (int)EAT.AddressOfFunctions)).ToString("X2")} and ending at {((IntPtr)(baseAddress + (int)EAT.AddressOfFunctions) + (int)(EAT.NumberOfFunctions * 4)).ToString("X2")}", Logger.ELogType.Info);
             // 2. AddressOfNames, an array of int32 RVAs to c-strings (we have to read the c-strings too!)
             WinAPI.ReadProcessMemory(procHandle, (IntPtr)(baseAddress + (int)EAT.AddressOfNames), EAT_NameRVAs, (IntPtr)(EAT.NumberOfNames * 4), out numBytesReadAsIntPtr);
-            Logger.Log.Write("PEHeader", "ReadEAT", "Read " + EAT.NumberOfNames + " name RVAs starting at " + ((IntPtr)(baseAddress + (int)EAT.AddressOfNames)).ToString("X2") + " and ending at " + ((IntPtr)(baseAddress + (int)EAT.AddressOfNames) + (int)(EAT.NumberOfNames * 4)).ToString(), Logger.ELogType.Info);
+            Logger.Log.Write($"Read {EAT.NumberOfNames} name RVAs starting at {((IntPtr)(baseAddress + (int)EAT.AddressOfNames)).ToString("X2")} and ending at {((IntPtr)(baseAddress + (int)EAT.AddressOfNames) + (int)(EAT.NumberOfNames * 4)).ToString("X2")}", Logger.ELogType.Info);
             // 3. AddressOfNameOrdinals, an array of ushorts mirroring AddressOfNames, each ushort is the index into AddressOfFunctions
             WinAPI.ReadProcessMemory(procHandle, (IntPtr)(baseAddress + (int)EAT.AddressOfNameOrdinals), EAT_Ordinals, (IntPtr)(EAT.NumberOfNames * 2), out numBytesReadAsIntPtr);
-            Logger.Log.Write("PEHeader", "ReadEAT", "Read " + EAT.NumberOfNames + " name RVAs starting at " + ((IntPtr)(baseAddress + (int)EAT.AddressOfNames)).ToString("X2") + " and ending at " + ((IntPtr)(baseAddress + (int)EAT.AddressOfNames) + (int)(EAT.NumberOfNames * 4)).ToString(), Logger.ELogType.Info);
+            Logger.Log.Write($"Read {EAT.NumberOfNames} name RVAs starting at {((IntPtr)(baseAddress + (int)EAT.AddressOfNames)).ToString("X2")} and ending at {((IntPtr)(baseAddress + (int)EAT.AddressOfNames) + (int)(EAT.NumberOfNames * 4)).ToString("X2")}", Logger.ELogType.Info);
 
             // 4. we want to avoid making 1700 ReadProcessMemory calls, so we should try reading as many of the names as we can in one call
             // we do this by going through the name RVAs and finding both the lowest RVA and the highest RVA and make our one ReadProcessMemory in that range.
@@ -587,13 +588,13 @@ namespace Injector
                 curIndex++;
             }
             sizeOfNameHeap = (int)(highestNameRVA - lowestNameRVA);
-            Logger.Log.Write("PEHeader", "ReadEAT", "Saw lowestNameRVA of " + lowestNameRVA.ToString() + " at index " + lowestNameRVAIndex.ToString(), Logger.ELogType.Info);
-            Logger.Log.Write("PEHeader", "ReadEAT", "Saw highestNameRVA of " + highestNameRVA.ToString() + " at index " + highestNameRVAIndex.ToString(), Logger.ELogType.Info);
+            Logger.Log.Write($"Saw lowestNameRVA of {lowestNameRVA} at index {lowestNameRVAIndex}", Logger.ELogType.Info);
+            Logger.Log.Write($"Saw highestNameRVA of {highestNameRVA} at index {highestNameRVAIndex}", Logger.ELogType.Info);
 
             EAT_NameHeap = new byte[sizeOfNameHeap];
-            Logger.Log.Write("PEHeader", "ReadEAT", "Allocated EAT_NameHeap with size " + sizeOfNameHeap.ToString(), Logger.ELogType.Info);
+            Logger.Log.Write($"Allocated EAT_NameHeap with size {sizeOfNameHeap}", Logger.ELogType.Info);
             WinAPI.ReadProcessMemory(procHandle, (IntPtr)(baseAddress + (int)lowestNameRVA), EAT_NameHeap, (IntPtr)sizeOfNameHeap, out numBytesReadAsIntPtr);
-            Logger.Log.Write("PEHeader", "ReadEAT", "Read NameHeap (bytesRead: " + numBytesReadAsIntPtr.ToString() + ")", Logger.ELogType.Info);
+            Logger.Log.Write($"Read NameHeap (bytesRead: {numBytesReadAsIntPtr})", Logger.ELogType.Info);
 
             // 5. process name heap into usable string collection
             int startOfCurrentStringIndex = 0;
@@ -616,7 +617,7 @@ namespace Injector
                     startOfCurrentStringIndex = index + 1;
                 }
             }
-            Logger.Log.Write("PEHeader", "ReadEAT", "Processed " + numConvertedStrings.ToString() + " strings from NameHeap into convenient dictionary", Logger.ELogType.Info);
+            Logger.Log.Write($"Processed {numConvertedStrings} strings from NameHeap into convenient dictionary", Logger.ELogType.Info);
 
             hasEAT = true;
             return true;
@@ -627,11 +628,11 @@ namespace Injector
             PEHeader parsedHeader = new PEHeader();
             IntPtr procHandle = WinAPI.OpenProcess((uint)WinAPI.ProcessAccessFlags.All, 0, (uint)proc.Id);
             IntPtr procBaseAddr = ProcessUtils.GetProcessBase(procHandle);
-            Logger.Log.Write("PEHeader", "ParseFromProcess", "Got process base address: " + procBaseAddr.ToString("X2"), Logger.ELogType.Info);
+            Logger.Log.Write($"Got process base address: {procBaseAddr.ToString("X2")}", Logger.ELogType.Info);
 
             if (ParseFromAddress(procHandle, procBaseAddr, ref parsedHeader) == false)
             {
-                Logger.Log.WriteError("PEHeader", "ParseFromProcess", "Could not parse PE header at " + procBaseAddr.ToString("X2"));
+                Logger.Log.WriteError($"Could not parse PE header at {procBaseAddr.ToString("X2")}");
                 parsedHeader.IsValid = false;
                 WinAPI.CloseHandle(procHandle);
                 return parsedHeader;
@@ -650,7 +651,7 @@ namespace Injector
 
             if (ParseFromAddress(procHandle, moduleBaseAddr, ref parsedHeader) == false)
             {
-                Logger.Log.WriteError("PEHeader", "ParseModuleHeader", "Could not parse PE header at " + moduleBaseAddr.ToString("X2"));
+                Logger.Log.WriteError($"Could not parse PE header at {moduleBaseAddr.ToString("X2")}");
                 parsedHeader.IsValid = false;
                 WinAPI.CloseHandle(procHandle);
                 return parsedHeader;
@@ -671,15 +672,15 @@ namespace Injector
             Console.WriteLine("ReadProcessMemory result: " + rpmResult.ToString());
             Console.WriteLine("Read " + numBytesRead.ToString() + " bytes");
             */
-            Logger.Log.Write("PEHeader", "ParseFromAddress", "DosHeader->e_lfanew: " + parsedHeader.dosHeader.e_lfanew.ToString() + "\nbytesRead: " + numBytesRead.ToString(), Logger.ELogType.Info);
+            Logger.Log.Write($"DosHeader->e_lfanew: {parsedHeader.dosHeader.e_lfanew}\nbytesRead: {numBytesRead}", Logger.ELogType.Info);
             if (!parsedHeader.dosHeader.isValid)
             {
-                Logger.Log.WriteError("PEHeader", "ParseFromAddress", "DosHeader is not valid. Cannot continue.");
+                Logger.Log.WriteError("DosHeader is not valid. Cannot continue.");
                 return false;
             }
             // 2. read just the magic field from the NTHeader.OptionalHeader.Magic, this is what determines if it's x86 or x64, which we'll need to know before reading the whole NT header struct
             MagicType NTHeaderMagic = (MagicType)WinAPI.Rpm<ushort>(procHandle, address + parsedHeader.dosHeader.e_lfanew + 24, out numBytesRead);
-            Logger.Log.Write("PEHeader", "ParseFromAddress", "NTHeader->OptionalHeader->Magic: " + NTHeaderMagic.ToString() + "\nbytesRead: " + numBytesRead.ToString(), Logger.ELogType.Info);
+            Logger.Log.Write($"NTHeader->OptionalHeader->Magic: {NTHeaderMagic}\nbytesRead: {numBytesRead}", Logger.ELogType.Info);
             // 3. read the appropriate NT header struct (IMAGE_NT_HEADERS32 or IMAGE_NT_HEADERS64 depending on magic field)
             if (NTHeaderMagic == MagicType.IMAGE_NT_OPTIONAL_HDR32_MAGIC)
             {
@@ -688,7 +689,7 @@ namespace Injector
 
                 if (parsedHeader.ntHeader32.isValid == false)
                 {
-                    Logger.Log.WriteError("PEHeader", "ParseFromAddress", "NTHeader32 is not valid. Cannot continue.");
+                    Logger.Log.WriteError("NTHeader32 is not valid. Cannot continue.");
                     return false;
                 }
             }
@@ -699,13 +700,13 @@ namespace Injector
 
                 if (parsedHeader.ntHeader64.isValid == false)
                 {
-                    Logger.Log.WriteError("PEHeader", "ParseFromAddress", "NTHeader64 is not valid. Cannot continue.");
+                    Logger.Log.WriteError("NTHeader64 is not valid. Cannot continue.");
                     return false;
                 }
             }
             else
             {
-                Logger.Log.WriteError("PEHeader", "ParseFromAddress", "Could not read NT header magic. Cannot continue.");
+                Logger.Log.WriteError("Could not read NT header magic. Cannot continue.");
                 return false;
             }
             // 4. stop there and let user decide what else needs to be read

@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Runtime.InteropServices;
 
-namespace Injector
+namespace Launcher
 {
     public static class WinAPI
     {

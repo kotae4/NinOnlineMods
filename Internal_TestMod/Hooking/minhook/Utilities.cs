@@ -5,6 +5,7 @@ using System.Text;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Runtime.CompilerServices;
+using NinMods.Logging;
 
 namespace NinMods.Hooking.Utilities
 {

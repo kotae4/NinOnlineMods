@@ -1,5 +1,5 @@
 ﻿
-namespace Injector
+namespace Launcher
 {
     partial class Main
     {
@@ -51,6 +51,8 @@ namespace Injector
             this.txtboxPassword = new System.Windows.Forms.TextBox();
             this.label5 = new System.Windows.Forms.Label();
             this.label6 = new System.Windows.Forms.Label();
+            this.btnToggleLogDisplay = new System.Windows.Forms.Button();
+            this.rtxtLog = new System.Windows.Forms.RichTextBox();
             this.menuStrip1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBoxProcessIcon)).BeginInit();
             this.SuspendLayout();
@@ -152,10 +154,10 @@ namespace Injector
             // 
             // btnInject
             // 
-            this.btnInject.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
+            this.btnInject.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.btnInject.Enabled = false;
-            this.btnInject.Location = new System.Drawing.Point(12, 214);
+            this.btnInject.Location = new System.Drawing.Point(12, 205);
             this.btnInject.Name = "btnInject";
             this.btnInject.Size = new System.Drawing.Size(342, 37);
             this.btnInject.TabIndex = 11;
@@ -238,11 +240,31 @@ namespace Injector
             this.label6.TabIndex = 17;
             this.label6.Text = "Password:";
             // 
+            // btnToggleLogDisplay
+            // 
+            this.btnToggleLogDisplay.Location = new System.Drawing.Point(157, 248);
+            this.btnToggleLogDisplay.Name = "btnToggleLogDisplay";
+            this.btnToggleLogDisplay.Size = new System.Drawing.Size(46, 20);
+            this.btnToggleLogDisplay.TabIndex = 18;
+            this.btnToggleLogDisplay.Text = "↕ ↕ ↕";
+            this.btnToggleLogDisplay.UseVisualStyleBackColor = true;
+            this.btnToggleLogDisplay.Click += new System.EventHandler(this.btnToggleLogDisplay_Click);
+            // 
+            // rtxtLog
+            // 
+            this.rtxtLog.Location = new System.Drawing.Point(12, 274);
+            this.rtxtLog.Name = "rtxtLog";
+            this.rtxtLog.Size = new System.Drawing.Size(342, 149);
+            this.rtxtLog.TabIndex = 19;
+            this.rtxtLog.Text = "";
+            // 
             // Main
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(366, 263);
+            this.ClientSize = new System.Drawing.Size(366, 435);
+            this.Controls.Add(this.rtxtLog);
+            this.Controls.Add(this.btnToggleLogDisplay);
             this.Controls.Add(this.label6);
             this.Controls.Add(this.label5);
             this.Controls.Add(this.txtboxPassword);
@@ -297,6 +319,8 @@ namespace Injector
         private System.Windows.Forms.TextBox txtboxPassword;
         private System.Windows.Forms.Label label5;
         private System.Windows.Forms.Label label6;
+        private System.Windows.Forms.Button btnToggleLogDisplay;
+        private System.Windows.Forms.RichTextBox rtxtLog;
     }
 }
 
