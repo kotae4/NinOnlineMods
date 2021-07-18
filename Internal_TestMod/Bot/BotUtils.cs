@@ -71,7 +71,7 @@ namespace NinMods.Bot
         {
             Stack<Vector2i> path = null;
             ECompassDirection idealDir = GetCompassDirectionFromTo(fromPos, new Vector2i(monster.X, monster.Y));
-            Vector2i attackingTile = new Vector2i(monster.X + Vector2i.directions_Eight[(int)idealDir].x, monster.Y + Vector2i.directions_Eight[(int)idealDir].y);
+            Vector2i attackingTile = new Vector2i(monster.X + Vector2i.directions_Four[(int)idealDir].x, monster.Y + Vector2i.directions_Four[(int)idealDir].y);
             path = Pathfinder.GetPathTo(attackingTile.x, attackingTile.y);
             if (path != null)
             {
@@ -185,6 +185,36 @@ namespace NinMods.Bot
 			clsBuffer2.WriteByte((byte)targetType);
 			clsBuffer2.WriteLong(targetIndex);
 			client.modClientTCP.SendData(clsBuffer2.ToArray());
+		}
+
+		public static bool MoveToTileByPath(Stack<Vector2i> path)
+		{ 
+			if (path == null)
+				return  false;
+			
+			if (path.Count == 0)
+			{
+				return true;
+			}
+
+			if (CanMove())
+			{
+				//Logger.Log.Write("BotCommand_MoveToStaticPoint", "Perform", "Got permission to perform movement this tick");
+				Vector2i botLocation = GetSelfLocation();
+				Vector2i nextTile = path.Pop();
+				Vector2i tileDirection = nextTile - botLocation;
+
+				if (MoveDir(tileDirection) == false)
+				{
+					Logger.Log.WriteError($"Could not move bot at {botLocation} in direction {tileDirection}");
+				
+					return false;
+				} else
+                {
+					return true;
+                }
+			}
+			return false;
 		}
 
         public static bool MoveDir(Vector2i tileDirection)

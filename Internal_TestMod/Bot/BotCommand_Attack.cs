@@ -16,6 +16,8 @@ namespace NinMods.Bot
         // for chasing the target if it moves before we engage it (happens occasionally)
         Stack<Vector2i> path = null;
         bool isChasingByPath = false;
+        // for stopping chase if kiting
+        bool isKiting = false;
         // cache optimization
         Vector2i targetLocation = new Vector2i();
 
@@ -55,11 +57,12 @@ namespace NinMods.Bot
             if (dist > 1.6f)
             {
                 Logger.Log.Write($"Target has moved out of range, beginning chase now (self: {botLocation}, target: {targetLocation}, dist: {dist}");
-                if (ChaseTarget(botLocation, dist) == false)
-                {
-                    hasFailedCatastrophically = true;
-                    return false;
-                }
+                if (!isKiting)
+                    if (ChaseTarget(botLocation, dist) == false)
+                    {
+                        hasFailedCatastrophically = true;
+                        return false;
+                    }
             }
             else
             {
@@ -72,11 +75,11 @@ namespace NinMods.Bot
                 // NOTE:
                 // we can actually skip the hotbar part and just cast directly from the spellbook
                 // BUT keeping it this way allows us to kind of prioritize which spells should be cast (by placing those spells on the lower parts of the hotbar)
-                if (client.modGlobals.Tick >= spellCastTimer)
+               /* if (client.modGlobals.Tick >= spellCastTimer)
                 {
                     /*Logger.Log.Write("BotCommand_Attack", "Perform", $"Got permission to cast a spell this tick (target[{targetIndex}]: {target.num}, hp: {target.Vital[(int)client.modEnumerations.Vitals.HP]}) " +
                         $"(npc: {client.modTypes.Npc[target.num].Name.Trim()}, {client.modTypes.Npc[target.num].HP})");
-                    */
+                    
                     for (int hotbarIndex = 1; hotbarIndex <= 20; hotbarIndex++)
                     {
                         // sType of 2 indicates it's a spell (aka jutsu)
@@ -106,7 +109,7 @@ namespace NinMods.Bot
                             }
                         }
                     }
-                }
+                } */
                 // NOTE:
                 // is it ever possible to do a basic attack immediately (like literally same frame) after casting a spell?
                 if (BotUtils.CanAttack())
@@ -128,9 +131,56 @@ namespace NinMods.Bot
                         return false;
                     }
                     BotUtils.BasicAttack();
+                   
+                }
+                // Kiting
+                switch (Kite())
+                {
+                    case "kited":
+                        isKiting = false;
+                        break;
+                    case "kiting":
+                        isKiting = true;
+                        break;
+                    case "error":
+                        isKiting = false;
+                        break;
                 }
             }
             return true;
+        }
+
+        // I need a better return type, I will change this to Enum or smth
+        String Kite()
+        {
+            Vector2i botLocation = BotUtils.GetSelfLocation();
+            for (int index = 0; index < Vector2i.directions_Four.Length; index++)
+            {
+                Vector2i kiteTile = botLocation + new Vector2i(Vector2i.directions_Four[index].x * 2, Vector2i.directions_Four[index].y * 2);
+                if (kiteTile != targetLocation) 
+                    if (client.modTypes.Map.Tile[kiteTile.x, kiteTile.y].Type != Constants.TILE_TYPE_BLOCKED)
+                    {
+                        if (BotUtils.CanMove())
+                        {
+                            path = Pathfinder.GetPathTo(kiteTile.x, kiteTile.y);
+
+                            if (BotUtils.MoveToTileByPath(path) == true)
+                            {
+                                return "kited";
+                                Logger.Log.Write("Moved one away from attack target");
+                            } else
+                            {
+                                return "error";
+                            }
+                        } else
+                        {
+                            return "kiting";
+                        }
+
+                    }
+            }
+            return "error";
+
         }
 
         void CheckTargetChanged()

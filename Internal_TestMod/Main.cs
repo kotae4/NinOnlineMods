@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.Runtime.InteropServices;
 using NinOnline;
 using System.Reflection;
 using NinMods.Pathfinding;
@@ -53,8 +54,11 @@ namespace NinMods
         public delegate void dRenderText(SFML.Graphics.Font font, string text, int x, int y, SFML.Graphics.Color color, bool shadow = false, byte textSize = 13, SFML.Graphics.RenderWindow target = null);
         public static dRenderText oRenderText = null;
 
+
         public static void Initialize()
         {
+            // For testing stuff - Alex
+            //AllocConsole();
             // initialize map items
             for (int itemIndex = 0; itemIndex <= 255; itemIndex++)
             {

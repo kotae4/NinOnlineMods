@@ -113,6 +113,51 @@ namespace NinMods
             System.Windows.Forms.ListViewItem listViewItem28 = new System.Windows.Forms.ListViewItem(new string[] {
             "Ki Dst:",
             "0"}, -1);
+            System.Windows.Forms.ListViewItem listViewItem29 = new System.Windows.Forms.ListViewItem(new string[] {
+            "Target Index:",
+            "0"}, -1);
+            System.Windows.Forms.ListViewItem listViewItem30 = new System.Windows.Forms.ListViewItem(new string[] {
+            "Target Range",
+            "0"}, -1);
+            System.Windows.Forms.ListViewItem listViewItem31 = new System.Windows.Forms.ListViewItem(new string[] {
+            "Target Stat ",
+            "0"}, -1);
+            System.Windows.Forms.ListViewItem listViewItem32 = new System.Windows.Forms.ListViewItem(new string[] {
+            "Target HP",
+            "0"}, -1);
+            System.Windows.Forms.ListViewItem listViewItem33 = new System.Windows.Forms.ListViewItem(new string[] {
+            "Target EXP",
+            "0"}, -1);
+            System.Windows.Forms.ListViewItem listViewItem34 = new System.Windows.Forms.ListViewItem(new string[] {
+            "Target Anim",
+            "0"}, -1);
+            System.Windows.Forms.ListViewItem listViewItem35 = new System.Windows.Forms.ListViewItem(new string[] {
+            "Target AtkSay",
+            "0"}, -1);
+            System.Windows.Forms.ListViewItem listViewItem36 = new System.Windows.Forms.ListViewItem(new string[] {
+            "Target Behaviour",
+            "0"}, -1);
+            System.Windows.Forms.ListViewItem listViewItem37 = new System.Windows.Forms.ListViewItem(new string[] {
+            "TargetSwitchNum",
+            "0"}, -1);
+            System.Windows.Forms.ListViewItem listViewItem38 = new System.Windows.Forms.ListViewItem(new string[] {
+            "TargetVariableNum",
+            "0"}, -1);
+            System.Windows.Forms.ListViewItem listViewItem39 = new System.Windows.Forms.ListViewItem(new string[] {
+            "TargetSwitchNum",
+            "0"}, -1);
+            System.Windows.Forms.ListViewItem listViewItem40 = new System.Windows.Forms.ListViewItem(new string[] {
+            "TargetVariableVal",
+            "0"}, -1);
+            System.Windows.Forms.ListViewItem listViewItem41 = new System.Windows.Forms.ListViewItem(new string[] {
+            "TargetAttackSpeed",
+            "0"}, -1);
+            System.Windows.Forms.ListViewItem listViewItem42 = new System.Windows.Forms.ListViewItem(new string[] {
+            "TargetKickback",
+            "0"}, -1);
+            System.Windows.Forms.ListViewItem listViewItem43 = new System.Windows.Forms.ListViewItem(new string[] {
+            "TargetKickDistance",
+            "0"}, -1);
             this.lblPlayerName = new System.Windows.Forms.Label();
             this.listviewPlayerStats = new System.Windows.Forms.ListView();
             this.columnHeader1 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
@@ -167,20 +212,36 @@ namespace NinMods
             listViewItem25,
             listViewItem26,
             listViewItem27,
-            listViewItem28});
+            listViewItem28,
+            listViewItem29,
+            listViewItem30,
+            listViewItem31,
+            listViewItem32,
+            listViewItem33,
+            listViewItem34,
+            listViewItem35,
+            listViewItem36,
+            listViewItem37,
+            listViewItem38,
+            listViewItem39,
+            listViewItem40,
+            listViewItem41,
+            listViewItem42,
+            listViewItem43});
             this.listviewPlayerStats.Location = new System.Drawing.Point(1, 25);
             this.listviewPlayerStats.Margin = new System.Windows.Forms.Padding(1, 3, 1, 3);
             this.listviewPlayerStats.MultiSelect = false;
             this.listviewPlayerStats.Name = "listviewPlayerStats";
-            this.listviewPlayerStats.Size = new System.Drawing.Size(189, 724);
+            this.listviewPlayerStats.Size = new System.Drawing.Size(213, 769);
             this.listviewPlayerStats.TabIndex = 2;
             this.listviewPlayerStats.UseCompatibleStateImageBehavior = false;
             this.listviewPlayerStats.View = System.Windows.Forms.View.Details;
+            this.listviewPlayerStats.SelectedIndexChanged += new System.EventHandler(this.listviewPlayerStats_SelectedIndexChanged);
             // 
             // columnHeader1
             // 
             this.columnHeader1.Text = "Name";
-            this.columnHeader1.Width = 70;
+            this.columnHeader1.Width = 100;
             // 
             // columnHeader2
             // 
@@ -192,7 +253,7 @@ namespace NinMods
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(192, 761);
+            this.ClientSize = new System.Drawing.Size(216, 789);
             this.Controls.Add(this.listviewPlayerStats);
             this.Controls.Add(this.lblPlayerName);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedToolWindow;

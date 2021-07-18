@@ -43,6 +43,7 @@ namespace NinMods
             ProjectileTimer,
             KickbackDirection,
             KickDistance,
+            
             MAX
         }
 
@@ -139,6 +140,9 @@ namespace NinMods
             statDict[ETrackedStats.ProjectileTimer] = playerRecord.ProjectileTimer.ToString();
             statDict[ETrackedStats.KickbackDirection] = playerRecord.KickbackDir.ToString();
             statDict[ETrackedStats.KickDistance] = playerRecord.KickDistance.ToString();
+            client.modTypes.MapNpcRec npc = client.modTypes.MapNpc[client.modGlobals.myTarget];
+            
+
         }
 
         void UpdateItemLabelsIfNew()
@@ -177,6 +181,11 @@ namespace NinMods
             //listviewPlayerStats.Visible = true;
 
             PopulateStatValues(playerRecord, ref prevStatValues);
+        }
+
+        private void listviewPlayerStats_SelectedIndexChanged(object sender, EventArgs e)
+        {
+
         }
 
         /*
