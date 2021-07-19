@@ -10,9 +10,9 @@ Mostly a grind bot right now.
 5. Run Injector.exe and fill in the required info
     * ".NET Runtime Version" must match the game's (currently filled in for you - I have not seen any .NET game use a different version)
     * "Full Typename" should include the full namespace and class, eg: InjectedLibrary.InjectedClass
-    * "Entrypoint Method" should be the method within the above class that you want to execute, eg: InjectedEntryPoint
+    * "Entrypoint Method" should be the method name within the above class that you want to execute, eg: **InjectedEntryPoint**
         * This method needs to be `static`, have `int` as return type, and have only one argument which must be a `string` of any name.
-        * eg: `static int InjectedEntryPoint(string mandatoryArgument)` is a valid method signature, and you would type `InjectedEntryPoint` into the textbox.
+        * eg: `static int InjectedEntryPoint(string mandatoryArgument)` is a valid method signature, and you would **type just `InjectedEntryPoint` into the Injector's Entrypoint Method textbox**.
 6. Launch the game
 7. Press the Inject button in the injector once the splash screen has finished and you see the main menu
 8. Once injected, the mod will auto-login. Once fully loaded into the world, press F3 to initiate the bot (currently, the bot is off by default).
