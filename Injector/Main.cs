@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
 using System.Drawing;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -39,6 +40,18 @@ namespace Injector
             get { return m_ActiveProfile; }
             set { m_ActiveProfile = value; RefreshControlsState(); }
         }
+
+        public class ProcessInfoItem
+        {
+            public Process ActiveProcess = null;
+            public int PID = -1;
+            public bool Is64Bit = false;
+            public string Name = "";
+            public string FilePath = "";
+            public Icon Icon = null;
+        }
+
+        private ProcessInfoItem SelectedProcess = new ProcessInfoItem();
 
         public Main()
         {
@@ -139,7 +152,9 @@ namespace Injector
                         ActiveProfile.GameDirPath = folderBrowserDialog1.SelectedPath + "\\";
                         Logger.Log.Write("Main", "GameDirWorker_RunWorkerCompleted", "Got GameDir from user: " + ActiveProfile.GameDirPath, Logger.ELogType.Notification);
                         // start up the ProcessWatcher
-                        SetWatchedProcess(ActiveProfile.GameDirPath + GAME_EXE_NAME);
+                        //SetWatchedProcess(ActiveProfile.GameDirPath + GAME_EXE_NAME);
+                        btnStart.Enabled = true;
+
                         return;
                     }
                     Logger.Log.Write("Main", "GameDirWorker_RunWorkerCompleted", "User selected wrong game directory when prompted (" + folderBrowserDialog1.SelectedPath + ")", Logger.ELogType.Info);
@@ -151,8 +166,9 @@ namespace Injector
             {
                 ActiveProfile.GameDirPath = e.Result as string;
                 Logger.Log.Write("Main", "GameDirWorker_RunWorkerCompleted", "Got GameDir automatically: " + ActiveProfile.GameDirPath, Logger.ELogType.Notification);
+                btnStart.Enabled = true;
                 // start up the ProcessWatcher
-                SetWatchedProcess(ActiveProfile.GameDirPath + GAME_EXE_NAME);
+                //SetWatchedProcess(ActiveProfile.GameDirPath + GAME_EXE_NAME);
             }
         }
 
@@ -174,13 +190,85 @@ namespace Injector
             RefreshControlsState();
         }
 
-        private void btnInject_Click(object sender, EventArgs e)
+
+        private void LostActiveProcess()
         {
-            if ((SelectedProcess == null) || (SelectedProcess.ActiveProcess == null) || (SelectedProcess.ActiveProcess.HasExited) || (string.IsNullOrEmpty(ActiveProfile.InjectDLLFullPath)))
+            lblProcessDetails.Text = "Waiting for start...";
+            lblProcessDetails.ForeColor = System.Drawing.Color.DarkOrange;
+            Logger.Log.Write("ProcessWatcher", "LostActiveProcess", "ProcessWatcher lost game process, beginning search again...", Logger.ELogType.Notification);
+            //            btnStart.Enabled = false;
+            // check if background worker is busy. if not, give it its task
+            // if it is busy, welllll.... why would it be busy?
+            if (ProcessPollWorker.IsBusy)
             {
-                Logger.Log.Write("Main", "btnInject_Click", "Could not inject because the game is not running", Logger.ELogType.Notification);
+                ProcessPollWorker.CancelAsync();
+                Logger.Log.Write("ProcessWatcher", "LostActiveProcess", "ProcessWatcher's worker was busy, spinning until free...", Logger.ELogType.Info);
+                while (ProcessPollWorker.IsBusy)
+                {
+                    System.Windows.Forms.Application.DoEvents();
+                }
+            }
+            // poll continually for new processes matching the old one's filepath
+            ProcessPollWorker.RunWorkerAsync(SelectedProcess.FilePath);
+        }
+
+        private void OnProcessExited(object sender, EventArgs e)
+        {
+            LostActiveProcess();
+        }
+
+        private void btnStart_Click(object sender, EventArgs e)
+        {
+            /*    if ((SelectedProcess == null) || (SelectedProcess.ActiveProcess == null) || (SelectedProcess.ActiveProcess.HasExited) || (string.IsNullOrEmpty(ActiveProfile.InjectDLLFullPath)))
+                {
+                    Logger.Log.Write("Main", "btnInject_Click", "Could not inject because the game is not running", Logger.ELogType.Notification);
+                    return;
+                }*/
+            string  exePath = Path.Combine(ActiveProfile.GameDirPath, GAME_EXE_NAME);
+            ProcessStartInfo startInfo = new ProcessStartInfo
+            {
+                FileName = exePath,
+                WorkingDirectory = ActiveProfile.GameDirPath,
+            };
+            Process proc = Process.Start(startInfo);
+
+            if(proc == null)
+            {
+                Logger.Log.Write("Main", "btnInject_Click", "Process did not start", Logger.ELogType.Exception);
+
                 return;
             }
+            String procStr = proc.ToString();
+            Logger.Log.Write("Main", "btnInject_Click", procStr, Logger.ELogType.Exception);
+
+
+            SelectedProcess.ActiveProcess = proc;
+            SelectedProcess.PID = SelectedProcess.ActiveProcess.Id;
+            PEHeader peHeader = PEHeader.ParseFromProcess(proc);
+            SelectedProcess.Is64Bit = peHeader.Is64Bit;
+
+            Logger.Log.Write("ProcessWatcher", "SetActiveProcess", "ProcessWatcher found game process '" + SelectedProcess.ActiveProcess.ProcessName + "' with PID " + SelectedProcess.PID.ToString(), Logger.ELogType.Info);
+
+            if (SelectedProcess.Name == "")
+            {
+                SelectedProcess.Name = SelectedProcess.ActiveProcess.ProcessName;
+            }
+            try
+            {
+                SelectedProcess.ActiveProcess.EnableRaisingEvents = true;
+                SelectedProcess.ActiveProcess.SynchronizingObject = this;
+                SelectedProcess.ActiveProcess.Exited += OnProcessExited;
+            }
+            catch (Exception ex)
+            {
+                Logger.Log.Alert("ProcessWatcher", "SetActiveProcess", "Could not subscribe to process' Exited event. Cannot auto-detect when selected process closes or becomes invalid.\n\n" + ex.Message + "\n\n" + ex.StackTrace, "Error", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error);
+                return;
+            }
+
+            // UNSAFE, WAITING FOR MAIN LOOP
+            // TO DO: CHANGE THIS
+            System.Threading.Thread.Sleep(10000);
+
             string bootstrapDLLPath = SelectedProcess.Is64Bit ? BOOTSTRAPPER_X64_NAME : BOOTSTRAPPER_X86_NAME;
             if (!File.Exists(bootstrapDLLPath))
             {
@@ -210,7 +298,7 @@ namespace Injector
                 }
                 string bootstrapDLLFullPath = Path.GetFullPath(bootstrapDLLPath);
                 Logger.Log.Write("Main", "btnInject_Click", "Injecting bootstrapper (" + bootstrapDLLFullPath + ")");
-                btnInject.Enabled = !Injector.Inject(SelectedProcess.ActiveProcess, bootstrapDLLFullPath);
+                btnStart.Enabled = !Injector.Inject(SelectedProcess.ActiveProcess, bootstrapDLLFullPath);
             }
             catch (Exception ex)
             {

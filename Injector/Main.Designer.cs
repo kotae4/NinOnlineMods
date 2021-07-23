@@ -40,7 +40,7 @@ namespace Injector
             this.txtboxTypename = new System.Windows.Forms.TextBox();
             this.txtboxEntrypointMethod = new System.Windows.Forms.TextBox();
             this.label3 = new System.Windows.Forms.Label();
-            this.btnInject = new System.Windows.Forms.Button();
+            this.btnStart = new System.Windows.Forms.Button();
             this.GameDirWorker = new System.ComponentModel.BackgroundWorker();
             this.folderBrowserDialog1 = new System.Windows.Forms.FolderBrowserDialog();
             this.ProcessPollWorker = new System.ComponentModel.BackgroundWorker();
@@ -150,18 +150,18 @@ namespace Injector
             this.label3.TabIndex = 10;
             this.label3.Text = "Entrypoint Method:";
             // 
-            // btnInject
+            // btnStart
             // 
-            this.btnInject.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
+            this.btnStart.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnInject.Enabled = false;
-            this.btnInject.Location = new System.Drawing.Point(12, 214);
-            this.btnInject.Name = "btnInject";
-            this.btnInject.Size = new System.Drawing.Size(342, 37);
-            this.btnInject.TabIndex = 11;
-            this.btnInject.Text = "Inject";
-            this.btnInject.UseVisualStyleBackColor = true;
-            this.btnInject.Click += new System.EventHandler(this.btnInject_Click);
+            this.btnStart.Enabled = false;
+            this.btnStart.Location = new System.Drawing.Point(12, 214);
+            this.btnStart.Name = "btnStart";
+            this.btnStart.Size = new System.Drawing.Size(342, 37);
+            this.btnStart.TabIndex = 11;
+            this.btnStart.Text = "Start";
+            this.btnStart.UseVisualStyleBackColor = true;
+            this.btnStart.Click += new System.EventHandler(this.btnStart_Click);
             // 
             // GameDirWorker
             // 
@@ -176,9 +176,10 @@ namespace Injector
             // 
             // ProcessPollWorker
             // 
-            this.ProcessPollWorker.WorkerSupportsCancellation = true;
+            /*this.ProcessPollWorker.WorkerSupportsCancellation = true;
             this.ProcessPollWorker.DoWork += new System.ComponentModel.DoWorkEventHandler(this.ProcessPollWorker_DoWork);
             this.ProcessPollWorker.RunWorkerCompleted += new System.ComponentModel.RunWorkerCompletedEventHandler(this.ProcessPollWorker_RunWorkerCompleted);
+            */
             // 
             // txtboxInjectDLLPath
             // 
@@ -249,7 +250,7 @@ namespace Injector
             this.Controls.Add(this.txtboxUsername);
             this.Controls.Add(this.label4);
             this.Controls.Add(this.txtboxInjectDLLPath);
-            this.Controls.Add(this.btnInject);
+            this.Controls.Add(this.btnStart);
             this.Controls.Add(this.label3);
             this.Controls.Add(this.txtboxEntrypointMethod);
             this.Controls.Add(this.txtboxTypename);
@@ -286,7 +287,7 @@ namespace Injector
         private System.Windows.Forms.TextBox txtboxTypename;
         private System.Windows.Forms.TextBox txtboxEntrypointMethod;
         private System.Windows.Forms.Label label3;
-        private System.Windows.Forms.Button btnInject;
+        private System.Windows.Forms.Button btnStart;
         private System.ComponentModel.BackgroundWorker GameDirWorker;
         private System.Windows.Forms.FolderBrowserDialog folderBrowserDialog1;
         private System.ComponentModel.BackgroundWorker ProcessPollWorker;
