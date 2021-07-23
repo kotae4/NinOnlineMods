@@ -29,7 +29,8 @@ namespace NinMods
         public static string AutoLogin_Username = "";
         public static string AutoLogin_Password = "";
 
-        public static bool HasInitialized = false;
+        public static bool HasInitializedHooks = false;
+        public static bool HasInitializedGame = false;
         public static object _lock = 0;
 
         public static SquareGrid MapPathfindingGrid;
@@ -85,7 +86,7 @@ namespace NinMods
                 Logger.Log.WriteException(ex);
             }
             InterMapPathfinding.IntermapPathfinding.Initialize();
-            HasInitialized = true;
+            HasInitializedHooks = true;
         }
 
         static void RegisterEventHandlers()
@@ -102,12 +103,16 @@ namespace NinMods
             GameHooks.RegisterEventHandler(GameHooks.EEventType.OnNetRecv, EHookExecutionState.Post, typeof(NinMods.Main), "Main_OnNetRecv_Post");
             GameHooks.RegisterEventHandler(GameHooks.EEventType.OnNetSend, EHookExecutionState.Post, typeof(NinMods.Main), "Main_OnNetSend_Post");
 
+            // just some wild testing
+            // action msg is the in-world text that appears above the enemies head when you deal dmg. probably other stuff too.
+            GameHooks.RegisterEventHandler(GameHooks.EEventType.OnActionMessage, EHookExecutionState.Post, typeof(NinMods.Main), "Main_OnActionMsg_Post");
+
             GameHooks.SetupManagedHookerHooks();
         }
 
         static void StartGrindBot()
         {
-            if (HasInitialized == false) return;
+            if (HasInitializedHooks == false) return;
             //farmBot = new Bot.FarmBot();
             client.modTypes.PlayerRec bot = Bot.BotUtils.GetSelf();
             int targetMapID = -1;
@@ -219,46 +224,93 @@ namespace NinMods
             }
         }
 
-        public static void CheckNewItemDrops()
+        public static void CheckForAttackingMobs()
         {
-            client.modTypes.PlayerRec bot = NinMods.Bot.BotUtils.GetSelf();
-            //Logger.Log.Write("NinMods.Main", "CheckNewItemDrops", $"Checking {client.modGlobals.MapItem_HighIndex} map items", Logger.ELogType.Info, null, true);
-            List<Vector2i> newItemLocations = new List<Vector2i>();
-            for (int itemIndex = 1; itemIndex <= 255; itemIndex++)
+            int yOffset = 0;
+            Vector2i npcLocation = Vector2i.zero;
+            for (int npcIndex = 1; npcIndex <= client.modGlobals.NPC_HighIndex; npcIndex++)
             {
-                client.modTypes.MapItemRec mapItem = client.modTypes.MapItem[itemIndex];
-                if (mapItem.num <= 0)
-                {
-                    // clear the entry in lastFrameMapItems since it's invalid
-                    lastFrameMapItems[itemIndex].X = 0;
-                    lastFrameMapItems[itemIndex].Y = 0;
-                    lastFrameMapItems[itemIndex].num = 0;
-                    lastFrameMapItems[itemIndex].PlayerName = "";
+                client.modTypes.MapNpcRec mapNPC = client.modTypes.MapNpc[npcIndex];
+                npcLocation.x = mapNPC.X;
+                npcLocation.y = mapNPC.Y;
+                if ((npcLocation.x < 0) || (npcLocation.x > client.modTypes.Map.MaxX) ||
+                    (npcLocation.y < 0) || (npcLocation.y > client.modTypes.Map.MaxY) ||
+                    (mapNPC.num <= 0) || (mapNPC.num > client.modConstants.MAX_NPCS)
+                    || (mapNPC.Vital[(int)client.modEnumerations.Vitals.HP] <= 0)
+                    || (client.modTypes.Npc[mapNPC.num].Village == client.modTypes.Player[client.modGlobals.MyIndex].Village))
                     continue;
-                }
-                client.modTypes.MapItemRec oldItem = lastFrameMapItems[itemIndex];
-                bool isNew = (((lastFrameMapItems[itemIndex].X != mapItem.X) || (lastFrameMapItems[itemIndex].Y != mapItem.Y) || (lastFrameMapItems[itemIndex].num != mapItem.num))
-                    && (mapItem.PlayerName.Trim() == bot.Name.Trim()));
-                if (isNew)
-                {
-                    newItemLocations.Add(new Vector2i(mapItem.X, mapItem.Y));
-                    Logger.Log.WritePipe($"Saw new item " +
-                            $"(idx {itemIndex}, itemNum {mapItem.num})" +
-                            $"\n\t-itemLoc ({mapItem.X}, {mapItem.Y})" +
-                            $"\n\t-itemPlayer {mapItem.PlayerName.Trim()}" +
-                            $"\n\t-itemMvalue {mapItem.mvalue}", Logger.ELogType.Info, null, true);
-                }
-                // now that we're done processing, perform the deep copy into lastFrameMapItems
-                // only going to copy the fields we actually use
-                lastFrameMapItems[itemIndex].X = mapItem.X;
-                lastFrameMapItems[itemIndex].Y = mapItem.Y;
-                lastFrameMapItems[itemIndex].num = mapItem.num;
-                lastFrameMapItems[itemIndex].PlayerName = mapItem.PlayerName;
+                client.modTypes.NpcRec npcData = client.modTypes.Npc[mapNPC.num];
 
+                if (mapNPC.target == client.modGlobals.MyIndex)
+                {
+                    int isAttacking_TextWidth = client.modText.TextWidth(ref client.modText.Font[1], $"{npcData.Name.Trim()} is attacking");
+                    NinMods.Main.oRenderText(client.modText.Font[1], $"{npcData.Name.Trim()} is attacking", client.modGraphics.ScreenWidth - isAttacking_TextWidth, yOffset, SFML.Graphics.Color.Red, false, 13, client.modGraphics.GameWindowForm.Window);
+                    yOffset += 14;
+                }
             }
-            foreach (Vector2i newItemLocation in newItemLocations)
+        }
+
+        public static void DrawTargetInfo()
+        {
+            client.modTypes.PlayerRec bot = Bot.BotUtils.GetSelf();
+            Vector2i botPos = Bot.BotUtils.GetSelfLocation();
+            int xBase = client.modGraphics.ScreenWidth - 300;
+            int yOffset = 10;
+
+            if (client.modGlobals.myTarget > 0)
             {
-                farmBot.InjectEvent(Bot.FarmBot.EBotEvent.ItemDrop, (object)newItemLocation);
+                client.modTypes.MapNpcRec mapNPC = client.modTypes.MapNpc[client.modGlobals.myTarget];
+                Vector2i targetPos = new Vector2i(mapNPC.X, mapNPC.Y);
+                if ((mapNPC.X < 0) || (mapNPC.X > client.modTypes.Map.MaxX) ||
+                    (mapNPC.Y < 0) || (mapNPC.Y > client.modTypes.Map.MaxY) ||
+                    (mapNPC.num <= 0) || (mapNPC.num > 255)
+                    || (mapNPC.Vital[(int)client.modEnumerations.Vitals.HP] <= 0))
+                    return;
+                client.modTypes.NpcRec npcData = client.modTypes.Npc[mapNPC.num];
+                double distance = botPos.DistanceTo(targetPos);
+                // name string
+                RenderString targetName = new RenderString(npcData.Name.Trim());
+                NinMods.Main.oRenderText(client.modText.Font[1], targetName.Message, xBase - targetName.Width, yOffset, SFML.Graphics.Color.Red, false, targetName.FontSize, client.modGraphics.GameWindowForm.Window);
+                yOffset += (targetName.Height + 4);
+                // attack radius string
+                RenderString targetRange = new RenderString($"Range: {npcData.Range}");
+                NinMods.Main.oRenderText(client.modText.Font[1], targetRange.Message, xBase - targetRange.Width, yOffset, SFML.Graphics.Color.Red, false, targetRange.FontSize, client.modGraphics.GameWindowForm.Window);
+                yOffset += (targetRange.Height + 4);
+                // distance string
+                RenderString targetDistance = new RenderString($"Distance: {distance}");
+                NinMods.Main.oRenderText(client.modText.Font[1], targetDistance.Message, xBase - targetDistance.Width, yOffset, SFML.Graphics.Color.Red, false, targetDistance.FontSize, client.modGraphics.GameWindowForm.Window);
+                yOffset += (targetDistance.Height + 4);
+                // behavior string
+                RenderString targetBehavior = new RenderString($"Behavior: {npcData.Behaviour}");
+                NinMods.Main.oRenderText(client.modText.Font[1], targetBehavior.Message, xBase - targetBehavior.Width, yOffset, SFML.Graphics.Color.Red, false, targetBehavior.FontSize, client.modGraphics.GameWindowForm.Window);
+                yOffset += (targetBehavior.Height + 4);
+                // AttackSpeed string
+                RenderString targetAttackSpeed = new RenderString($"AttackSpeed: {npcData.AttackSpeed}");
+                NinMods.Main.oRenderText(client.modText.Font[1], targetAttackSpeed.Message, xBase - targetAttackSpeed.Width, yOffset, SFML.Graphics.Color.Red, false, targetAttackSpeed.FontSize, client.modGraphics.GameWindowForm.Window);
+                yOffset += (targetAttackSpeed.Height + 4);
+                // is attacking string
+                if (mapNPC.target == client.modGlobals.MyIndex)
+                {
+                    RenderString targetTarget = new RenderString("Is Attacking");
+                    NinMods.Main.oRenderText(client.modText.Font[1], targetTarget.Message, xBase - targetTarget.Width, yOffset, SFML.Graphics.Color.Red, false, targetTarget.FontSize, client.modGraphics.GameWindowForm.Window);
+                    yOffset += (targetTarget.Height + 4);
+                }
+                // Attacking string
+                RenderString targetAttacking = new RenderString($"Attacking: {mapNPC.Attacking}");
+                NinMods.Main.oRenderText(client.modText.Font[1], targetAttacking.Message, xBase - targetAttacking.Width, yOffset, SFML.Graphics.Color.Red, false, targetAttacking.FontSize, client.modGraphics.GameWindowForm.Window);
+                yOffset += (targetAttacking.Height + 4);
+                // Attacking string
+                RenderString targetAttackTimer = new RenderString($"AttackTmr: {mapNPC.AttackTimer}");
+                NinMods.Main.oRenderText(client.modText.Font[1], targetAttackTimer.Message, xBase - targetAttackTimer.Width, yOffset, SFML.Graphics.Color.Red, false, targetAttackTimer.FontSize, client.modGraphics.GameWindowForm.Window);
+                yOffset += (targetAttackTimer.Height + 4);
+                // current tick string
+                RenderString globalTick = new RenderString($"Tick: {client.modGlobals.Tick}");
+                NinMods.Main.oRenderText(client.modText.Font[1], globalTick.Message, xBase - globalTick.Width, yOffset, SFML.Graphics.Color.Red, false, globalTick.FontSize, client.modGraphics.GameWindowForm.Window);
+                yOffset += (globalTick.Height + 4);
+                if ((mapNPC.Attacking != 0) && ((mapNPC.AttackTimer == 0) || ((mapNPC.AttackTimer + npcData.AttackSpeed) <= client.modGlobals.Tick)))
+                {
+                    Logger.Log.WritePipe($"Predicted attack @ {client.modGlobals.Tick}, next attack should be @ {client.modGlobals.Tick + npcData.AttackSpeed}");
+                }
             }
         }
 
@@ -274,6 +326,10 @@ namespace NinMods
             }
             try
             {
+                if (GameState.SaveSnapshot() == false)
+                {
+                    Logger.Log.Write($"Could not save snapshot (myIndex: {client.modGlobals.MyIndex})", Logger.ELogType.Warning);
+                }
                 lock (_lock)
                 {
                     if (NinMods.Main.frmPlayerStats == null)
@@ -313,9 +369,14 @@ namespace NinMods
 
         public static void Main_OnGameLoop_Post()
         {
-            // i think we have to call this after the original function
-            // too lazy to double check
-            CheckNewItemDrops();
+            // check for changed game state
+            // this will also push any differences to the bot
+            // TO-DO:
+            // make it more clear what exactly this function does
+            if (GameState.CheckNewState() == false)
+            {
+                Logger.Log.Write($"Could not compare post state to pre state (myIndex: {client.modGlobals.MyIndex})", Logger.ELogType.Warning);
+            }
         }
 
         // for updating our pathfinding grid (and probably some other stuff later)
@@ -345,7 +406,16 @@ namespace NinMods
             client.clsBuffer clsBuffer2 = new client.clsBuffer(data);
             string text = clsBuffer2.ReadString();
             byte tColor = clsBuffer2.ReadByte();
-            Logger.Log.WritePipe($"Saw combat msg {text} with color {tColor}");
+            //Logger.Log.WritePipe($"Saw combat msg {text} with color {tColor}");
+        }
+
+        public static void Main_OnActionMsg_Post(int Index, byte[] data, int StartAddr, int ExtraVar)
+        {
+            client.clsBuffer buffer = new client.clsBuffer(data);
+            string message = buffer.ReadString();
+            int color = buffer.ReadLong();
+            int msgType = buffer.ReadLong();
+            Logger.Log.Write($"Saw action msg '{message}' (color: {color} type: {msgType})");
         }
 
         // for drawing tile overlays
@@ -361,7 +431,11 @@ namespace NinMods
         // everything drawn here is in screen-space
         public static void Main_OnDraw_Screenspace_Pre()
         {
+            NinMods.Main.oRenderText(client.modText.Font[1], $"ScrWidth: {client.modGraphics.ScreenWidth}", 10, 10, SFML.Graphics.Color.Red, false, 13, client.modGraphics.GameWindowForm.Window);
+            NinMods.Main.oRenderText(client.modText.Font[1], $"ScrHeight: {client.modGraphics.ScreenHeight}", 10, 24, SFML.Graphics.Color.Red, false, 13, client.modGraphics.GameWindowForm.Window);
             Utils.DrawNetStats();
+            CheckForAttackingMobs();
+            DrawTargetInfo();
         }
 
         // for our keybinds :)
