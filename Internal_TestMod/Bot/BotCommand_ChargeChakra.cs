@@ -11,6 +11,18 @@ namespace NinMods.Bot
     {
         int realBotMap = -1;
 
+        // destructor for safety. sometimes the ChargeChakra command gets interrupted, leaving the bot's map set to 0
+        // which then breaks intermap pathfinding. so, when this ChargeChakra command goes out of scope it'll
+        // hopefully restore the 'real' bot map ID.
+        ~BotCommand_ChargeChakra()
+        {
+            if (realBotMap != -1)
+            {
+                client.modTypes.PlayerRec bot = BotUtils.GetSelf();
+                bot.Map = realBotMap;
+            }
+        }
+
         // for pathing to nearest non-water tile
         Stack<Vector2i> path = null;
 
@@ -59,7 +71,7 @@ namespace NinMods.Bot
         {
             if (BotUtils.CanMove())
             {
-                if (path == null)
+                if ((path == null) || (path.Count == 0))
                 {
                     Vector2i closestTile;
                     if (TryGetClosestNonWaterTile(bot, out closestTile) == false)

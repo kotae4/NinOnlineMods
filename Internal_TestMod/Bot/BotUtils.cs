@@ -44,7 +44,7 @@ namespace NinMods.Bot
                 npcLocation.y = client.modTypes.MapNpc[npcIndex].Y;
                 if ((npcLocation.x < 0) || (npcLocation.x > client.modTypes.Map.MaxX) ||
                     (npcLocation.y < 0) || (npcLocation.y > client.modTypes.Map.MaxY) ||
-					(client.modTypes.MapNpc[npcIndex].num <= 0) || (client.modTypes.MapNpc[npcIndex].num > 255) 
+					(client.modTypes.MapNpc[npcIndex].num <= 0) || (client.modTypes.MapNpc[npcIndex].num > client.modConstants.MAX_NPCS) 
 					|| (client.modTypes.MapNpc[npcIndex].Vital[(int)client.modEnumerations.Vitals.HP] <= 0)
 					|| (client.modTypes.Npc[client.modTypes.MapNpc[npcIndex].num].Village == client.modTypes.Player[client.modGlobals.MyIndex].Village))
                     continue;
@@ -177,6 +177,19 @@ namespace NinMods.Bot
 			warpTiles = BotUtils.GetAllTilesMatchingPredicate(tilePredicate);
 			Logger.Log.Write($"Got {warpTiles.Count} valid warp tiles (warpDirection: {warpDirection})");
 			return ((warpTiles != null) && (warpTiles.Count > 0));
+        }
+
+		public static void ReleaseSpirit()
+        {
+			client.modTypes.PlayerRec bot = GetSelf();
+			if (bot.DeathTimer > 0)
+            {
+				Logger.Log.WritePipe("Releasing bot spirit to go back to hospital early");
+				client.clsBuffer clsBuffer2 = new client.clsBuffer();
+				clsBuffer2.WriteLong(88);
+				client.modClientTCP.SendData(clsBuffer2.ToArray());
+				bot.DeathTimer = 0;
+			}
         }
 
 		public static void SetTarget(int targetIndex, int targetType = Constants.TARGET_TYPE_NPC)

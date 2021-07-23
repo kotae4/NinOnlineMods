@@ -23,7 +23,8 @@ namespace NinMods
             OnNetRecv,
             OnNetSend,
             OnDraw_Worldspace,
-            OnDraw_Screenspace
+            OnDraw_Screenspace,
+            OnActionMessage
         }
         // i really hate this design
         // i wish i could wrap them into a GameHookData class
@@ -41,13 +42,16 @@ namespace NinMods
             typeof(client.modGameLogic), "GameLoop", typeof(NinMods.GameHooks), "hk_modGameLogic_GameLoop");
 
         // for making sure we always have the latest tiledata for pathfinding
-        public delegate void dHandleMapDone(int Index, byte[] data, int StartAddr, int ExtraVar);
+        public delegate void dHandlePacketDelegate(int Index, byte[] data, int StartAddr, int ExtraVar);
         public static GenericGameHookClass_Void<int, byte[], int, int> HandleMapDoneHook = new GenericGameHookClass_Void<int, byte[], int, int>(
             typeof(client.modHandleData), "HandleMapDone", typeof(NinMods.GameHooks), "hk_modHandleData_HandleMapDone");
 
         // for damage log / spell accuracy
         public static GenericGameHookClass_Void<int, byte[], int, int> HandleCombatMsgHook = new GenericGameHookClass_Void<int, byte[], int, int>(
             typeof(client.modHandleData), "HandleCombatMsg", typeof(NinMods.GameHooks), "hk_modHandleData_HandleCombatMsg");
+
+        public static GenericGameHookClass_Void<int, byte[], int, int> HandleActionMsgHook = new GenericGameHookClass_Void<int, byte[], int, int>(
+            typeof(client.modHandleData), "HandleActionMsg", typeof(NinMods.GameHooks), "hk_modHandleData_HandleActionMsg");
 
         // for logging incoming network messages (this is what receives all packets and then dispatches them to the specific packet handlers)
         public static GenericGameHookClass_Void<byte[]> HandleDataHook = new GenericGameHookClass_Void<byte[]>(
@@ -76,7 +80,8 @@ namespace NinMods
             { EEventType.OnNetSend, SendDataHook },
             { EEventType.OnDraw_Screenspace, DrawGUIHook },
             { EEventType.OnMapLoaded, HandleMapDoneHook },
-            //{ EEventType.OnCombatMsg, HandleCombatMsgHook },
+            { EEventType.OnCombatMsg, HandleCombatMsgHook },
+            { EEventType.OnActionMessage, HandleActionMsgHook },
             { EEventType.OnMenuLoop, MenuLoopHook },
             { EEventType.OnGameLoop, GameLoopHook }
         };
@@ -170,8 +175,46 @@ namespace NinMods
                     else
                     {
 
-                        NinMods.GameHooks.dHandleMapDone oHandleMapDone = (NinMods.GameHooks.dHandleMapDone)handleMapDoneMethodInfo.CreateDelegate(typeof(NinMods.GameHooks.dHandleMapDone));
+                        NinMods.GameHooks.dHandlePacketDelegate oHandleMapDone = (NinMods.GameHooks.dHandlePacketDelegate)handleMapDoneMethodInfo.CreateDelegate(typeof(NinMods.GameHooks.dHandlePacketDelegate));
                         oHandleMapDone(0, null, 0, 0);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger.Log.WriteException(ex);
+                    Logger.Log.Write("The above exception is probably safe!");
+                }
+                try
+                {
+                    System.Reflection.MethodInfo handleActionMsgMethodInfo = typeof(client.modHandleData).GetMethod("HandleActionMsg", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
+                    if (handleActionMsgMethodInfo == null)
+                    {
+                        Logger.Log.WriteError("Could not get HandleActionMsg methodinfo");
+                    }
+                    else
+                    {
+
+                        NinMods.GameHooks.dHandlePacketDelegate oHandleActionMsg = (NinMods.GameHooks.dHandlePacketDelegate)handleActionMsgMethodInfo.CreateDelegate(typeof(NinMods.GameHooks.dHandlePacketDelegate));
+                        oHandleActionMsg(0, null, 0, 0);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger.Log.WriteException(ex);
+                    Logger.Log.Write("The above exception is probably safe!");
+                }
+                try
+                {
+                    System.Reflection.MethodInfo handleCombatMsgMethodInfo = typeof(client.modHandleData).GetMethod("HandleCombatMsg", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
+                    if (handleCombatMsgMethodInfo == null)
+                    {
+                        Logger.Log.WriteError("Could not get HandleCombatMsg methodinfo");
+                    }
+                    else
+                    {
+
+                        NinMods.GameHooks.dHandlePacketDelegate oHandleCombatMsg = (NinMods.GameHooks.dHandlePacketDelegate)handleCombatMsgMethodInfo.CreateDelegate(typeof(NinMods.GameHooks.dHandlePacketDelegate));
+                        oHandleCombatMsg(0, null, 0, 0);
                     }
                 }
                 catch (Exception ex)
@@ -319,7 +362,7 @@ namespace NinMods
                 Logger.Log.Write("Successfully hooked!", Logger.ELogType.Info, null, true);
             }
             // this is the only hook that has logic within the hook itself, everything else should be done on event handlers.
-            if (NinMods.Main.HasInitialized == false)
+            if (NinMods.Main.HasInitializedHooks == false)
             {
                 // early exit
                 NinMods.GameHooks.GameLoopHook.Hook.CallOriginalFunction(typeof(void));
@@ -364,6 +407,20 @@ namespace NinMods
             NinMods.GameHooks.HandleCombatMsgHook.FireEvent(Index, data, StartAddr, ExtraVar, EHookExecutionState.Pre);
             NinMods.GameHooks.HandleCombatMsgHook.Hook.CallOriginalFunction(typeof(void), Index, data, StartAddr, ExtraVar);
             NinMods.GameHooks.HandleCombatMsgHook.FireEvent(Index, data, StartAddr, ExtraVar, EHookExecutionState.Post);
+        }
+
+        public static void hk_modHandleData_HandleActionMsg(int Index, byte[] data, int StartAddr, int ExtraVar)
+        {
+            if (NinMods.GameHooks.HandleActionMsgHook.FirstRun == true)
+            {
+                NinMods.GameHooks.HandleActionMsgHook.FirstRun = false;
+                Logger.Log.Write("Successfully hooked!", Logger.ELogType.Info, null, true);
+            }
+
+            // call original
+            NinMods.GameHooks.HandleActionMsgHook.FireEvent(Index, data, StartAddr, ExtraVar, EHookExecutionState.Pre);
+            NinMods.GameHooks.HandleActionMsgHook.Hook.CallOriginalFunction(typeof(void), Index, data, StartAddr, ExtraVar);
+            NinMods.GameHooks.HandleActionMsgHook.FireEvent(Index, data, StartAddr, ExtraVar, EHookExecutionState.Post);
         }
 
         // for drawing tile overlays

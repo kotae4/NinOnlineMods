@@ -4,12 +4,17 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using NinMods.Logging;
+using NinMods.GameTypeWrappers;
 
 namespace NinMods.Bot
 {
     // probably have this class act as a collection of relevant bot commands working toward a specific purpose (farming monsters in this case)
     public class FarmBot
     {
+        const int EVT_ITEMDROP_PRIORITY = 100;
+        const int EVT_AGGROMOB_PRIORITY = 5;
+        const int EVT_MAPLOAD_PRIORITY = 0;
+
         class InjectedEventData
         {
             public EBotEvent eventType;
@@ -36,8 +41,13 @@ namespace NinMods.Bot
 
         public enum EBotEvent
         {
+            MapLoad,
+            AggroMob,
+            HealthChanged,
             ItemDrop,
-            MapLoad
+            InventoryItemChanged,
+            LevelChanged,
+            Death
         }
 
         EBotState currentState = EBotState.Idle;
@@ -46,7 +56,8 @@ namespace NinMods.Bot
         // in other words, the current state is more important than the injected event
         // in cases where the current state is *less* important, then we simply switch states (interrupting the current state) to handle the event right away
         // in those cases, we do that in the InjectEvent() method directly and wouldn't use this Queue<T>
-        Queue<InjectedEventData> injectedEventQueue = new Queue<InjectedEventData>();
+        // edit: borrowing the priorityqueue class from astar implementation, lol :)
+        Pathfinding.PriorityQueue<InjectedEventData> injectedEventQueue = new Pathfinding.PriorityQueue<InjectedEventData>();
 
 
         client.modTypes.MapNpcRec targetMonster = null;
@@ -101,10 +112,9 @@ namespace NinMods.Bot
             return false;
         }
 
-        void NextState()
+        bool MoveToInjectedState_IfNecessary()
         {
             EBotState oldState = currentState;
-            client.modTypes.PlayerRec bot = BotUtils.GetSelf();
             if (injectedEventQueue.Count > 0)
             {
                 // NOTE:
@@ -114,13 +124,33 @@ namespace NinMods.Bot
                 {
                     case EBotEvent.ItemDrop:
                         {
-                            currentCommand = new BotCommand_CollectItem((Vector2i)injectedEvent.eventData);
+                            MapItemWrapper mapItem = injectedEvent.eventData as MapItemWrapper;
+                            currentCommand = new BotCommand_CollectItem(new Vector2i(mapItem.mapItem.X, mapItem.mapItem.Y));
                             currentState = EBotState.CollectingItem;
                             Logger.Log.WritePipe($"Moved to injected state {currentState} from {oldState}");
-                            return;
+                            return true;
+                        }
+                    case EBotEvent.AggroMob:
+                        {
+                            MapNpcWrapper mapNpc = injectedEvent.eventData as MapNpcWrapper;
+                            currentCommand = new BotCommand_Attack(mapNpc.mapNpc, mapNpc.mapNpcIndex, null);
+                            currentState = EBotState.AttackingTarget;
+                            Logger.Log.WritePipe($"Moved to injected state {currentState} from {oldState}");
+                            return true;
                         }
                 }
             }
+            return false;
+        }
+
+        void NextState()
+        {
+            EBotState oldState = currentState;
+            client.modTypes.PlayerRec bot = BotUtils.GetSelf();
+
+            if (MoveToInjectedState_IfNecessary())
+                return;
+
             // currentState is the 'finished' state, so we're determing what to do next
             switch (currentState)
             {
@@ -179,30 +209,52 @@ namespace NinMods.Bot
             // NOTE:
             // it was at this point that i realized a proper state machine implementation would be invaluable :)
             // more closely tying events, states (and commands - the logic of a state), and the conditionals that glue it together would be great
+            if ((currentState == EBotState.MovingToMap) && (eventType != EBotEvent.Death))
+            {
+                // just ignore items while we're moving to our grind maps.
+                Logger.Log.WritePipe($"Ignoring {eventType} event because we are moving to a new map");
+                return;
+            }
             client.modTypes.PlayerRec bot = BotUtils.GetSelf();
             switch (eventType)
             {
                 case EBotEvent.ItemDrop:
                     {
-                        if (currentState == EBotState.MovingToMap)
-                        {
-                            // just ignore items while we're moving to our grind maps.
-                            // TO-DO:
-                            // don't ignore items while moving to grind map
-                            Logger.Log.WritePipe($"Ignoring {eventType} event because we are moving to a new map");
-                            return;
-                        }
-                        else if (currentState == EBotState.AttackingTarget)
+                        if (currentState == EBotState.AttackingTarget)
                         {
                             Logger.Log.WritePipe($"Enqueuing {eventType} event because we are in an uninterruptible state");
-                            injectedEventQueue.Enqueue(new InjectedEventData(eventType, eventData));
+                            injectedEventQueue.Enqueue(new InjectedEventData(eventType, eventData), EVT_ITEMDROP_PRIORITY);
                             return;
                         }
                         else
                         {
                             Logger.Log.WritePipe($"Interrupting current state to handle {eventType} event");
-                            currentCommand = new BotCommand_CollectItem((Vector2i)eventData);
+                            MapItemWrapper mapItem = eventData as MapItemWrapper;
+                            currentCommand = new BotCommand_CollectItem(new Vector2i(mapItem.mapItem.X, mapItem.mapItem.Y));
                             currentState = EBotState.CollectingItem;
+                        }
+                        break;
+                    }
+                case EBotEvent.AggroMob:
+                    {
+                        // TO-DO:
+                        // figure out how best to keep track of how many mobs we're being attacked by and flee when some threshold is reached
+                        if (currentState == EBotState.AttackingTarget)
+                        {
+                            // if we're already attacking a target, then queue this new target for afterwards
+                            Logger.Log.WritePipe($"Enqueuing {eventType} event because we are already attacking a mob");
+                            injectedEventQueue.Enqueue(new InjectedEventData(eventType, eventData), EVT_AGGROMOB_PRIORITY);
+                            return;
+                        }
+                        else
+                        {
+                            // if we're not attacking a target and we're not moving maps, then enter combat immediately
+                            // TO-DO:
+                            // add some logic to enter flee state instead if some criteria is met (low health, too many mobs, maybe even like... mob density being too great, etc)
+                            Logger.Log.WritePipe($"Interrupting current state to handle {eventType} event");
+                            MapNpcWrapper mapNpc = eventData as MapNpcWrapper;
+                            currentCommand = new BotCommand_Attack(mapNpc.mapNpc, mapNpc.mapNpcIndex, null);
+                            currentState = EBotState.AttackingTarget;
                         }
                         break;
                     }
@@ -216,6 +268,14 @@ namespace NinMods.Bot
                         Logger.Log.WritePipe($"Interrupting current state to handle {eventType} event");
                         currentCommand = new BotCommand_MoveToMap((int)eventData);
                         currentState = EBotState.MovingToMap;
+                        break;
+                    }
+                case EBotEvent.Death:
+                    {
+                        Logger.Log.WritePipe($"Interrupting current state to handle {eventType} event");
+                        BotUtils.ReleaseSpirit();
+                        currentCommand = null;
+                        currentState = EBotState.Idle;
                         break;
                     }
             }
