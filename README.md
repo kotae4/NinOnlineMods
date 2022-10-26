@@ -1,3 +1,6 @@
+# THIS IS A DEFUNCT PROJECT #
+The game underwent a massive overhaul of the codebase including a switch to a new runtime, so **none of this functional or even accurate anymore**. As such, I've decided to make it public now that no harm could be done with this. This was my first "real" MMO botting project so I'm proud of it despite the horrendously messy code.
+
 # NinOnlineMods #
 Modding framework and set of tools for the game Nin Online.  
 Mostly a grind bot right now.
