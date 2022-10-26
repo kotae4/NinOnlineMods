@@ -158,7 +158,7 @@ namespace Launcher
                     }
                     Logger.Log.Write("User selected wrong game directory when prompted (" + folderBrowserDialog1.SelectedPath + ")", Logger.ELogType.Info);
                 }
-                Logger.Log.WriteError("Could not locate Among Us directory", null, true);
+                Logger.Log.WriteError($"Could not locate {GAME_EXE_NAME} directory", null, true);
                 Application.Exit();
             }
             else

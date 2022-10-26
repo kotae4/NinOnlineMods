@@ -58,8 +58,15 @@ namespace Launcher
     public struct IMAGE_NT_HEADERS32
     {
         [FieldOffset(0)]
+        /* NET 5 bug: generates runtime TypeLoader exception when this struct is instantiated, says fields are overlapping
+         * i think the CLR probably ignores some of the MarshalAs attribute fields or something?
+         * works fine under .NET framework 4.5 with no changes.
         [MarshalAs(UnmanagedType.ByValArray, SizeConst = 4)]
         public char[] Signature;
+        */
+        // workaround to the above bug:
+        // we can just check if it's 00004550h instead.
+        public UInt32 SignatureDWORD;
 
         [FieldOffset(4)]
         public IMAGE_FILE_HEADER FileHeader;
@@ -67,22 +74,34 @@ namespace Launcher
         [FieldOffset(24)]
         public IMAGE_OPTIONAL_HEADER32 OptionalHeader;
 
+        /* see: .NET 5 bug above.
         private string _Signature
         {
             get { return new string(Signature); }
         }
+        */
 
         public bool isValid
         {
+            /* see: .NET 5 bug above.
             get { return _Signature == "PE\0\0" && OptionalHeader.Magic == MagicType.IMAGE_NT_OPTIONAL_HDR32_MAGIC; }
+            */
+            get { return SignatureDWORD == 0x00004550 && OptionalHeader.Magic == MagicType.IMAGE_NT_OPTIONAL_HDR32_MAGIC; }
         }
     }
     [StructLayout(LayoutKind.Explicit)]
     public struct IMAGE_NT_HEADERS64
     {
         [FieldOffset(0)]
+        /* NET 5 bug: generates runtime TypeLoader exception when this struct is instantiated, says fields are overlapping
+         * i think the CLR probably ignores some of the MarshalAs attribute fields or something?
+         * works fine under .NET framework 4.5 with no changes.
         [MarshalAs(UnmanagedType.ByValArray, SizeConst = 4)]
         public char[] Signature;
+        */
+        // workaround to the above bug:
+        // we can just check if it's 00004550h instead.
+        public UInt32 SignatureDWORD;
 
         [FieldOffset(4)]
         public IMAGE_FILE_HEADER FileHeader;
@@ -90,14 +109,19 @@ namespace Launcher
         [FieldOffset(24)]
         public IMAGE_OPTIONAL_HEADER64 OptionalHeader;
 
+        /* see: .NET 5 bug above.
         private string _Signature
         {
             get { return new string(Signature); }
         }
+        */
 
         public bool isValid
         {
+            /* see: .NET 5 bug above.
             get { return _Signature == "PE\0\0" && OptionalHeader.Magic == MagicType.IMAGE_NT_OPTIONAL_HDR64_MAGIC; }
+            */
+            get { return SignatureDWORD == 0x00004550 && OptionalHeader.Magic == MagicType.IMAGE_NT_OPTIONAL_HDR64_MAGIC; }
         }
     }
 

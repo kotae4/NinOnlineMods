@@ -116,36 +116,66 @@ namespace NinMods
             //farmBot = new Bot.FarmBot();
             client.modTypes.PlayerRec bot = Bot.BotUtils.GetSelf();
             int targetMapID = -1;
-            if (bot.Level <= 5)
+            if (bot.Village == 1)
             {
-                // grind larva on map Larva Road (id: 26)
-                targetMapID = 26;
+                if (bot.Level <= 5)
+                {
+                    // grind larva on map Larva Road (id: 26)
+                    targetMapID = 26;
+                }
+                else if (bot.Level <= 10)
+                {
+                    // grind spiders on map Moist Plains (id: 99)
+                    targetMapID = 99;
+                }
+                else if (bot.Level <= 18)
+                {
+                    // grind wolves on map Outskirts Dead End (id: 130)
+                    targetMapID = 130;
+                }
+                else if (bot.Level <= 26)
+                {
+                    // grind tigers on map Striped Lake (id: 90)
+                    targetMapID = 90;
+                }
+                else
+                {
+                    targetMapID = bot.Map;
+                }
             }
-            else if (bot.Level <= 10)
+            else if (bot.Village == 2)
             {
-                // grind spiders on map Moist Plains (id: 99)
-                targetMapID = 99;
-            }
-            else if (bot.Level <= 18)
-            {
-                // grind wolves on map Outskirts Dead End (id: 130)
-                targetMapID = 130;
-            }
-            else if (bot.Level <= 26)
-            {
-                // grind tigers on map Striped Lake (id: 90)
-                targetMapID = 90;
-            }
-            else
-            {
-                targetMapID = bot.Map;
+                if (bot.Level <= 7)
+                {
+                    // grind larva on map Sand Nesting Ground (id: 85)
+                    targetMapID = 85;
+                }
+                else if (bot.Level <= 12)
+                {
+                    // grind scorpions on map Desert Palms (id: 48)
+                    targetMapID = 48;
+                }
+                else if (bot.Level <= 16)
+                {
+                    // grind stingers on map Sand Hive Grounds (id: 86)
+                    targetMapID = 86;
+                }
+                else if (bot.Level <= 22)
+                {
+                    // grind scarabs on map Desert Cave Entrance (id: 87)
+                    targetMapID = 87;
+                }
+                else
+                {
+                    targetMapID = bot.Map;
+                }
             }
             if (bot.Map != targetMapID)
             {
                 farmBot.InjectEvent(Bot.FarmBot.EBotEvent.MapLoad, targetMapID);
             }
         }
-
+        /*
         public static void BeginAutoLogin()
         {
             if ((string.IsNullOrEmpty(NinMods.Main.AutoLogin_Username)) || (string.IsNullOrEmpty(NinMods.Main.AutoLogin_Password)))
@@ -203,6 +233,7 @@ namespace NinMods
                 Logger.Log.WritePipe("Cannot select server because ServerDetails are invalid", Logger.ELogType.Error);
             }
         }
+        */
 
         // for auto-login
         public static void Main_OnMenuLoop_Pre()
@@ -214,6 +245,7 @@ namespace NinMods
             {
                 Logger.Log.InitPipe();
             }
+            /*
             if (client.modGlobals.InGame == false)
             {
                 // WARNING:
@@ -222,6 +254,7 @@ namespace NinMods
                 // i think we need to add a timer and only start the auto-login process after like... 10 seconds or something. the game's logout process messes up game state so much.
                 BeginAutoLogin();
             }
+            */
         }
 
         public static void CheckForAttackingMobs()
@@ -317,6 +350,10 @@ namespace NinMods
         // the heart of the bot. this runs every tick on the game's thread.
         public static void Main_OnGameLoop_Pre()
         {
+            if (Logger.Log.NeedsInit)
+            {
+                Logger.Log.InitPipe();
+            }
             // TO-DO:
             // check exactly when game state becomes valid for us.
             // now that we're injecting at game startup rather than once we're fully loaded in-game, we **have** to make sure the game state is valid before running any of our logic
@@ -510,10 +547,12 @@ namespace NinMods
             // instead of hooking client.modAuth.Auth_HandleServerDetails we'll just check for that packet here
             // it is important that client.modAuth.Auth_HandleServerDetails is called before we reach this point, though.
             // we ensure that's the case w/ the CallOriginalFunction above.
+            /*
             if (packetID == client.modEnumerations.ServerPackets.Auth_ServerDetails)
             {
                 FinishAutoLogin();
             }
+            */
         }
 
         // for logging packets that we send to the server

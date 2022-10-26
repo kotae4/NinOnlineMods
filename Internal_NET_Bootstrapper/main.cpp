@@ -44,7 +44,10 @@ void PrintErrorMessage(HRESULT error)
 		// ... do something with the string `errorText` - log it, display it to the user, etc.
 		_tprintf(TEXT("[Bootstrapper] Error code (0x%lx): %s"), error, errorText);
 		// release memory allocated by FormatMessage()
-		LocalFree(errorText);
+		// < win10
+		//LocalFree(errorText);
+		// win10
+		HeapFree(::GetProcessHeap(), NULL, errorText);
 		errorText = NULL;
 	}
 }

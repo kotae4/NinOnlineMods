@@ -83,7 +83,20 @@ namespace NinMods.InterMapPathfinding
                 new Edge<int>(19, 66), // near the valley to dark clearing
                 new Edge<int>(66, 19),
                 new Edge<int>(19, 215), // near the valley to mountain sea path
-                new Edge<int>(215, 19)
+                new Edge<int>(215, 19),
+                // sand village starter area
+                new Edge<int>(57, 56), // sand village hospital 2f to 1f
+                new Edge<int>(56, 57),
+                new Edge<int>(56, 51), // sand village hospital 1f to sand village
+                // NOTE: sand village to hospital doesn't have the usual warp data. it's a no-name walkthrough event.
+                new Edge<int>(51, 50), // sand village to sand village northern entrance
+                new Edge<int>(50, 51),
+                new Edge<int>(50, 85), // sand village northern entrance to sand nesting ground
+                new Edge<int>(85, 50),
+                new Edge<int>(85, 86), // sand nesting ground to sand hive grounds
+                new Edge<int>(86, 85),
+                new Edge<int>(86, 87), // sand hive grounds to desert cave entrance
+                new Edge<int>(87, 86)
             };
             adjacencyMatrix.AddVerticesAndEdgeRange(edges);
             #endregion
